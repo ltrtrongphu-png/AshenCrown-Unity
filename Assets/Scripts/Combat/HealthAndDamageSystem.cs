@@ -65,6 +65,19 @@ namespace AshenCrown.Combat
         public event Action OnPoiseBroken;
         public event Action OnDeath;
 
+        /// <summary>Applies authored RPG stats before the first damage calculation.</summary>
+        public void ConfigureStats(float health, float defenseValue, float poise)
+        {
+            maxHealth = Mathf.Max(1f, health);
+            defense = Mathf.Max(0f, defenseValue);
+            maxPoise = Mathf.Max(0f, poise);
+            CurrentHealth = maxHealth;
+            CurrentPoise = maxPoise;
+            IsDead = false;
+            OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
+            OnPoiseChanged?.Invoke(CurrentPoise, maxPoise);
+        }
+
         IDamageFilter[] filters;
         float poiseRegenTimer;
 
