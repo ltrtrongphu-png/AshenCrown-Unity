@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090807"><title>Ashen Crown — Combat Trial</title><link rel="stylesheet" href="./play.css"></head>
+<body>
+<div class="topbar"><a class="back" href="./">← Ashen Crown</a><div class="trial-title"><span></span> COMBAT TRIAL <small>01</small></div><div class="hint">ESC — pause</div></div>
+<main class="stage">
+<canvas id="game" aria-label="Ashen Crown playable combat trial"></canvas>
+<div class="hud"><div class="boss-block"><div class="label"><span>THE ASHEN WARDEN</span><b id="phase">PHASE I</b></div><div class="bar boss-bar"><i id="bossHp"></i></div><div class="bar poise-bar"><i id="bossPoise"></i></div></div><div class="player-block"><div class="bar hp-bar"><i id="playerHp"></i></div><div class="bar stamina-bar"><i id="stamina"></i></div><div class="player-meta"><span>EMBERBOUND</span><b id="status">READY</b></div></div></div>
+<div class="center-message" id="message"><strong>DEFEAT THE WARDEN</strong><span>WASD move · LMB attack · RMB heavy · SPACE dodge · F guard</span></div>
+<div class="pause" id="pause"><div><span>TRIAL PAUSED</span><button id="resume">Resume</button><a href="./">Return to Ashen Crown</a></div></div>
+<div class="result" id="result"><div><p id="resultKicker">TRIAL COMPLETE</p><h1 id="resultTitle">The ember survives.</h1><p id="resultText"></p><button id="restart">Fight again</button><a href="./">Back to the showcase</a></div></div>
+</main>
+<section class="controls-strip"><span><b>W A S D</b> move</span><span><b>LMB</b> light</span><span><b>RMB</b> heavy</span><span><b>SPACE</b> dodge</span><span><b>F</b> guard</span></section>
+<script src="./play.js"></script>
+</body></html>
