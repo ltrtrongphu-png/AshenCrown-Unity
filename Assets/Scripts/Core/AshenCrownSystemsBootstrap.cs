@@ -8,6 +8,7 @@ using AshenCrown.World;
 using AshenCrown.Codex;
 using AshenCrown.NPC;
 using AshenCrown.UI;
+using AshenCrown.Endgame;
 
 namespace AshenCrown.Core
 {
@@ -38,6 +39,8 @@ namespace AshenCrown.Core
             root.AddComponent<NPCWorldSpawner>();
             root.AddComponent<DialogueOverlay>();
             root.AddComponent<CameraModeHUD>();
+            root.AddComponent<LongTermEngagementSystem>();
+            root.AddComponent<LongTermEngagementHUD>();
             root.AddComponent<AshenCrownSystemsBootstrap>();
         }
         void Update()
