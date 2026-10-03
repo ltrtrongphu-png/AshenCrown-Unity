@@ -1,5 +1,6 @@
 using UnityEngine;
 using AshenCrown.Endgame;
+using AshenCrown.Localization;
 
 namespace AshenCrown.UI
 {
@@ -17,7 +18,7 @@ namespace AshenCrown.UI
             GUILayout.Label($"Legacy Lv {s.LegacyLevel} • Journey {s.JourneyPoints} pts",body);
             GUILayout.Label($"Expedition: {(s.Expedition.active?$"T{s.Expedition.tier} {s.Expedition.roomsCleared}/{s.Expedition.roomsRequired}":"Ready")}",body);
             GUILayout.Space(6);GUILayout.Label("Rotating Contracts",title);
-            foreach(var c in s.Contracts){var state=c.claimed?"CLAIMED":$"{c.progress}/{c.required}";GUILayout.Label($"• {c.titleKey}: {state}",body);}
+            foreach(var c in s.Contracts){var state=c.claimed?"CLAIMED":$"{c.progress}/{c.required}";var titleKey=LocalizationService.Instance!=null?LocalizationService.Instance.Get(c.titleKey):c.titleKey;GUILayout.Label($"• {titleKey}: {state}",body);}
             GUILayout.Space(6);GUILayout.Label("F10 refresh rotations • F11 toggle HUD",body);
             GUILayout.EndArea();
         }
