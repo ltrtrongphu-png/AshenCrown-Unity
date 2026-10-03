@@ -15,7 +15,7 @@ namespace AshenCrown.Save
 {
     [Serializable] public class AshenSaveData
     {
-        public int version=3;
+        public int version=4;
         public string language="English";
         public float masterVolume=1f;
         public bool reducedMotion;
