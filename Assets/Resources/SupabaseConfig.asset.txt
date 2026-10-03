@@ -1,0 +1,6 @@
+Create a SupabaseConfig asset at Assets/Resources/SupabaseConfig.asset and set:
+projectUrl = https://YOUR_PROJECT_REF.supabase.co
+publishableKey = sb_publishable_...
+autoCloudSave = true
+
+Never use sb_secret_ or service_role in the Unity client.
