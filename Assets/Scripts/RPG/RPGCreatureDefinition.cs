@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using AshenCrown.Core;
 using AshenCrown.Enemy;
+using AshenCrown.Progression;
 
 namespace AshenCrown.RPG
 {
