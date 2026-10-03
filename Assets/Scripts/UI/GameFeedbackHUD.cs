@@ -24,7 +24,7 @@ namespace AshenCrown.UI
         Toast active;
         Rect panel = new Rect(0, 72, 420, 70);
 
-        void OnEnable()
+        void Start()
         {
             if (LongTermProgressionSystem.Instance != null)
                 LongTermProgressionSystem.Instance.LevelChanged += OnLevelChanged;
