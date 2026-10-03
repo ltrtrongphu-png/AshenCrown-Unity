@@ -8,12 +8,13 @@ using AshenCrown.Core;
 using AshenCrown.World;
 using AshenCrown.Quests;
 using AshenCrown.Codex;
+using AshenCrown.Endgame;
 
 namespace AshenCrown.Save
 {
     [Serializable] public class AshenSaveData
     {
-        public int version=2;
+        public int version=3;
         public string language="English";
         public float masterVolume=1f;
         public bool reducedMotion;
@@ -27,6 +28,7 @@ namespace AshenCrown.Save
         public List<string> completedQuests=new List<string>();
         public List<ReputationEntry> reputation=new List<ReputationEntry>();
         public List<string> codex=new List<string>();
+        public LongTermEngagementData engagement;
     }
 
     public sealed class SaveLoadSystem:MonoBehaviour
@@ -34,7 +36,6 @@ namespace AshenCrown.Save
         public static SaveLoadSystem Instance{get;private set;}
         public string SavePath=>Path.Combine(Application.persistentDataPath,"ashen_crown_save.json");
         void Awake(){if(Instance!=null&&Instance!=this){Destroy(gameObject);return;}Instance=this;DontDestroyOnLoad(gameObject);}
-
         public bool Save()
         {
             var d=new AshenSaveData();
@@ -47,9 +48,9 @@ namespace AshenCrown.Save
             if(QuestSystem.Instance!=null){d.activeQuests=QuestSystem.Instance.CaptureActive();d.completedQuests=QuestSystem.Instance.CaptureCompleted();}
             if(ReputationSystem.Instance!=null)d.reputation=ReputationSystem.Instance.Capture();
             if(CodexSystem.Instance!=null)d.codex=CodexSystem.Instance.Capture();
+            if(LongTermEngagementSystem.Instance!=null)d.engagement=LongTermEngagementSystem.Instance.Capture();
             try{File.WriteAllText(SavePath,JsonUtility.ToJson(d,true));return true;}catch(Exception e){Debug.LogError("[SaveLoadSystem] Save failed: "+e.Message);return false;}
         }
-
         public bool Load()
         {
             if(!File.Exists(SavePath))return false;
@@ -65,11 +66,11 @@ namespace AshenCrown.Save
                 if(QuestSystem.Instance!=null)QuestSystem.Instance.Restore(d.activeQuests,d.completedQuests);
                 if(ReputationSystem.Instance!=null)ReputationSystem.Instance.Restore(d.reputation);
                 if(CodexSystem.Instance!=null)CodexSystem.Instance.Restore(d.codex);
+                if(LongTermEngagementSystem.Instance!=null)LongTermEngagementSystem.Instance.Restore(d.engagement);
                 return true;
             }
             catch(Exception e){Debug.LogError("[SaveLoadSystem] Load failed: "+e.Message);return false;}
         }
-
         public bool HasSave()=>File.Exists(SavePath);
         public void DeleteSave(){if(File.Exists(SavePath))File.Delete(SavePath);}
     }
