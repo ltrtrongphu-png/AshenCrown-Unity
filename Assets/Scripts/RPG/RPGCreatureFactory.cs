@@ -25,6 +25,8 @@ namespace AshenCrown.RPG
 
             var health=go.AddComponent<HealthAndDamageSystem>();
             health.ConfigureStats(d.health, d.defense, d.poise);
+            var reward=go.AddComponent<RPGCreatureReward>();
+            reward.Configure(8 + (int)d.rewardTier * 7 + (d.elite ? 30 : 0));
             var visual=go.AddComponent<RPGCreatureVisual>();
             visual.Build(d);
 
@@ -56,6 +58,8 @@ namespace AshenCrown.RPG
 
             var bossHealth=go.AddComponent<HealthAndDamageSystem>();
             bossHealth.ConfigureStats(d.health, d.defense, d.poise);
+            var reward=go.AddComponent<RPGCreatureReward>();
+            reward.Configure(250 + d.phaseCount * 75);
             var boss=go.AddComponent<BossController>();
             boss.bossName=d.title;
             boss.ConfigureRuntimePhases(d.phaseCount);
