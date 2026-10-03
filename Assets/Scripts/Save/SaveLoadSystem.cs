@@ -29,6 +29,7 @@ namespace AshenCrown.Save
         public List<ReputationEntry> reputation=new List<ReputationEntry>();
         public List<string> codex=new List<string>();
         public LongTermEngagementData engagement;
+        public EquipmentState equipment;
     }
 
     public sealed class SaveLoadSystem:MonoBehaviour
@@ -49,7 +50,8 @@ namespace AshenCrown.Save
             if(ReputationSystem.Instance!=null)d.reputation=ReputationSystem.Instance.Capture();
             if(CodexSystem.Instance!=null)d.codex=CodexSystem.Instance.Capture();
             if(LongTermEngagementSystem.Instance!=null)d.engagement=LongTermEngagementSystem.Instance.Capture();
-            try{File.WriteAllText(SavePath,JsonUtility.ToJson(d,true));return true;}catch(Exception e){Debug.LogError("[SaveLoadSystem] Save failed: "+e.Message);return false;}
+            if(EquipmentSystem.Instance!=null)d.equipment=EquipmentSystem.Instance.Capture();
+            try{var json=JsonUtility.ToJson(d,true);File.WriteAllText(SavePath,json);if(AshenCrown.Online.SupabaseAuthService.Instance!=null)StartCoroutine(AshenCrown.Online.SupabaseAuthService.Instance.SaveCloud(json));return true;}catch(Exception e){Debug.LogError("[SaveLoadSystem] Save failed: "+e.Message);return false;}
         }
         public bool Load()
         {
@@ -67,6 +69,7 @@ namespace AshenCrown.Save
                 if(ReputationSystem.Instance!=null)ReputationSystem.Instance.Restore(d.reputation);
                 if(CodexSystem.Instance!=null)CodexSystem.Instance.Restore(d.codex);
                 if(LongTermEngagementSystem.Instance!=null)LongTermEngagementSystem.Instance.Restore(d.engagement);
+                if(EquipmentSystem.Instance!=null)EquipmentSystem.Instance.Restore(d.equipment);
                 return true;
             }
             catch(Exception e){Debug.LogError("[SaveLoadSystem] Load failed: "+e.Message);return false;}
