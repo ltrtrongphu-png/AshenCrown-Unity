@@ -43,6 +43,8 @@ namespace AshenCrown.Save
     {
         public static SaveLoadSystem Instance { get; private set; }
         public string SavePath => Path.Combine(Application.persistentDataPath, "ashen_crown_save.json");
+        public string BackupPath => SavePath + ".bak";
+        public string TempPath => SavePath + ".tmp";
 
         void Awake()
         {
@@ -91,7 +93,13 @@ namespace AshenCrown.Save
                 var json = JsonUtility.ToJson(d, true);
                 var directory = Path.GetDirectoryName(SavePath);
                 if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-                File.WriteAllText(SavePath, json);
+                if (File.Exists(SavePath))
+                    File.Copy(SavePath, BackupPath, true);
+
+                File.WriteAllText(TempPath, json);
+                if (File.Exists(SavePath))
+                    File.Delete(SavePath);
+                File.Move(TempPath, SavePath);
 
                 if (AshenCrown.Online.SupabaseAuthService.Instance != null)
                     StartCoroutine(AshenCrown.Online.SupabaseAuthService.Instance.SaveCloud(json));
@@ -128,15 +136,29 @@ namespace AshenCrown.Save
 
         public bool Load()
         {
-            if (!File.Exists(SavePath)) return false;
+            if (TryApplyFile(SavePath))
+                return true;
+
+            if (TryApplyFile(BackupPath))
+            {
+                Debug.LogWarning("[SaveLoadSystem] Primary save was invalid; recovered from backup.");
+                return true;
+            }
+
+            return false;
+        }
+
+        bool TryApplyFile(string path)
+        {
+            if (!File.Exists(path)) return false;
 
             try
             {
-                return ApplyJson(File.ReadAllText(SavePath));
+                return ApplyJson(File.ReadAllText(path));
             }
             catch (Exception e)
             {
-                Debug.LogError("[SaveLoadSystem] Load failed: " + e.Message);
+                Debug.LogError("[SaveLoadSystem] Load failed for " + path + ": " + e.Message);
                 return false;
             }
         }
@@ -183,6 +205,6 @@ namespace AshenCrown.Save
         }
 
         public bool HasSave() => File.Exists(SavePath);
-        public void DeleteSave() { if (File.Exists(SavePath)) File.Delete(SavePath); }
+        public void DeleteSave() { if (File.Exists(SavePath)) File.Delete(SavePath); if (File.Exists(BackupPath)) File.Delete(BackupPath); if (File.Exists(TempPath)) File.Delete(TempPath); }
     }
 }
