@@ -23,10 +23,10 @@ namespace AshenCrown.Online
         public IEnumerator SaveCloud(string json)
         {
             if(Config==null||!Config.autoCloudSave||CurrentUser==null||string.IsNullOrWhiteSpace(AccessToken))yield break;
-            var payload=JsonUtility.ToJson(new CloudRow{user_id=CurrentUser.id,save_json=json});
+            var payload="{\"user_id\":"+JsonUtility.ToJson(CurrentUser.id)+",\"save_json\":"+json+",\"save_text\":"+JsonUtility.ToJson(json)+"}";
             using(var req=new UnityWebRequest(Config.projectUrl.TrimEnd('/')+"/rest/v1/player_saves?on_conflict=user_id","POST"))
             {req.uploadHandler=new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(payload));req.downloadHandler=new DownloadHandlerBuffer();req.SetRequestHeader("Content-Type","application/json");req.SetRequestHeader("apikey",Config.publishableKey);req.SetRequestHeader("Authorization","Bearer "+AccessToken);req.SetRequestHeader("Prefer","resolution=merge-duplicates,return=minimal");yield return req.SendWebRequest();if(req.result!=UnityWebRequest.Result.Success)Error?.Invoke("Cloud save failed: "+req.downloadHandler.text);}
         }
-        [Serializable]sealed class Credentials{public string email;public string password;}[Serializable]sealed class CloudRow{public string user_id;public string save_json;}
+        [Serializable]sealed class Credentials{public string email;public string password;}
     }
 }
