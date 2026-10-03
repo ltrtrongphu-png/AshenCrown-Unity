@@ -11,6 +11,7 @@ using AshenCrown.UI;
 using AshenCrown.Endgame;
 using AshenCrown.Performance;
 using AshenCrown.Online;
+using AshenCrown.Customization;
 
 namespace AshenCrown.Core
 {
@@ -26,6 +27,7 @@ namespace AshenCrown.Core
             Object.DontDestroyOnLoad(root);
             root.AddComponent<LocalizationService>();
             root.AddComponent<GameSettingsService>();
+            root.AddComponent<CharacterAppearanceSystem>();
             root.AddComponent<InventorySystem>();
             root.AddComponent<EquipmentSystem>();
             root.AddComponent<LootSystem>();
@@ -46,6 +48,8 @@ namespace AshenCrown.Core
             root.AddComponent<LongTermEngagementSystem>();
             root.AddComponent<LongTermEngagementHUD>();
             root.AddComponent<EquipmentHUD>();
+            root.AddComponent<SettingsHUD>();
+            root.AddComponent<QuestHUD>();
             root.AddComponent<PerformanceDirector>();
             root.AddComponent<SupabaseAuthService>();
             root.AddComponent<SupabaseAuthUI>();

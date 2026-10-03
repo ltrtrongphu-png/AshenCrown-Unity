@@ -214,3 +214,20 @@ The progression loop now includes:
 Create a SupabaseConfig asset under Assets/Resources/ using the public project URL and publishable key. Never put a Supabase secret/service-role key in the Unity client. Apply supabase/migrations/001_ashen_crown_accounts.sql to the Supabase project used by Ashen Crown before enabling cloud saves.
 
 The account layer is configuration-based so the repository does not contain credentials or silently write to an unrelated Supabase project.
+
+
+## 12. Character Settings / 3D Appearance / NPC Quests
+
+The player-facing loop now includes:
+- **F1 Settings**: accessibility, volume, target FPS, shadow preference and character appearance.
+- **Character appearance**: four ready-to-use presets, body scale, skin/hair/outfit color presets, persisted in PlayerPrefs and save data.
+- **3D cosmetics**: the runtime appearance layer adds lightweight cosmetic geometry when no production character accessories exist, while real imported models can still be supplied through CharacterModelBinder.
+- **NPC quest flow**: walk within interaction range and press **E** to talk; an NPC with an available quest shows a **!** marker and automatically offers the next valid quest.
+- **J Quest HUD**: shows active objectives and progress.
+- Story quests chain through Lyra -> Orren -> The Seer using the existing quest prerequisites and world progression.
+- Appearance state is included in save/cloud-save JSON, so it can be restored with the character profile.
+
+### New controls
+- **F1** — Settings / Character customization
+- **J** — Quest tracker
+- **E** — Interact with nearby NPC / accept available quest

@@ -9,12 +9,13 @@ using AshenCrown.World;
 using AshenCrown.Quests;
 using AshenCrown.Codex;
 using AshenCrown.Endgame;
+using AshenCrown.Customization;
 
 namespace AshenCrown.Save
 {
     [Serializable] public class AshenSaveData
     {
-        public int version=3;
+        public int version=4;
         public string language="English";
         public float masterVolume=1f;
         public bool reducedMotion;
@@ -31,6 +32,7 @@ namespace AshenCrown.Save
         public LongTermEngagementData engagement;
         public EquipmentState equipment;
         public LootState loot;
+        public CharacterAppearanceData appearance;
     }
 
     public sealed class SaveLoadSystem:MonoBehaviour
@@ -53,6 +55,7 @@ namespace AshenCrown.Save
             if(LongTermEngagementSystem.Instance!=null)d.engagement=LongTermEngagementSystem.Instance.Capture();
             if(EquipmentSystem.Instance!=null)d.equipment=EquipmentSystem.Instance.Capture();
             if(LootSystem.Instance!=null)d.loot=LootSystem.Instance.Capture();
+            if(CharacterAppearanceSystem.Instance!=null)d.appearance=CharacterAppearanceSystem.Instance.Capture();
             try{var json=JsonUtility.ToJson(d,true);File.WriteAllText(SavePath,json);if(AshenCrown.Online.SupabaseAuthService.Instance!=null)StartCoroutine(AshenCrown.Online.SupabaseAuthService.Instance.SaveCloud(json));return true;}catch(Exception e){Debug.LogError("[SaveLoadSystem] Save failed: "+e.Message);return false;}
         }
         void Start(){if(AshenCrown.Online.SupabaseAuthService.Instance!=null)AshenCrown.Online.SupabaseAuthService.Instance.SignedIn+=OnSignedIn;}
@@ -78,6 +81,7 @@ namespace AshenCrown.Save
             if(LongTermEngagementSystem.Instance!=null)LongTermEngagementSystem.Instance.Restore(d.engagement);
             if(EquipmentSystem.Instance!=null)EquipmentSystem.Instance.Restore(d.equipment);
             if(LootSystem.Instance!=null)LootSystem.Instance.Restore(d.loot);
+            if(CharacterAppearanceSystem.Instance!=null)CharacterAppearanceSystem.Instance.Restore(d.appearance);
             return true;
         }
         public bool HasSave()=>File.Exists(SavePath);
