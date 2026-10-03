@@ -133,3 +133,29 @@ Mọi lời gọi Animator đều "an toàn": thiếu parameter/state thì bỏ 
 - Chưa có trong bản này (để dành cho các bước sau): hệ thống Hồn Tàn/Trạm Phong Ấn, loot table, UI HUD người chơi,
   save/load. `EnemyFSM.OnEnemyKilled(enemy, soulsReward)` đã sẵn để nối vào hệ thống tiền tệ.
 - Mã chưa được biên dịch trong Unity editor tại thời điểm xuất file — nếu gặp lỗi biên dịch do khác phiên bản, báo mình để sửa.
+
+
+## 7. Eternal World / Long-Term Campaign
+
+The upgraded framework supports a long-running ARPG campaign:
+- 8 acts: Prologue, Ashen March, Hollow Kingdom, Veil Sea, Crownlands, Starless Depths, Last Ember, and New Game Plus.
+- Persistent world flags, unlocked regions, defeated bosses, and story cycles.
+- Quest graph with prerequisites and Talk, Kill, Collect, Explore, and Boss objectives.
+- NPC interaction with mouse click or E, branching dialogue, story flags, and reputation.
+- Sample NPCs: Lyra, Orren, and The Seer; capsule fallback visuals can be replaced by real 3D prefabs.
+- Long-term progression: level/XP, Essence, Prestige, relic slots, and New Game Plus cycles.
+- Crafting, faction reputation, lore codex, and rotating world events.
+- Save/Load v2 persists campaign, quests, reputation, codex, and progression.
+- Five languages: English, Vietnamese, Japanese, Korean, and Chinese Simplified.
+
+## 8. 3D Model Pipeline
+
+CharacterModelBinder supports one runtime pipeline for Unity-imported FBX or GLB prefabs:
+1. Import the model into Unity.
+2. For automatic loading, put the prefab/model under Resources and set ModelSource.assetGuid to its Resources path.
+3. Or assign ModelSource.modelPrefab directly.
+4. The model Animator is connected automatically.
+5. ModelPerformanceProfile provides distance/shadow tuning and a LOD foundation.
+6. Without a production asset, the system uses a 3D capsule fallback so scenes remain runnable.
+
+The repository currently contains the runtime integration and pipeline, but not third-party binary FBX/GLB assets.

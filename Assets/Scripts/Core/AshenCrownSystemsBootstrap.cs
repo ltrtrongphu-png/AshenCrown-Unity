@@ -1,36 +1,48 @@
 using UnityEngine;
 using AshenCrown.Localization;
-using AshenCrown.Core;
 using AshenCrown.Progression;
 using AshenCrown.Save;
+using AshenCrown.Quests;
+using AshenCrown.Dialogue;
+using AshenCrown.World;
+using AshenCrown.Codex;
+using AshenCrown.NPC;
+using AshenCrown.UI;
 
 namespace AshenCrown.Core
 {
-    public sealed class AshenCrownSystemsBootstrap : MonoBehaviour
+    public sealed class AshenCrownSystemsBootstrap:MonoBehaviour
     {
         static bool booted;
-
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Bootstrap()
         {
-            if (booted) return;
-            booted = true;
-            var root = new GameObject("AshenCrown_Systems");
+            if(booted)return;
+            booted=true;
+            var root=new GameObject("AshenCrown_Systems");
             Object.DontDestroyOnLoad(root);
             root.AddComponent<LocalizationService>();
             root.AddComponent<GameSettingsService>();
             root.AddComponent<InventorySystem>();
             root.AddComponent<SkillTreeSystem>();
+            root.AddComponent<LongTermProgressionSystem>();
+            root.AddComponent<ReputationSystem>();
+            root.AddComponent<CraftingSystem>();
+            root.AddComponent<WorldProgressionSystem>();
+            root.AddComponent<WorldEventSystem>();
+            root.AddComponent<EternalCampaignDirector>();
+            root.AddComponent<QuestSystem>();
+            root.AddComponent<DialogueSystem>();
+            root.AddComponent<CodexSystem>();
             root.AddComponent<SaveLoadSystem>();
+            root.AddComponent<NPCWorldSpawner>();
+            root.AddComponent<DialogueOverlay>();
             root.AddComponent<AshenCrownSystemsBootstrap>();
         }
-
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F5) && SaveLoadSystem.Instance != null)
-                SaveLoadSystem.Instance.Save();
-            if (Input.GetKeyDown(KeyCode.F9) && SaveLoadSystem.Instance != null)
-                SaveLoadSystem.Instance.Load();
+            if(Input.GetKeyDown(KeyCode.F5)&&SaveLoadSystem.Instance!=null)SaveLoadSystem.Instance.Save();
+            if(Input.GetKeyDown(KeyCode.F9)&&SaveLoadSystem.Instance!=null)SaveLoadSystem.Instance.Load();
         }
     }
 }
