@@ -44,10 +44,11 @@ namespace AshenCrown.Endgame
         public int LegacyExperienceToNext=>500+(LegacyLevel-1)*250;
 
         void Awake(){if(Instance!=null&&Instance!=this){Destroy(gameObject);return;}Instance=this;DontDestroyOnLoad(gameObject);}
-        void OnEnable(){if(QuestSystem.Instance!=null)QuestSystem.Instance.QuestCompleted+=OnQuestCompleted;if(WorldProgressionSystem.Instance!=null)WorldProgressionSystem.Instance.BossDefeated+=OnBossDefeated;}
-        void OnDisable(){if(QuestSystem.Instance!=null)QuestSystem.Instance.QuestCompleted-=OnQuestCompleted;if(WorldProgressionSystem.Instance!=null)WorldProgressionSystem.Instance.BossDefeated-=OnBossDefeated;}
+        void OnEnable(){if(QuestSystem.Instance!=null)QuestSystem.Instance.QuestCompleted+=OnQuestCompleted;if(WorldProgressionSystem.Instance!=null)WorldProgressionSystem.Instance.BossDefeated+=OnBossDefeated;if(CraftingSystem.Instance!=null)CraftingSystem.Instance.Crafted+=OnCrafted;}
+        void OnDisable(){if(QuestSystem.Instance!=null)QuestSystem.Instance.QuestCompleted-=OnQuestCompleted;if(WorldProgressionSystem.Instance!=null)WorldProgressionSystem.Instance.BossDefeated-=OnBossDefeated;if(CraftingSystem.Instance!=null)CraftingSystem.Instance.Crafted-=OnCrafted;}
         void OnQuestCompleted(QuestRuntime quest){RecordAction(EngagementAction.QuestCompleted);}
         void OnBossDefeated(string bossId){RecordAction(EngagementAction.BossDefeated);AddCollection("boss:"+bossId);}
+        void OnCrafted(string recipeId){RecordAction(EngagementAction.CraftCompleted);AddMastery("crafting",50);}
         void Start(){RefreshRotations();EnsureJourneyRewards();}
         void Update(){if(Input.GetKeyDown(KeyCode.F10))RefreshRotations();}
 
