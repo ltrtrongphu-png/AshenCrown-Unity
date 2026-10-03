@@ -1,0 +1,6 @@
+using UnityEngine;using AshenCrown.Core;
+namespace AshenCrown.Presentation{public sealed class CharacterModelBinder:MonoBehaviour{
+[SerializeField]GameObject modelPrefab;[SerializeField]Transform modelAnchor;[SerializeField]bool copyAnimatorFromModel=true;[SerializeField]Vector3 localPosition;[SerializeField]Vector3 localEulerAngles;[SerializeField]Vector3 localScale=Vector3.one;
+GameObject instance;public Animator ModelAnimator{get;private set;}public GameObject ModelInstance=>instance;
+void Awake()=>Rebuild();public void Rebuild(){if(instance!=null)Destroy(instance);if(modelPrefab==null)return;var a=modelAnchor!=null?modelAnchor:transform;instance=Instantiate(modelPrefab,a);instance.name=modelPrefab.name+"_Runtime";instance.transform.localPosition=localPosition;instance.transform.localRotation=Quaternion.Euler(localEulerAngles);instance.transform.localScale=localScale;ModelAnimator=instance.GetComponentInChildren<Animator>(true);if(copyAnimatorFromModel){var root=GetComponent<Animator>();if(root!=null&&ModelAnimator!=null)root.runtimeAnimatorController=ModelAnimator.runtimeAnimatorController;}}
+public void Play(string state,float fade=.08f)=>AnimatorSafe.Play(ModelAnimator!=null?ModelAnimator:GetComponent<Animator>(),state,fade);}}
