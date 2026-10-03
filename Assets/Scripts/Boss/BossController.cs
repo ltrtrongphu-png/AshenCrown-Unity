@@ -181,6 +181,42 @@ namespace AshenCrown.Boss
             Health.OnDeath -= HandleDeath;
         }
 
+        /// <summary>Creates deterministic runtime phases for bosses spawned from RPG data.</summary>
+        public void ConfigureRuntimePhases(int phaseCount)
+        {
+            phaseCount = Mathf.Clamp(phaseCount, 1, 4);
+            phases = new BossPhase[phaseCount];
+            for (int i = 0; i < phaseCount; i++)
+            {
+                float threshold = phaseCount == 1 ? 1f : Mathf.Clamp01(1f - (i * (0.7f / (phaseCount - 1))));
+                var attack = new BossAttack
+                {
+                    name = i == 0 ? "Crown Strike" : (i % 2 == 0 ? "Veil Burst" : "Ashen Surge"),
+                    shape = i == 0 ? BossAttackShape.Melee : (i % 2 == 0 ? BossAttackShape.GroundSlam : BossAttackShape.Melee),
+                    maxRange = i == 0 ? 3.8f : 7f,
+                    aoeRadius = 5.5f + i * 1.25f,
+                    windup = Mathf.Max(0.35f, 0.75f - i * 0.08f),
+                    active = 0.25f,
+                    recover = Mathf.Max(0.45f, 0.9f - i * 0.08f),
+                    cooldown = Mathf.Max(1.5f, 3f - i * 0.3f),
+                    damage = 30f + i * 10f,
+                    poiseDamage = 28f + i * 6f
+                };
+                phases[i] = new BossPhase
+                {
+                    name = "Phase " + (i + 1),
+                    enterAtHealthPercent = threshold,
+                    moveSpeed = 5f + i * 0.6f,
+                    speedMultiplier = 1f + i * 0.08f,
+                    aoeMultiplier = 1f + i * 0.12f,
+                    scale = Vector3.one,
+                    canBeStaggered = i < phaseCount - 1,
+                    transitionDuration = 2f,
+                    attacks = new[] { attack }
+                };
+            }
+        }
+
         int MaxAttackCount()
         {
             int m = 1;
@@ -190,7 +226,7 @@ namespace AshenCrown.Boss
 
         void Update()
         {
-            if (state == BossState.Dead || player == null) return;
+            if (state == BossState.Dead || player == null || playerHealth == null) return;
 
             if (slowTimer > 0f) slowTimer -= Time.deltaTime;
             float dt = Time.deltaTime * LocalTime;
