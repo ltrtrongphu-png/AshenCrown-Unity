@@ -58,6 +58,7 @@ namespace AshenCrown.RPG
             boss.bossName=d.title;
 
             var visual=go.AddComponent<RPGCreatureVisual>();
+            go.AddComponent<RPGBossVisualDirector>();
             var visualData=new RPGCreatureDefinition
             {
                 id=d.id,displayName=d.title,kind=RPGCreatureKind.Boss,scale=1f,elite=true,coreColor=d.color
