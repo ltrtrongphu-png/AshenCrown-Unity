@@ -55,7 +55,7 @@ namespace AshenCrown.Save
             if(LootSystem.Instance!=null)d.loot=LootSystem.Instance.Capture();
             try{var json=JsonUtility.ToJson(d,true);File.WriteAllText(SavePath,json);if(AshenCrown.Online.SupabaseAuthService.Instance!=null)StartCoroutine(AshenCrown.Online.SupabaseAuthService.Instance.SaveCloud(json));return true;}catch(Exception e){Debug.LogError("[SaveLoadSystem] Save failed: "+e.Message);return false;}
         }
-        void OnEnable(){if(AshenCrown.Online.SupabaseAuthService.Instance!=null)AshenCrown.Online.SupabaseAuthService.Instance.SignedIn+=OnSignedIn;}
+        void Start(){if(AshenCrown.Online.SupabaseAuthService.Instance!=null)AshenCrown.Online.SupabaseAuthService.Instance.SignedIn+=OnSignedIn;}
         void OnDisable(){if(AshenCrown.Online.SupabaseAuthService.Instance!=null)AshenCrown.Online.SupabaseAuthService.Instance.SignedIn-=OnSignedIn;}
         void OnSignedIn(AshenCrown.Online.AuthUser user){StartCoroutine(AshenCrown.Online.SupabaseAuthService.Instance.LoadCloud(json=>{if(!string.IsNullOrWhiteSpace(json))ApplyJson(json);}));}
         public bool Load()
