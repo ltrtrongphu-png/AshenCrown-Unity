@@ -39,7 +39,7 @@ namespace AshenCrown.Progression
         void Start()
         {
             Refresh();
-            if (InventorySystem.Instance != null && InventorySystem.Instance.GetAmount(CurrencyId) == 0)
+            if (InventorySystem.Instance != null && InventorySystem.Instance.Items.Count == 0)
                 InventorySystem.Instance.Add(CurrencyId, 250);
         }
 
