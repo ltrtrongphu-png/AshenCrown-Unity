@@ -102,12 +102,12 @@ namespace AshenCrown.RPG
         {
             if(visual==null||definition==null)return;
             bool reduced=GameSettingsService.Instance!=null&&GameSettingsService.Instance.ReducedMotion;
-            float motion=reduced?.15f:1f;
+            float motion=reduced ? .15f : 1f;
             float t=Time.time*motion;
-            float hover=definition.kind==RPGCreatureKind.Wisp?.12f:.035f;
+            float hover=definition.kind==RPGCreatureKind.Wisp ? .12f : .035f;
             visual.localPosition=Vector3.up*Mathf.Sin(t*1.8f)*hover;
             visual.localRotation=Quaternion.Euler(Mathf.Sin(t*.7f)*2f,t*(definition.elite?8f:4f),Mathf.Cos(t*.5f)*2f);
-            float pulse=1f+Mathf.Sin(t*2.4f)*(definition.elite?.025f:.012f);
+            float pulse=1f+Mathf.Sin(t*2.4f)*(definition.elite ? .025f : .012f);
             visual.localScale=Vector3.one*pulse;
             if(animator!=null)animator.speed=motion;
         }
