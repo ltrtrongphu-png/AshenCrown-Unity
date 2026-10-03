@@ -47,7 +47,7 @@ namespace AshenCrown.RPG
         {
             if(visual==null)return;
             bool reduced=GameSettingsService.Instance!=null&&GameSettingsService.Instance.ReducedMotion;
-            float motion=reduced?.2f:1f;
+            float motion=reduced ? .2f : 1f;
             float t=Time.time*motion;
             phasePulse=Mathf.MoveTowards(phasePulse,0f,Time.deltaTime*1.6f);
             visual.localRotation=Quaternion.Euler(Mathf.Sin(t*.5f)*3f,t*(3.5f+intensity*2f),Mathf.Cos(t*.65f)*3f);
