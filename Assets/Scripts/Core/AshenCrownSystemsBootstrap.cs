@@ -51,6 +51,8 @@ namespace AshenCrown.Core
             root.AddComponent<SettingsHUD>();
             root.AddComponent<QuestHUD>();
             root.AddComponent<PerformanceDirector>();
+            root.AddComponent<SessionPersistenceDirector>();
+            root.AddComponent<ProgressionHUD>();
             root.AddComponent<SupabaseAuthService>();
             root.AddComponent<SupabaseAuthUI>();
             root.AddComponent<AshenCrownSystemsBootstrap>();
