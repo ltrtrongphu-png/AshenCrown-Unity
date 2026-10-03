@@ -24,6 +24,7 @@ namespace AshenCrown.RPG
             agent.stoppingDistance=1.7f;
 
             var health=go.AddComponent<HealthAndDamageSystem>();
+            health.ConfigureStats(d.health, d.defense, d.poise);
             var visual=go.AddComponent<RPGCreatureVisual>();
             visual.Build(d);
 
