@@ -231,3 +231,17 @@ The player-facing loop now includes:
 - **F1** — Settings / Character customization
 - **J** — Quest tracker
 - **E** — Interact with nearby NPC / accept available quest
+
+
+## 13. Session Reliability / Autosave
+
+The runtime now includes a session persistence director:
+- Autosave every 120 seconds by default.
+- Checkpoint save when a single-mode scene loads.
+- Checkpoint on application pause/focus loss.
+- Local save metadata records UTC timestamp and save reason.
+- Daily world events persist through save/load and automatically roll over when the UTC day changes.
+- F2 toggles the compact progression/profile HUD.
+- The profile HUD shows level, XP progress, Essence, Prestige, Journey/Legacy progress, active Expedition room state, and the next autosave.
+
+F5 remains the manual save shortcut and F9 remains the local load shortcut.
