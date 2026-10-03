@@ -159,3 +159,18 @@ CharacterModelBinder supports one runtime pipeline for Unity-imported FBX or GLB
 6. Without a production asset, the system uses a 3D capsule fallback so scenes remain runnable.
 
 The repository currently contains the runtime integration and pipeline, but not third-party binary FBX/GLB assets.
+
+
+## 9. Multi-Camera Gameplay
+
+- **1** — First Person: camera at the character's head, direct camera-aligned attacks.
+- **2** — Shoulder Camera: close over-the-shoulder combat view.
+- **3** — Third Person: wider classic action-RPG view.
+- **V** — cycle all camera modes.
+- **C** — swap left/right shoulder in modes 2/3.
+- **Z** — temporary combat zoom.
+- Camera collision prevents clipping through level geometry.
+- Lock-on works across all three views.
+- Sprint changes FOV dynamically.
+- Camera shake respects the Reduced Motion setting.
+- Camera mode and shoulder preference persist through PlayerPrefs.

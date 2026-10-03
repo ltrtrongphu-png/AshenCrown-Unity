@@ -37,6 +37,7 @@ namespace AshenCrown.Core
             root.AddComponent<SaveLoadSystem>();
             root.AddComponent<NPCWorldSpawner>();
             root.AddComponent<DialogueOverlay>();
+            root.AddComponent<CameraModeHUD>();
             root.AddComponent<AshenCrownSystemsBootstrap>();
         }
         void Update()
