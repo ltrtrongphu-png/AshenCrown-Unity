@@ -25,6 +25,10 @@ namespace AshenCrown.Progression
             var item=new ItemDefinition{id=$"{sourceId}_{Guid.NewGuid():N}",displayName=$"{Prefixes[UnityEngine.Random.Range(0,Prefixes.Length)]} {slot}",slot=slot,tier=tier,requiredLevel=Mathf.Max(1,playerLevel-2),power=power,armor=slot==EquipmentSlot.Weapon?0:power/2,damage=slot==EquipmentSlot.Weapon?power:0,health=power/3};
             var count=Mathf.Clamp(1+(int)tier/2,1,5);for(int i=0;i<count;i++)item.affixes.Add(Affixes[UnityEngine.Random.Range(0,Affixes.Length)]);ItemDropped?.Invoke(item);return item;
         }
+        public int Salvage(ItemDefinition item)
+        {
+            if(item==null)return 0;var reward=2+(int)item.tier*3+item.upgradeLevel;equipped.Remove(item.slot);EquipmentChanged?.Invoke();if(LongTermProgressionSystem.Instance!=null)LongTermProgressionSystem.Instance.AddEssence(reward);return reward;
+        }
         public bool Upgrade(ItemDefinition item,int essenceCost)
         {
             if(item==null||item.upgradeLevel>=item.maxUpgrade||LongTermProgressionSystem.Instance==null||LongTermProgressionSystem.Instance.Essence<essenceCost)return false;
