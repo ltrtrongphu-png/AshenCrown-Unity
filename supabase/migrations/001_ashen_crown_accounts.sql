@@ -3,3 +3,4 @@ alter table public.player_saves enable row level security;
 create policy "players can read own save" on public.player_saves for select to authenticated using ((select auth.uid())=user_id);
 create policy "players can insert own save" on public.player_saves for insert to authenticated with check ((select auth.uid())=user_id);
 create policy "players can update own save" on public.player_saves for update to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+ALTER TABLE public.player_saves ADD COLUMN IF NOT EXISTS save_text text NOT NULL DEFAULT '';
