@@ -22,6 +22,7 @@ namespace AshenCrown.Core
             root.AddComponent<InventorySystem>();
             root.AddComponent<SkillTreeSystem>();
             root.AddComponent<SaveLoadSystem>();
+            root.AddComponent<AshenCrownSystemsBootstrap>();
         }
 
         void Update()
