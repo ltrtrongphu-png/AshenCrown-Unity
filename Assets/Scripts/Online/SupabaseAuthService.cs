@@ -27,6 +27,21 @@ namespace AshenCrown.Online
             using(var req=new UnityWebRequest(Config.projectUrl.TrimEnd('/')+"/rest/v1/player_saves?on_conflict=user_id","POST"))
             {req.uploadHandler=new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(payload));req.downloadHandler=new DownloadHandlerBuffer();req.SetRequestHeader("Content-Type","application/json");req.SetRequestHeader("apikey",Config.publishableKey);req.SetRequestHeader("Authorization","Bearer "+AccessToken);req.SetRequestHeader("Prefer","resolution=merge-duplicates,return=minimal");yield return req.SendWebRequest();if(req.result!=UnityWebRequest.Result.Success)Error?.Invoke("Cloud save failed: "+req.downloadHandler.text);}
         }
+        public IEnumerator LoadCloud(Action<string> onLoaded)
+        {
+            if(Config==null||CurrentUser==null||string.IsNullOrWhiteSpace(AccessToken)){onLoaded?.Invoke(null);yield break;}
+            var url=Config.projectUrl.TrimEnd('/')+"/rest/v1/player_saves?select=save_text&user_id=eq."+UnityWebRequest.EscapeURL(CurrentUser.id)+"&limit=1";
+            using(var req=UnityWebRequest.Get(url))
+            {
+                req.SetRequestHeader("apikey",Config.publishableKey);req.SetRequestHeader("Authorization","Bearer "+AccessToken);
+                yield return req.SendWebRequest();
+                if(req.result!=UnityWebRequest.Result.Success){Error?.Invoke("Cloud load failed: "+req.downloadHandler.text);onLoaded?.Invoke(null);yield break;}
+                var rows=JsonUtility.FromJson<CloudRows>("{\"rows\":"+req.downloadHandler.text+"}");
+                onLoaded?.Invoke(rows!=null&&rows.rows!=null&&rows.rows.Length>0?rows.rows[0].save_text:null);
+            }
+        }
         [Serializable]sealed class Credentials{public string email;public string password;}
+        [Serializable]sealed class CloudRow{public string save_text;}
+        [Serializable]sealed class CloudRows{public CloudRow[] rows;}
     }
 }
