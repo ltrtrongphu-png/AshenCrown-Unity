@@ -23,7 +23,11 @@ namespace AshenCrown.Localization
             { "ui.ready", new[] { "Ready", "Sẵn sàng", "準備完了", "준비 완료", "准备就绪" } },
             { "combat.move", new[] { "Move", "Di chuyển", "移動", "이동", "移动" } },
             { "combat.dodge", new[] { "Dodge", "Né", "回避", "회피", "闪避" } },
-            { "combat.guard", new[] { "Guard / Parry", "Đỡ / Đỡ hoàn hảo", "ガード / パリィ", "가드 / 패리", "格挡 / 弹反" } }
+            { "combat.guard", new[] { "Guard / Parry", "Đỡ / Đỡ hoàn hảo", "ガード / パリィ", "가드 / 패리", "格挡 / 弹反" } },
+            { "skill.ashen_edge", new[] { "Ashen Edge", "Lưỡi Tro Tàn", "灰の刃", "잿빛 칼날", "灰烬之刃" } },
+            { "skill.void_step", new[] { "Void Step", "Bước Hư Không", "虚無の歩み", "공허의 발걸음", "虚空步" } },
+            { "skill.ember_guard", new[] { "Ember Guard", "Hộ Vệ Tàn Lửa", "残火の守り", "잿불 수호", "余烬守护" } },
+            { "skill.crown_breaker", new[] { "Crown Breaker", "Phá Vương Miện", "王冠砕き", "왕관 파괴자", "破冠者" } }
         };
 
         void Awake()
