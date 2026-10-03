@@ -54,9 +54,11 @@ namespace AshenCrown.RPG
             agent.angularSpeed=360f;
             agent.stoppingDistance=2.5f;
 
-            go.AddComponent<HealthAndDamageSystem>();
+            var bossHealth=go.AddComponent<HealthAndDamageSystem>();
+            bossHealth.ConfigureStats(d.health, d.defense, d.poise);
             var boss=go.AddComponent<BossController>();
             boss.bossName=d.title;
+            boss.ConfigureRuntimePhases(d.phaseCount);
 
             var visual=go.AddComponent<RPGCreatureVisual>();
             go.AddComponent<RPGBossVisualDirector>();
