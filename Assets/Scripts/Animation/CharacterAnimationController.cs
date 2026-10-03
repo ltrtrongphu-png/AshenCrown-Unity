@@ -1,0 +1,5 @@
+using UnityEngine;using AshenCrown.Core;
+namespace AshenCrown.Animation{public sealed class CharacterAnimationController:MonoBehaviour{
+[SerializeField]Animator animator;[SerializeField]float locomotionDamp=.12f;void Awake(){if(animator==null)animator=GetComponentInChildren<Animator>();}
+public void SetLocomotion(Vector3 localVelocity,float speed01){AnimatorSafe.SetFloat(animator,"Speed",speed01,locomotionDamp,Time.deltaTime);AnimatorSafe.SetFloat(animator,"MoveX",localVelocity.x,locomotionDamp,Time.deltaTime);AnimatorSafe.SetFloat(animator,"MoveY",localVelocity.z,locomotionDamp,Time.deltaTime);}
+public void SetGrounded(bool v)=>AnimatorSafe.SetBool(animator,"Grounded",v);public void SetCombat(bool v)=>AnimatorSafe.SetBool(animator,"Combat",v);public void Trigger(string v)=>AnimatorSafe.Trigger(animator,v);public void Play(string v,float f=.08f)=>AnimatorSafe.Play(animator,v,f);public void SetSpeed(float v){if(animator!=null)animator.speed=Mathf.Max(.01f,v);}}}
