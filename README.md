@@ -189,3 +189,11 @@ A meta-progression layer now sits above the main campaign so the game has long-t
 - **Lightweight HUD**: F11 toggles the panel and F10 refreshes the current rotation.
 
 Gameplay systems can wire into the layer through LongTermEngagementSystem.Instance.RecordAction(...), AddMastery(...), and AddCollection(...).
+
+### Endgame controls
+- **F12** — start an Expedition at the selected tier.
+- **PageUp / PageDown** — choose Expedition tier 1–20.
+- **F7** — advance one Expedition room.
+- **F8** — claim all completed rotating contracts.
+- **F10** — refresh the current rotation.
+- **F11** — toggle the endgame HUD.
