@@ -23,7 +23,8 @@ namespace AshenCrown.Quests
         void Awake(){if(Instance!=null&&Instance!=this){Destroy(gameObject);return;}Instance=this;DontDestroyOnLoad(gameObject);BuildStoryQuests();}
         void OnEnable(){if(WorldProgressionSystem.Instance!=null)WorldProgressionSystem.Instance.BossDefeated+=OnBossDefeated;}
         void OnDisable(){if(WorldProgressionSystem.Instance!=null)WorldProgressionSystem.Instance.BossDefeated-=OnBossDefeated;}
-        public QuestDefinition GetDefinition(string id){QuestDefinition q;return definitions.TryGetValue(id,out q)?q:null;}\n        public QuestDefinition GetAvailableQuestForGiver(string giverId){foreach(var pair in definitions)if(pair.Value.giverId==giverId&&CanAccept(pair.Key))return pair.Value;return null;}
+        public QuestDefinition GetDefinition(string id){QuestDefinition q;return definitions.TryGetValue(id,out q)?q:null;
+        public QuestDefinition GetAvailableQuestForGiver(string giverId){foreach(var pair in definitions)if(pair.Value.giverId==giverId&&CanAccept(pair.Key))return pair.Value;return null;}
         public bool IsCompleted(string id)=>completed.Contains(id);
         public bool CanAccept(string id){var q=GetDefinition(id);if(q==null||active.ContainsKey(id)||completed.Contains(id))return false;if(q.prerequisites==null)return true;foreach(var p in q.prerequisites)if(!completed.Contains(p))return false;return true;}
         public bool Accept(string id){if(!CanAccept(id))return false;var q=definitions[id];var r=new QuestRuntime{id=id,status=QuestStatus.Active};foreach(var o in q.objectives)r.objectives.Add(new QuestObjective{id=o.id,type=o.type,targetId=o.targetId,required=o.required,displayKey=o.displayKey});active[id]=r;QuestAccepted?.Invoke(r);return true;}
