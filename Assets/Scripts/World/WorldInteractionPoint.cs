@@ -9,6 +9,6 @@ namespace AshenCrown.World
         void Start(){var p=GameObject.FindGameObjectWithTag("Player");if(p!=null)player=p.transform;}
         void Update(){if(activated||player==null)return;if(Vector3.Distance(player.position,transform.position)<=activationDistance&&Input.GetKeyDown(KeyCode.E))Activate();}
         void OnMouseDown(){Activate();}
-        public void Activate(){if(activated)return;if(player!=null&&Vector3.Distance(player.position,transform.position)>activationDistance)return;activated=true;if(EternalCampaignDirector.Instance!=null)EternalCampaignDirector.Instance.NotifyExplore(pointId);else if(QuestSystem.Instance!=null)QuestSystem.Instance.Progress(QuestObjectiveType.Explore,pointId);}
+        public void Activate(){if(activated)return;if(player!=null&&Vector3.Distance(player.position,transform.position)>activationDistance)return;activated=true;if(AshenCrown.Endgame.LongTermEngagementSystem.Instance!=null)AshenCrown.Endgame.LongTermEngagementSystem.Instance.RecordAction(AshenCrown.Endgame.EngagementAction.ExplorationFound);if(EternalCampaignDirector.Instance!=null)EternalCampaignDirector.Instance.NotifyExplore(pointId);else if(QuestSystem.Instance!=null)QuestSystem.Instance.Progress(QuestObjectiveType.Explore,pointId);}
     }
 }

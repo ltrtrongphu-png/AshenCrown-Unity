@@ -49,7 +49,10 @@ namespace AshenCrown.Localization
             {"quest.objective.explore",new[]{"Explore","Khám phá","探索","탐험","探索"}},
             {"quest.objective.kill",new[]{"Defeat","Đánh bại","討伐","처치","击败"}},
             {"quest.objective.collect",new[]{"Collect","Thu thập","収集","수집","收集"}},
-            {"quest.objective.boss",new[]{"Defeat the boss","Đánh bại trùm","ボスを倒す","보스를 처치","击败首领"}}
+            {"quest.objective.boss",new[]{"Defeat the boss","Đánh bại trùm","ボスを倒す","보스를 처치","击败首领"}},
+            {"contract.hunt",new[]{"Weekly Hunt","Săn hàng tuần","週間討伐","주간 사냥","每周狩猎"}},
+            {"contract.story",new[]{"Weekly Story","Cốt truyện hàng tuần","週間ストーリー","주간 스토리","每周剧情"}},
+            {"contract.explore",new[]{"Weekly Exploration","Khám phá hàng tuần","週間探索","주간 탐험","每周探索"}}
         };
         void Awake(){if(Instance!=null&&Instance!=this){Destroy(gameObject);return;}Instance=this;DontDestroyOnLoad(gameObject);CurrentLanguage=(Language)Mathf.Clamp(PlayerPrefs.GetInt("ashen.language",0),0,4);}
         public void SetLanguage(Language language){if(CurrentLanguage==language)return;CurrentLanguage=language;PlayerPrefs.SetInt("ashen.language",(int)language);PlayerPrefs.Save();LanguageChanged?.Invoke();}

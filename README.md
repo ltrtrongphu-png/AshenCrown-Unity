@@ -174,3 +174,18 @@ The repository currently contains the runtime integration and pipeline, but not 
 - Sprint changes FOV dynamically.
 - Camera shake respects the Reduced Motion setting.
 - Camera mode and shoulder preference persist through PlayerPrefs.
+
+## 10. Eternal Engagement / Endgame Loop
+
+A meta-progression layer now sits above the main campaign so the game has long-term goals without requiring an online service:
+- **Rotating weekly contracts** for combat, story and exploration.
+- **Seasonal Journey** with quarterly identity, Journey Points and 10 milestone reward tiers.
+- **Mastery** XP/ranks for weapons, builds, expeditions or future archetypes.
+- **Persistent achievements** for combat, bosses, evasion, parries, levels and collections.
+- **Collection registry** for discoveries that can later feed relics, lore, cosmetics or a museum.
+- **Legacy progression** that continues beyond the normal character level.
+- **Endless Expeditions** from tier 1–20 with deterministic modifiers, escalating rooms and rewards.
+- **Offline-first save/load** for the entire meta layer.
+- **Lightweight HUD**: F11 toggles the panel and F10 refreshes the current rotation.
+
+Gameplay systems can wire into the layer through LongTermEngagementSystem.Instance.RecordAction(...), AddMastery(...), and AddCollection(...).

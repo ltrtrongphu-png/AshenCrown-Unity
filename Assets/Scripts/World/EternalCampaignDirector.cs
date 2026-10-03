@@ -22,7 +22,7 @@ namespace AshenCrown.World
             }
         }
         public void NotifyExplore(string pointId){if(QuestSystem.Instance!=null)QuestSystem.Instance.Progress(QuestObjectiveType.Explore,pointId);}
-        public void NotifyKill(string enemyId){if(QuestSystem.Instance!=null)QuestSystem.Instance.Progress(QuestObjectiveType.Kill,enemyId);if(WorldEventSystem.Instance!=null)WorldEventSystem.Instance.Progress();}
+        public void NotifyKill(string enemyId){if(AshenCrown.Endgame.LongTermEngagementSystem.Instance!=null)AshenCrown.Endgame.LongTermEngagementSystem.Instance.RecordAction(AshenCrown.Endgame.EngagementAction.EnemyDefeated);if(QuestSystem.Instance!=null)QuestSystem.Instance.Progress(QuestObjectiveType.Kill,enemyId);if(WorldEventSystem.Instance!=null)WorldEventSystem.Instance.Progress();}
         public void NotifyCollect(string itemId,int amount=1){if(QuestSystem.Instance!=null)QuestSystem.Instance.Progress(QuestObjectiveType.Collect,itemId,amount);}
     }
 }
