@@ -45,6 +45,7 @@ namespace AshenCrown.Core
             root.AddComponent<CameraModeHUD>();
             root.AddComponent<LongTermEngagementSystem>();
             root.AddComponent<LongTermEngagementHUD>();
+            root.AddComponent<EquipmentHUD>();
             root.AddComponent<PerformanceDirector>();
             root.AddComponent<SupabaseAuthService>();
             root.AddComponent<SupabaseAuthUI>();
