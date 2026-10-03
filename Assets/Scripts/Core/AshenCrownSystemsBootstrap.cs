@@ -32,7 +32,6 @@ namespace AshenCrown.Core
             root.AddComponent<EquipmentSystem>();
             root.AddComponent<LootSystem>();
             root.AddComponent<RPGShopSystem>();
-            root.AddComponent<RPGShopSystem>();
             root.AddComponent<SkillTreeSystem>();
             root.AddComponent<LongTermProgressionSystem>();
             root.AddComponent<ReputationSystem>();
@@ -50,7 +49,6 @@ namespace AshenCrown.Core
             root.AddComponent<LongTermEngagementSystem>();
             root.AddComponent<LongTermEngagementHUD>();
             root.AddComponent<EquipmentHUD>();
-            root.AddComponent<RPGShopHUD>();
             root.AddComponent<RPGShopHUD>();
             root.AddComponent<SettingsHUD>();
             root.AddComponent<QuestHUD>();
