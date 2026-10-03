@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0a09"><meta name="description" content="Ashen Crown: The Last Ember — a dark fantasy action RPG prototype built in Unity.">
+<title>Ashen Crown — The Last Ember</title><link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="noise"></div>
+<header class="site-header">
+<a class="brand" href="#top"><span class="brand-mark"><span></span></span><span>Ashen Crown</span></a>
+<nav><a href="#combat">Combat</a><a href="#systems">Systems</a><a href="#controls">Controls</a><a class="nav-cta" href="https://github.com/ltrtrongphu-png/AshenCrown-Unity" target="_blank" rel="noreferrer">Source ↗</a></nav>
+<button class="menu" aria-label="Menu"><i></i><i></i></button>
+</header>
+<main id="top">
+<section class="hero">
+<div class="hero-copy"><p class="eyebrow"><span></span> UNITY / DARK FANTASY ARPG</p><h1>The last ember<br><em>still burns.</em></h1>
+<p class="lede">A deliberate, weighty combat prototype built around stamina, poise, timing and the small decisions that turn survival into victory.</p>
+<div class="hero-actions"><a class="button primary" href="#combat">Explore the combat <span>→</span></a><a class="button quiet" href="https://github.com/ltrtrongphu-png/AshenCrown-Unity" target="_blank" rel="noreferrer">View source</a></div></div>
+<div class="hero-art" aria-hidden="true"><div class="sun"></div><div class="sigil"><div class="crown"></div><div class="ember"></div></div><div class="ring ring-a"></div><div class="ring ring-b"></div><div class="shard s1"></div><div class="shard s2"></div><div class="shard s3"></div></div>
+<div class="hero-foot"><span>01 — THE LAST EMBER</span><span>Prototype / Unity 2021.3 LTS+</span></div>
+</section>
+<section class="manifesto"><div class="section-index">02</div><div><p class="eyebrow">A COMBAT-FIRST APPROACH</p><h2>Nothing should happen<br>without <em>a reason.</em></h2></div><p class="manifesto-text">Ashen Crown is built around readable encounters, committed attacks and defensive choices with consequences. The goal is not spectacle for its own sake — every hit, stagger and recovery window exists to make the player pay attention.</p></section>
+<section id="combat" class="combat"><div class="section-head"><div><p class="eyebrow">03 / COMBAT</p><h2>Learn the rhythm.</h2></div><p>Four layers of interaction create a combat loop that rewards patience without making every encounter slow.</p></div>
+<div class="combat-grid">
+<article class="feature feature-large"><span class="number">01</span><div class="feature-icon blade"></div><h3>Committed strikes</h3><p>Light attacks flow through a four-hit combo. Heavy attacks charge into a deliberate release window instead of becoming a button mash.</p></article>
+<article class="feature"><span class="number">02</span><div class="feature-icon shield"></div><h3>Defend with intent</h3><p>Block, parry or spend stamina to roll. A narrow perfect-dodge window turns timing into a real resource.</p></article>
+<article class="feature"><span class="number">03</span><div class="feature-icon poise"></div><h3>Break the poise</h3><p>Damage is more than a health trade. Pressure an enemy's poise, create a stagger and earn your opening.</p></article>
+<article class="feature feature-wide"><span class="number">04</span><div class="phase-bars"><i></i><i></i><i></i></div><div><h3>Bosses that change the rules</h3><p>Three-phase boss logic, enrage states, ranged threats and ground hazards shift the player's priorities rather than simply inflate health.</p></div></article>
+</div></section>
+<section id="systems" class="systems"><div class="systems-intro"><p class="eyebrow">04 / UNDER THE HOOD</p><h2>Small systems.<br><em>Clear contracts.</em></h2><p>The codebase keeps combat modules separated through shared interfaces, making the prototype easier to extend without turning every mechanic into a dependency.</p></div>
+<div class="system-list"><div><span>01</span><b>Player</b><p>Movement · sprint · lock-on · camera</p></div><div><span>02</span><b>Combat</b><p>Damage · armor · poise · resistances</p></div><div><span>03</span><b>Enemy</b><p>FSM · ranged attacks · hazards</p></div><div><span>04</span><b>Boss</b><p>Phases · enrage · stagger · UI events</p></div><div><span>05</span><b>Presentation</b><p>Camera shake · floating damage · HUD hooks</p></div></div></section>
+<section id="controls" class="controls"><div class="section-head"><div><p class="eyebrow">05 / FIELD NOTES</p><h2>Controls at a glance.</h2></div></div>
+<div class="control-card"><div class="control-row"><span>W A S D</span><b>Move</b><small>Camera-relative movement</small></div><div class="control-row"><span>SHIFT</span><b>Sprint</b><small>Consumes stamina</small></div><div class="control-row"><span>LMB</span><b>Light attack</b><small>Four-hit combo / input buffer</small></div><div class="control-row"><span>RMB</span><b>Heavy attack</b><small>Hold to charge · release to strike</small></div><div class="control-row"><span>SPACE</span><b>Dodge</b><small>0.3s i-frame · perfect timing window</small></div><div class="control-row"><span>F</span><b>Guard / Parry</b><small>Tap early to parry · hold to block</small></div><div class="control-row"><span>Q / E</span><b>Skills</b><small>Void Thrust · Ashen Eruption</small></div><div class="control-row"><span>R</span><b>Soul Harvest</b><small>Requires a full ultimate meter</small></div></div></section>
+<section class="closing"><div class="closing-mark"><span></span></div><p class="eyebrow">THE FIRE IS NOT GONE.</p><h2>It is waiting<br><em>for a hand.</em></h2><a class="button primary" href="https://github.com/ltrtrongphu-png/AshenCrown-Unity" target="_blank" rel="noreferrer">Open the repository ↗</a></section>
+</main>
+<footer><span>ASHEN CROWN / THE LAST EMBER</span><span>Built with Unity · Presented on Vercel</span></footer>
+<script src="./app.js"></script>
+</body></html>
