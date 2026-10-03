@@ -9,6 +9,8 @@ using AshenCrown.Codex;
 using AshenCrown.NPC;
 using AshenCrown.UI;
 using AshenCrown.Endgame;
+using AshenCrown.Performance;
+using AshenCrown.Online;
 
 namespace AshenCrown.Core
 {
@@ -25,6 +27,8 @@ namespace AshenCrown.Core
             root.AddComponent<LocalizationService>();
             root.AddComponent<GameSettingsService>();
             root.AddComponent<InventorySystem>();
+            root.AddComponent<EquipmentSystem>();
+            root.AddComponent<LootSystem>();
             root.AddComponent<SkillTreeSystem>();
             root.AddComponent<LongTermProgressionSystem>();
             root.AddComponent<ReputationSystem>();
@@ -41,6 +45,10 @@ namespace AshenCrown.Core
             root.AddComponent<CameraModeHUD>();
             root.AddComponent<LongTermEngagementSystem>();
             root.AddComponent<LongTermEngagementHUD>();
+            root.AddComponent<EquipmentHUD>();
+            root.AddComponent<PerformanceDirector>();
+            root.AddComponent<SupabaseAuthService>();
+            root.AddComponent<SupabaseAuthUI>();
             root.AddComponent<AshenCrownSystemsBootstrap>();
         }
         void Update()
