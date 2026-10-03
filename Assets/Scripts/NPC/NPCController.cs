@@ -7,7 +7,7 @@ namespace AshenCrown.NPC
     public sealed class NPCController:MonoBehaviour
     {
         [SerializeField]string npcId="lyra";[SerializeField]float interactionDistance=5f;Transform player;
-        public string NpcId=>npcId;
+        public string NpcId=>npcId;\n        void OnGUI(){if(Camera.main==null||QuestSystem.Instance==null)return;var q=QuestSystem.Instance.GetAvailableQuestForGiver(npcId);if(q==null)return;var p=Camera.main.WorldToScreenPoint(transform.position+Vector3.up*2.2f);if(p.z<=0)return;GUI.Label(new Rect(p.x-12,Screen.height-p.y-22,40,30),"!");}
         void Start(){GameObject p=GameObject.FindGameObjectWithTag("Player");if(p!=null)player=p.transform;}
         void Update(){if(player!=null&&Input.GetKeyDown(KeyCode.E)&&Vector3.Distance(player.position,transform.position)<=interactionDistance)Interact();}
         void OnMouseDown(){Interact();}
