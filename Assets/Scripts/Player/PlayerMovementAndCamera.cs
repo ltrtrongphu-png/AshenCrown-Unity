@@ -215,6 +215,14 @@ namespace AshenCrown.Player
                 to.y = 0f;
                 if (to.sqrMagnitude > 0.001f) return to.normalized;
             }
+
+            var cameraRig = cameraTransform != null ? cameraTransform.GetComponent<ThirdPersonCameraRig>() : null;
+            if (cameraRig != null && cameraRig.IsFirstPerson)
+            {
+                Vector3 aim = cameraRig.GetAimDirection();
+                if (aim.sqrMagnitude > 0.001f) return aim;
+            }
+
             if (HasMoveInput && MoveInputWorld.sqrMagnitude > 0.001f) return MoveInputWorld.normalized;
             return transform.forward;
         }
