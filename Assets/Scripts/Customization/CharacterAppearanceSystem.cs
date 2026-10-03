@@ -146,6 +146,48 @@ namespace AshenCrown.Customization
             AppearanceChanged?.Invoke();
         }
 
+        void BuildCosmetics(GameObject player, CharacterModelBinder binder, Color hair, Color outfit)
+        {
+            Transform parent = binder != null && binder.ModelInstance != null ? binder.ModelInstance.transform : player.transform;
+            Transform root = parent.Find("AppearanceCosmetics");
+            if (root == null)
+            {
+                var go = new GameObject("AppearanceCosmetics");
+                go.transform.SetParent(parent, false);
+                root = go.transform;
+            }
+            for (int i = root.childCount - 1; i >= 0; i--) Destroy(root.GetChild(i).gameObject);
+
+            var hairGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            hairGo.name = "HairCosmetic";
+            hairGo.transform.SetParent(root, false);
+            hairGo.transform.localPosition = new Vector3(0f, 0.82f, 0f);
+            hairGo.transform.localScale = new Vector3(0.38f, 0.22f, 0.38f);
+            ApplyColor(hairGo.GetComponent<Renderer>(), hair);
+
+            var mantle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            mantle.name = "OutfitCosmetic";
+            mantle.transform.SetParent(root, false);
+            mantle.transform.localPosition = new Vector3(0f, 0.38f, 0f);
+            mantle.transform.localScale = new Vector3(0.52f, 0.18f, 0.32f);
+            ApplyColor(mantle.GetComponent<Renderer>(), outfit);
+
+            var hairCollider = hairGo.GetComponent<Collider>();
+            if (hairCollider != null) Destroy(hairCollider);
+            var mantleCollider = mantle.GetComponent<Collider>();
+            if (mantleCollider != null) Destroy(mantleCollider);
+        }
+
+        static void ApplyColor(Renderer r, Color c)
+        {
+            if (r == null) return;
+            var block = new MaterialPropertyBlock();
+            r.GetPropertyBlock(block);
+            block.SetColor("_Color", c);
+            block.SetColor("_BaseColor", c);
+            r.SetPropertyBlock(block);
+        }
+
         static Color ParseColor(string hex, Color fallback)
         {
             Color c;
