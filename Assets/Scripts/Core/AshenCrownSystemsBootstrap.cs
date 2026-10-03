@@ -28,6 +28,7 @@ namespace AshenCrown.Core
             root.AddComponent<GameSettingsService>();
             root.AddComponent<InventorySystem>();
             root.AddComponent<EquipmentSystem>();
+            root.AddComponent<LootSystem>();
             root.AddComponent<SkillTreeSystem>();
             root.AddComponent<LongTermProgressionSystem>();
             root.AddComponent<ReputationSystem>();
