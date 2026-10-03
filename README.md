@@ -197,3 +197,20 @@ Gameplay systems can wire into the layer through LongTermEngagementSystem.Instan
 - **F8** — claim all completed rotating contracts.
 - **F10** — refresh the current rotation.
 - **F11** — toggle the endgame HUD.
+
+## 11. Grind / Gear / Accounts
+
+The progression loop now includes:
+- 8 gear tiers: Broken -> Common -> Uncommon -> Rare -> Epic -> Legendary -> Mythic -> Ascendant.
+- 8 equipment slots: Helmet, Chest, Gloves, Legs, Boots, Weapon, Offhand and Relic.
+- Random gear power, stat rolls and affixes from enemies/bosses.
+- Gear upgrading with Essence and a salvage loop that converts unwanted gear back into Essence.
+- Persistent loot collection and equipped gear in save data.
+- Dynamic quality scaling: the performance director adjusts Unity quality based on frame-rate pressure while keeping the target frame rate configurable.
+- Account foundation: email/password registration and login through Supabase Auth, with cloud save restore after login.
+- Secure cloud saves: each account can access only its own save through RLS policies.
+
+### Account setup
+Create a SupabaseConfig asset under Assets/Resources/ using the public project URL and publishable key. Never put a Supabase secret/service-role key in the Unity client. Apply supabase/migrations/001_ashen_crown_accounts.sql to the Supabase project used by Ashen Crown before enabling cloud saves.
+
+The account layer is configuration-based so the repository does not contain credentials or silently write to an unrelated Supabase project.
