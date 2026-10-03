@@ -47,7 +47,7 @@ namespace AshenCrown.Presentation
             var emberMat = CreateMaterial(emberColor, 2.5f);
 
             CreatePrimitive(PrimitiveType.Cylinder, "CrownBase", new Vector3(0, 0.05f, 0), new Vector3(1.7f, .18f, 1.7f), baseMat);
-            CreatePrimitive(PrimitiveType.Torus, "CrownRing", Vector3.zero, new Vector3(1.1f, 1f, 1.1f), baseMat);
+            CreatePrimitive(PrimitiveType.Cylinder, "CrownRing", new Vector3(0, 0.18f, 0), new Vector3(1.12f, .06f, 1.12f), baseMat);
 
             for (int i = 0; i < 8; i++)
             {
