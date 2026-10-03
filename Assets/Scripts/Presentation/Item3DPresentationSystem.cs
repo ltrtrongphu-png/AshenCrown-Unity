@@ -12,6 +12,15 @@ namespace AshenCrown.Presentation
     /// </summary>
     public sealed class Item3DPresentationSystem : MonoBehaviour
     {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void BootstrapRuntime()
+        {
+            if (Instance != null) return;
+            var root = new GameObject("AshenCrown_ItemPresentation");
+            DontDestroyOnLoad(root);
+            root.AddComponent<Item3DPresentationSystem>();
+            root.AddComponent<ItemUpgradeFeedback>();
+        }
         public static Item3DPresentationSystem Instance { get; private set; }
 
         [SerializeField] Transform displayRoot;
