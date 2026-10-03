@@ -45,7 +45,7 @@ namespace AshenCrown.RPG
 
         void Update()
         {
-            if(visual==null)return;
+            if(visual==null){visual=transform.Find("3D_Boss");if(visual==null)return;}
             bool reduced=GameSettingsService.Instance!=null&&GameSettingsService.Instance.ReducedMotion;
             float motion=reduced ? .2f : 1f;
             float t=Time.time*motion;
