@@ -95,7 +95,8 @@ namespace AshenCrown.Core
         {
             waitingForRespawn = false;
             var scene = SceneManager.GetActiveScene();
-            SceneManager.LoadScene(scene.buildIndex >= 0 ? scene.buildIndex : scene.name);
+            if (scene.buildIndex >= 0) SceneManager.LoadScene(scene.buildIndex);
+            else SceneManager.LoadScene(scene.name);
         }
 
         void OnSceneLoaded(Scene scene, LoadSceneMode mode)
