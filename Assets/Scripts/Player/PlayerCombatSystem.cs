@@ -213,6 +213,7 @@ namespace AshenCrown.Player
                 switch (state)
                 {
                     case CombatState.Attacking:
+                        if (current == null) return 0f;
                         float total = Mathf.Max(0.0001f,
                             phase == AttackPhase.Windup ? current.windup :
                             phase == AttackPhase.Active ? current.active : current.recover);

@@ -1203,7 +1203,7 @@ let last=performance.now();function frame(t){const dt=Math.min(.033,(t-last)/100
   else motionMedia.addListener(syncMotion);
 
   const observer = new MutationObserver(syncState);
-  observer.observe(body, {subtree:true, attributes:true, attributeFilter:['class','style']});
+  observer.observe(body, {subtree:true, attributes:true, attributeFilter:['class']});
 
   document.addEventListener('visibilitychange', () => body.classList.toggle('page-hidden', document.hidden));
 

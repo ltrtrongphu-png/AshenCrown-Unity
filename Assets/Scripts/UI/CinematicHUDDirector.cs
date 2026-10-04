@@ -27,6 +27,7 @@ namespace AshenCrown.UI
         GUIStyle tiny;
         GUIStyle key;
         GUIStyle bar;
+        GUIStyle messageStyle;
 
         readonly Rect playerRect = new Rect(28f, 28f, 326f, 118f);
         readonly Rect targetRect = new Rect(0f, 28f, 330f, 84f);
@@ -36,6 +37,8 @@ namespace AshenCrown.UI
         static void Install()
         {
             if (instance != null) return;
+            var existing = FindObjectOfType<CinematicHUDDirector>();
+            if (existing != null) { instance = existing; return; }
             var go = new GameObject("Ashen Crown Cinematic HUD");
             instance = go.AddComponent<CinematicHUDDirector>();
             DontDestroyOnLoad(go);
@@ -121,6 +124,7 @@ namespace AshenCrown.UI
             tiny = new GUIStyle(GUI.skin.label) { fontSize = 8, alignment = TextAnchor.UpperLeft };
             key = new GUIStyle(GUI.skin.box) { fontSize = 11, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
             bar = new GUIStyle(GUI.skin.box) { margin = new RectOffset(0, 0, 0, 0), padding = new RectOffset(0, 0, 0, 0) };
+            messageStyle = new GUIStyle(title) { alignment = TextAnchor.MiddleCenter, fontSize = 18 };
         }
 
         void OnGUI()
@@ -234,11 +238,7 @@ namespace AshenCrown.UI
             if (string.IsNullOrEmpty(message) || messageTimer <= 0f) return;
             float life = reduced ? 1f : CinematicHUDMath.Pulse(messageTimer, MessageDuration);
             GUI.color = new Color(0.92f, 0.82f, 0.68f, life * alpha);
-            GUI.Label(new Rect(0f, height * 0.68f, width, 32f), message, new GUIStyle(title)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 18
-            });
+            GUI.Label(new Rect(0f, height * 0.68f, width, 32f), message, messageStyle);
         }
 
         string GetStateLabel()
