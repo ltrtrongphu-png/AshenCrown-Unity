@@ -77,7 +77,7 @@ namespace AshenCrown.Tests.EditMode
             var newItem = new ItemDefinition { id = "new_helmet", slot = EquipmentSlot.Helmet, tier = ItemTier.Epic };
 
             Assert.IsTrue(EquipmentSystem.Instance.Equip(oldItem));
-            Assert.IsTrue(LootSystem.Instance.AddLoot(newItem) || true);
+            LootSystem.Instance.AddLoot(newItem);
             Assert.IsTrue(LootSystem.Instance.Equip(newItem));
 
             Assert.AreSame(newItem, EquipmentSystem.Instance.Get(EquipmentSlot.Helmet));
