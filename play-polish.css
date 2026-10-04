@@ -1,0 +1,15 @@
+/* Ashen Crown — major UI/UX presentation pass. */
+:root{--ac-glow:rgba(212,119,64,.28);--ac-border-hi:rgba(201,164,109,.48);--ac-focus:rgba(212,119,64,.72)}
+button,a,[role="button"]{-webkit-tap-highlight-color:transparent}button:focus-visible,a:focus-visible,[role="button"]:focus-visible{outline:2px solid var(--ac-focus);outline-offset:3px;box-shadow:0 0 0 5px rgba(212,119,64,.10)}
+.player-card,.quest-panel,.journal,.meta-card,.inventory-card,.map-card,.tutorial-card{border-color:rgba(151,109,79,.34);transition:border-color .24s ease,transform .24s ease,box-shadow .24s ease}
+.player-card:hover,.quest-panel:hover,.journal:hover{border-color:var(--ac-border-hi);box-shadow:0 22px 70px rgba(0,0,0,.34),0 0 32px var(--ac-glow)}
+.choice,.pause button,.result button,.journal-tabs button,.meta-tabs button,.meta-head button,.controls-strip button,.equip-slot,.tutorial-grid>div,.chapter-card,.rank-filter button{transition:transform .18s ease,border-color .18s ease,background-color .18s ease,color .18s ease,box-shadow .18s ease,opacity .18s ease}
+.choice:hover,.equip-slot:hover,.chapter-card:hover,.rank-filter button:hover{transform:translateY(-1px);border-color:rgba(212,119,64,.65);box-shadow:0 8px 28px rgba(0,0,0,.22),0 0 18px rgba(212,119,64,.08)}
+.choice:active,.pause button:active,.result button:active,.controls-strip button:active{transform:translateY(1px) scale(.985)}
+.bar i{transform-origin:left center;transition:width .18s cubic-bezier(.22,.8,.22,1)}.hp i{box-shadow:0 0 12px rgba(211,108,75,.16)}.stamina i{box-shadow:0 0 10px rgba(185,133,79,.12)}
+.toast,.center-message,.interaction{will-change:transform,opacity}.toast.show{box-shadow:0 12px 44px rgba(0,0,0,.34),0 0 22px rgba(212,119,64,.10)}.interaction.show{box-shadow:0 10px 34px rgba(0,0,0,.35),0 0 18px rgba(212,119,64,.08)}
+.dialogue,.pause,.result,.meta-menu,.inventory-menu,.world-map,.tutorial{overscroll-behavior:contain}.dialogue-card,.pause>div,.result>div,.meta-card,.inventory-card,.map-card,.tutorial-card{animation:ac-panel-in .28s cubic-bezier(.2,.8,.2,1) both}
+@keyframes ac-panel-in{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:700px){.topbar{height:58px}.trial-title{letter-spacing:.16em}.hud{inset:12px 12px 0}.quest-panel{width:min(280px,calc(100vw - 24px))}.controls-strip{padding-bottom:max(10px,env(safe-area-inset-bottom))}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.choice:hover,.equip-slot:hover,.chapter-card:hover,.rank-filter button:hover,.player-card:hover,.quest-panel:hover,.journal:hover{transform:none}}
+@media(pointer:coarse){button,a,[role="button"]{min-height:40px}.controls-strip{gap:8px 12px}}
