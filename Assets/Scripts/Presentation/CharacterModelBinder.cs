@@ -88,6 +88,7 @@ namespace AshenCrown.Presentation
             CreateFallbackPart(PrimitiveType.Cylinder, "HeadCrown", new Vector3(0f, 1.98f, 0f), new Vector3(0.30f, 0.10f, 0.30f), material);
 
             CacheModelComponents();
+            BuildFallbackLODGroup();
             ApplyPerformance();
         }
 
@@ -114,6 +115,39 @@ namespace AshenCrown.Presentation
             cachedCamera = Camera.main;
             cameraRefreshTimer = 0f;
             modelCulled = false;
+        }
+
+        void BuildFallbackLODGroup()
+        {
+            if (instance == null || renderers == null || renderers.Length == 0) return;
+            if (instance.GetComponent<LODGroup>() != null) return;
+
+            var lodGroup = instance.AddComponent<LODGroup>();
+            var lod0 = new LOD(performance != null ? performance.lod0Threshold : 0.70f, renderers);
+
+            var medium = new System.Collections.Generic.List<Renderer>();
+            var low = new System.Collections.Generic.List<Renderer>();
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                var renderer = renderers[i];
+                if (renderer == null) continue;
+                string n = renderer.name.ToLowerInvariant();
+
+                // Medium retains silhouette-critical pieces.
+                if (n.Contains("body") || n.Contains("face") || n.Contains("chest") || n.Contains("belt"))
+                    medium.Add(renderer);
+
+                // Far LOD keeps only the main body/head silhouette.
+                if (n.Contains("body") || n.Contains("face"))
+                    low.Add(renderer);
+            }
+
+            var lod1 = new LOD(performance != null ? performance.lod1Threshold : 0.35f, medium.ToArray());
+            var lod2 = new LOD(performance != null ? performance.lod2Threshold : 0.12f, low.ToArray());
+            lodGroup.SetLODs(new[] { lod0, lod1, lod2 });
+            lodGroup.fadeMode = performance != null && performance.useCrossFade ? LODFadeMode.CrossFade : LODFadeMode.None;
+            lodGroup.animateCrossFading = performance != null && performance.useCrossFade;
+            lodGroup.RecalculateBounds();
         }
 
         void ApplyPerformance()
@@ -155,13 +189,20 @@ namespace AshenCrown.Presentation
             }
 
             float distance = Vector3.Distance(cachedCamera.transform.position, transform.position);
-            bool shouldCull = distance >= Mathf.Max(performance.maxDistance, performance.cullDistance);
+            bool shouldCull = distance >= Mathf.Max(performance.cullDistance, performance.maxDistance + 1f);
 
             if (shouldCull != modelCulled)
             {
                 modelCulled = shouldCull;
                 for (int i = 0; i < renderers.Length; i++)
                     if (renderers[i] != null) renderers[i].enabled = !shouldCull;
+            }
+
+            if (modelAnimator != null && performance.cullAnimatorWhenOffscreen)
+            {
+                bool shouldAnimate = !shouldCull && distance <= performance.animatorFarDistance;
+                if (modelAnimator.enabled != shouldAnimate)
+                    modelAnimator.enabled = shouldAnimate;
             }
 
             bool castShadows = !performance.disableShadowsAtDistance || distance <= performance.ShadowDistance;
