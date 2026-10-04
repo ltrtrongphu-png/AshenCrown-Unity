@@ -18,8 +18,9 @@ namespace AshenCrown.Presentation
         public FilterMode filterMode = FilterMode.Trilinear;
 
         [Header("Compression")]
-        public TextureImporterCompression compression = TextureImporterCompression.CompressedHQ;
+        [Tooltip("Editor import compression quality. 100 = highest quality, lower values reduce build size.")]
         [Range(0, 100)] public int compressionQuality = 70;
+        public bool highQualityCompression = true;
         public bool crunchCompression = true;
 
         public int GetMaxSize(string assetPath)
