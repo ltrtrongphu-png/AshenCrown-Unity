@@ -94,11 +94,16 @@ namespace AshenCrown.Editor.Art
 
         public static void ReimportArtAssets()
         {
-            string[] guids = AssetDatabase.FindAssets("t:Texture2D t:Model");
+            var textureGuids = AssetDatabase.FindAssets("t:Texture2D");
+            var modelGuids = AssetDatabase.FindAssets("t:Model");
+            var guids = new System.Collections.Generic.HashSet<string>();
+            for (int i = 0; i < textureGuids.Length; i++) guids.Add(textureGuids[i]);
+            for (int i = 0; i < modelGuids.Length; i++) guids.Add(modelGuids[i]);
+
             int processed = 0;
-            for (int i = 0; i < guids.Length; i++)
+            foreach (var guid in guids)
             {
-                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                string path = AssetDatabase.GUIDToAssetPath(guid);
                 if (string.IsNullOrEmpty(path)) continue;
 
                 try
@@ -112,6 +117,7 @@ namespace AshenCrown.Editor.Art
                 }
             }
             AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
             Debug.Log("[AshenCrown] Reimported " + processed + " art assets.");
         }
 
