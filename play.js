@@ -8,7 +8,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5)); renderer.outputColorS
 const camera=new THREE.PerspectiveCamera(55,1,.1,100); camera.position.set(0,4,8);
 scene.add(new THREE.HemisphereLight(0xcbb29e,0x090706,1.5));
 const sun=new THREE.DirectionalLight(0xffc39d,2.2); sun.position.set(-8,14,7); scene.add(sun);
-const world=new THREE.Group(); scene.add(world), characters=new THREE.Group(),props=new THREE.Group(),effects=new THREE.Group();
+const world=new THREE.Group(), characters=new THREE.Group(), props=new THREE.Group(), effects=new THREE.Group(); scene.add(world);
 world.add(characters,props,effects);
 
 const state={day:1,xp:0,level:1,hp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
