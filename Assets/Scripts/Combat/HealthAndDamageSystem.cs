@@ -68,9 +68,12 @@ namespace AshenCrown.Combat
         /// <summary>Applies authored RPG stats before the first damage calculation.</summary>
         public void ConfigureStats(float health, float defenseValue, float poise)
         {
-            maxHealth = Mathf.Max(1f, health);
-            defense = Mathf.Max(0f, defenseValue);
+            baseMaxHealth = Mathf.Max(1f, health);
+            baseDefense = Mathf.Max(0f, defenseValue);
+            maxHealth = baseMaxHealth;
+            defense = baseDefense;
             maxPoise = Mathf.Max(0f, poise);
+            if (statBlock != null) RefreshEffectiveStats();
             CurrentHealth = maxHealth;
             CurrentPoise = maxPoise;
             IsDead = false;
@@ -80,13 +83,47 @@ namespace AshenCrown.Combat
 
         IDamageFilter[] filters;
         float poiseRegenTimer;
+        float baseMaxHealth;
+        float baseDefense;
+        StatBlock statBlock;
 
         void Awake()
         {
+            baseMaxHealth = maxHealth;
+            baseDefense = defense;
+            statBlock = GetComponent<StatBlock>();
             CurrentHealth = maxHealth;
             CurrentPoise = maxPoise;
             filters = GetComponents<IDamageFilter>();
         }
+
+        void Start()
+        {
+            if (statBlock != null)
+            {
+                statBlock.Changed += RefreshEffectiveStats;
+                statBlock.Rebuild();
+                RefreshEffectiveStats();
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (statBlock != null) statBlock.Changed -= RefreshEffectiveStats;
+        }
+
+        void RefreshEffectiveStats()
+        {
+            float previousMax = Mathf.Max(1f, maxHealth);
+            float health01 = IsDead ? 0f : Mathf.Clamp01(CurrentHealth / previousMax);
+            maxHealth = statBlock != null ? Mathf.Max(1f, statBlock.Evaluate(StatType.MaxHealth, baseMaxHealth)) : baseMaxHealth;
+            defense = statBlock != null ? Mathf.Max(0f, statBlock.Evaluate(StatType.Defense, baseDefense)) : baseDefense;
+            if (!IsDead) CurrentHealth = Mathf.Clamp(maxHealth * health01, 0f, maxHealth);
+            OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
+        }
+
+        float EffectiveDefense =>
+            statBlock != null ? Mathf.Max(0f, statBlock.Evaluate(StatType.Defense, baseDefense)) : Mathf.Max(0f, defense);
 
         void Update()
         {
@@ -122,7 +159,8 @@ namespace AshenCrown.Combat
             // 2-4) Kháng -> Giáp -> hệ số nhận thêm.
             float dmg = info.amount;
             dmg *= 1f - Mathf.Clamp(GetResistance(info.type), -1f, 0.95f);
-            float effDef = info.armorPiercing ? defense * 0.5f : defense;
+            float effectiveDefense = EffectiveDefense;
+            float effDef = info.armorPiercing ? effectiveDefense * 0.5f : effectiveDefense;
             dmg *= 100f / (100f + Mathf.Max(0f, effDef));
             dmg *= DamageTakenMultiplier;
             if (info.amount > 0f) dmg = Mathf.Max(1f, Mathf.Round(dmg));
