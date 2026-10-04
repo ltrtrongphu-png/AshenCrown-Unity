@@ -18,6 +18,10 @@ namespace AshenCrown.Core
     public sealed class AshenCrownSystemsBootstrap:MonoBehaviour
     {
         static bool booted;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() { booted = false; }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Bootstrap()
         {
@@ -43,6 +47,8 @@ namespace AshenCrown.Core
             root.AddComponent<DialogueSystem>();
             root.AddComponent<CodexSystem>();
             root.AddComponent<SaveLoadSystem>();
+            root.AddComponent<GameplayEventBridge>();
+            root.AddComponent<PlayerRespawnDirector>();
             root.AddComponent<NPCWorldSpawner>();
             root.AddComponent<DialogueOverlay>();
             root.AddComponent<CameraModeHUD>();
@@ -60,10 +66,14 @@ namespace AshenCrown.Core
             root.AddComponent<SupabaseAuthUI>();
             root.AddComponent<AshenCrownSystemsBootstrap>();
         }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         void Update()
         {
-            if(Input.GetKeyDown(KeyCode.F5)&&SaveLoadSystem.Instance!=null)SaveLoadSystem.Instance.Save();
-            if(Input.GetKeyDown(KeyCode.F9)&&SaveLoadSystem.Instance!=null)SaveLoadSystem.Instance.Load();
+            if(Input.GetKeyDown(KeyCode.F5)&&SaveLoadSystem.Instance!=null&&SaveLoadSystem.Instance.IsLoaded)
+                SaveLoadSystem.Instance.Save("debug-manual");
+            if(Input.GetKeyDown(KeyCode.F9)&&SaveLoadSystem.Instance!=null)
+                SaveLoadSystem.Instance.Load();
         }
+#endif
     }
 }

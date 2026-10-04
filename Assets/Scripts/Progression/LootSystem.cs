@@ -7,7 +7,9 @@ namespace AshenCrown.Progression
         public static LootSystem Instance{get;private set;}public event Action<ItemDefinition> LootAdded;readonly List<ItemDefinition> items=new List<ItemDefinition>();
         public IReadOnlyList<ItemDefinition> Items=>items;
         void Awake(){if(Instance!=null&&Instance!=this){Destroy(gameObject);return;}Instance=this;DontDestroyOnLoad(gameObject);}
-        public ItemDefinition Roll(string sourceId,int playerLevel,int luck=0){if(EquipmentSystem.Instance==null)return null;var item=EquipmentSystem.Instance.GenerateDrop(sourceId,playerLevel,luck);if(item==null)return null;items.Add(item);LootAdded?.Invoke(item);return item;}
+        public void AddLoot(ItemDefinition item){if(item==null)return;if(!items.Contains(item)){items.Add(item);LootAdded?.Invoke(item);}}
+        public bool Remove(ItemDefinition item)=>item!=null&&items.Remove(item);
+        public ItemDefinition Roll(string sourceId,int playerLevel,int luck=0){if(EquipmentSystem.Instance==null)return null;var item=EquipmentSystem.Instance.GenerateDrop(sourceId,playerLevel,luck);if(item==null)return null;AddLoot(item);return item;}
         public bool Equip(ItemDefinition item){if(item==null||!items.Remove(item)||EquipmentSystem.Instance==null)return false;return EquipmentSystem.Instance.Equip(item);}
         public LootState Capture()=>new LootState{items=new List<ItemDefinition>(items)};
         public void Restore(LootState state){items.Clear();if(state?.items!=null)items.AddRange(state.items);}

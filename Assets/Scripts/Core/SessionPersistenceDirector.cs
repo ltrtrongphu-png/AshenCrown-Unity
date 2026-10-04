@@ -78,7 +78,7 @@ namespace AshenCrown.Core
         public void Autosave(string reason)
         {
             autosaveClock = 0f;
-            if (SaveLoadSystem.Instance == null) return;
+            if (SaveLoadSystem.Instance == null || !SaveLoadSystem.Instance.IsLoaded) return;
 
             if (SaveLoadSystem.Instance.Save("autosave:" + reason))
             {
@@ -89,7 +89,7 @@ namespace AshenCrown.Core
 
         public void SaveCheckpoint(string reason)
         {
-            if (SaveLoadSystem.Instance == null) return;
+            if (SaveLoadSystem.Instance == null || !SaveLoadSystem.Instance.IsLoaded) return;
 
             if (SaveLoadSystem.Instance.Save("checkpoint:" + reason))
                 LastSaveReason = "checkpoint:" + reason;
@@ -98,7 +98,7 @@ namespace AshenCrown.Core
         public void ForceSave()
         {
             autosaveClock = 0f;
-            if (SaveLoadSystem.Instance != null && SaveLoadSystem.Instance.Save("manual"))
+            if (SaveLoadSystem.Instance != null && SaveLoadSystem.Instance.IsLoaded && SaveLoadSystem.Instance.Save("manual"))
                 LastSaveReason = "manual";
         }
     }
