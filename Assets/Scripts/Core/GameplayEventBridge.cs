@@ -57,7 +57,7 @@ namespace AshenCrown.Core
             SceneManager.sceneLoaded -= HandleSceneLoaded;
 
             foreach (var pair in bossDeathHandlers)
-                if (pair.Key != null && pair.Key.Health != null) pair.Key.Health.OnDeath -= pair.Value;
+                if (pair.Key != null) pair.Key.OnDefeated -= pair.Value;
             foreach (var player in boundPlayers)
                 if (player != null) UnbindPlayer(player);
             bossDeathHandlers.Clear();
@@ -90,7 +90,7 @@ namespace AshenCrown.Core
                 boundBosses.Add(boss);
                 Action handler = () => HandleBossDeath(boss);
                 bossDeathHandlers[boss] = handler;
-                boss.Health.OnDeath += handler;
+                boss.OnDefeated += handler;
             }
         }
 
@@ -104,13 +104,21 @@ namespace AshenCrown.Core
         void HandleParry(GameObject source)
         {
             if (LongTermEngagementSystem.Instance != null)
+            {
                 LongTermEngagementSystem.Instance.RecordAction(EngagementAction.Parry);
+                LongTermEngagementSystem.Instance.AddMastery("parry", 25);
+            }
+            if (CodexSystem.Instance != null) CodexSystem.Instance.Unlock("combat_parry");
         }
 
         void HandlePerfectDodge()
         {
             if (LongTermEngagementSystem.Instance != null)
+            {
                 LongTermEngagementSystem.Instance.RecordAction(EngagementAction.PerfectDodge);
+                LongTermEngagementSystem.Instance.AddMastery("perfect_dodge", 25);
+            }
+            if (CodexSystem.Instance != null) CodexSystem.Instance.Unlock("combat_perfect_dodge");
         }
 
         void HandleEnemyKilled(EnemyFSM enemy, int cinderReward)
@@ -120,6 +128,21 @@ namespace AshenCrown.Core
 
             if (EternalCampaignDirector.Instance != null)
                 EternalCampaignDirector.Instance.NotifyKill(id);
+
+            if (QuestSystem.Instance != null)
+                QuestSystem.Instance.Progress(QuestObjectiveType.Kill, id);
+
+            if (LongTermEngagementSystem.Instance != null)
+            {
+                LongTermEngagementSystem.Instance.RecordAction(EngagementAction.EnemyDefeated);
+                LongTermEngagementSystem.Instance.AddMastery("combat", 10);
+            }
+
+            if (CodexSystem.Instance != null)
+                CodexSystem.Instance.Unlock("enemy:" + id);
+
+            if (InventorySystem.Instance != null && cinderReward > 0)
+                InventorySystem.Instance.Add(RPGShopSystem.CurrencyId, cinderReward);
 
             int level = LongTermProgressionSystem.Instance != null ? LongTermProgressionSystem.Instance.Level : 1;
             if (LootSystem.Instance != null)
@@ -133,6 +156,12 @@ namespace AshenCrown.Core
 
             if (WorldProgressionSystem.Instance != null)
                 WorldProgressionSystem.Instance.RegisterBossDefeat(id);
+
+            if (LongTermEngagementSystem.Instance != null)
+                LongTermEngagementSystem.Instance.AddMastery("boss:" + id, 100);
+
+            if (CodexSystem.Instance != null)
+                CodexSystem.Instance.Unlock("boss:" + id);
 
             int level = LongTermProgressionSystem.Instance != null ? LongTermProgressionSystem.Instance.Level : 1;
             if (LootSystem.Instance != null)
