@@ -22,6 +22,8 @@ namespace AshenCrown.Performance
         int sampleIndex;
         int samplesFilled;
         float sampleTimer;
+        float sampleFrameTime;
+        int sampleFrameCount;
         float qualityCooldown;
         int lastQuality = -1;
 
@@ -49,17 +51,23 @@ namespace AshenCrown.Performance
 
         void Update()
         {
-            sampleTimer += Time.unscaledDeltaTime;
-            qualityCooldown = Mathf.Max(0f, qualityCooldown - Time.unscaledDeltaTime);
+            float dt = Time.unscaledDeltaTime;
+            sampleTimer += dt;
+            sampleFrameTime += dt;
+            sampleFrameCount++;
+            qualityCooldown = Mathf.Max(0f, qualityCooldown - dt);
             if (sampleTimer < sampleInterval) return;
 
-            float elapsed = Mathf.Max(0.001f, sampleTimer);
-            float instantFps = 1f / Mathf.Max(0.001f, Time.unscaledDeltaTime);
+            float intervalFps = sampleFrameCount > 0
+                ? sampleFrameCount / Mathf.Max(0.001f, sampleFrameTime)
+                : targetFps;
             sampleTimer = 0f;
+            sampleFrameTime = 0f;
+            sampleFrameCount = 0;
 
             if (frameSamples.Length > 0)
             {
-                frameSamples[sampleIndex] = instantFps;
+                frameSamples[sampleIndex] = intervalFps;
                 sampleIndex = (sampleIndex + 1) % Mathf.Min(frameSamples.Length, sampleCount);
                 samplesFilled = Mathf.Min(samplesFilled + 1, Mathf.Min(frameSamples.Length, sampleCount));
             }
