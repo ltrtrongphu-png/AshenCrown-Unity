@@ -25,6 +25,7 @@ namespace AshenCrown.Presentation
 
         [SerializeField] Transform displayRoot;
         readonly Dictionary<string, GameObject> activeDisplays = new Dictionary<string, GameObject>();
+        readonly Dictionary<string, Material> materialCache = new Dictionary<string, Material>();
         readonly Dictionary<ItemTier, Color> tierColors = new Dictionary<ItemTier, Color>
         {
             { ItemTier.Broken, new Color(.28f,.28f,.30f) },
@@ -120,8 +121,15 @@ namespace AshenCrown.Presentation
         void ApplyMaterial(Renderer renderer, Color color, ItemTier tier, bool transparent = false)
         {
             if (renderer == null) return;
+            string key = tier + (transparent ? "_transparent" : "_opaque");
+            if (materialCache.TryGetValue(key, out var cached) && cached != null)
+            {
+                renderer.sharedMaterial = cached;
+                return;
+            }
+
             var material = new Material(Shader.Find("Standard"));
-            material.name = "AshenCrown_Item_" + tier;
+            material.name = "AshenCrown_Item_" + key;
             material.color = transparent ? new Color(color.r, color.g, color.b, .08f) : color;
             if (tier >= ItemTier.Epic)
             {
@@ -138,7 +146,9 @@ namespace AshenCrown.Presentation
                 material.EnableKeyword("_ALPHABLEND_ON");
                 material.renderQueue = 3000;
             }
-            renderer.material = material;
+            material.enableInstancing = true;
+            materialCache[key] = material;
+            renderer.sharedMaterial = material;
         }
 
         void CreateParticles(Transform root, Color color, ItemTier tier)
@@ -161,6 +171,8 @@ namespace AshenCrown.Presentation
             shape.radius = .45f;
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
         }
 
         sealed class Item3DAnimator : MonoBehaviour
