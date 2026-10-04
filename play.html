@@ -1,15 +1,10 @@
-<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090807"><title>Ashen Crown — Combat Trial</title><link rel="stylesheet" href="./play.css"></head>
-<body>
-<div class="topbar"><a class="back" href="./">← Ashen Crown</a><div class="trial-title"><span></span> COMBAT TRIAL <small>01</small></div><div class="hint">ESC — pause</div></div>
-<main class="stage">
-<canvas id="game" aria-label="Ashen Crown playable combat trial"></canvas>
-<div class="hud"><div class="boss-block"><div class="label"><span>THE ASHEN WARDEN</span><b id="phase">PHASE I</b></div><div class="bar boss-bar"><i id="bossHp"></i></div><div class="bar poise-bar"><i id="bossPoise"></i></div></div><div class="player-block"><div class="bar hp-bar"><i id="playerHp"></i></div><div class="bar stamina-bar"><i id="stamina"></i></div><div class="player-meta"><span>EMBERBOUND</span><b id="status">READY</b></div></div></div>
-<div class="center-message" id="message"><strong>DEFEAT THE WARDEN</strong><span>WASD move · LMB attack · RMB heavy · SPACE dodge · F guard</span></div>
-<div class="pause" id="pause"><div><span>TRIAL PAUSED</span><button id="resume">Resume</button><a href="./">Return to Ashen Crown</a></div></div>
-<div class="result" id="result"><div><p id="resultKicker">TRIAL COMPLETE</p><h1 id="resultTitle">The ember survives.</h1><p id="resultText"></p><button id="restart">Fight again</button><a href="./">Back to the showcase</a></div></div>
-</main>
-<section class="controls-strip"><span><b>W A S D</b> move</span><span><b>LMB</b> light</span><span><b>RMB</b> heavy</span><span><b>SPACE</b> dodge</span><span><b>F</b> guard</span></section>
-<script src="./play.js"></script>
-</body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090807"><meta name="description" content="Ashen Crown — story-driven RPG beta."><title>Ashen Crown — Story Demo</title><link rel="stylesheet" href="./play.css"></head><body>
+<div class="topbar"><a class="back" href="./">← Ashen Crown</a><div class="trial-title"><span></span> STORY DEMO <small>01</small></div><div class="top-actions"><span id="dayLabel">DAY 1 · DAWN</span><span>ESC — pause</span></div></div>
+<main class="stage"><canvas id="game" aria-label="Ashen Crown story-driven RPG beta"></canvas>
+<aside class="quest-panel"><div class="panel-kicker">CURRENT JOURNEY</div><h2 id="questTitle">A Stranger at the Gate</h2><p id="questDesc">Speak with Lyra at the sanctuary.</p><div class="objective" id="objective">◈ Talk to Lyra</div><div class="quest-footer"><span id="regionLabel">SANCTUARY</span><b id="questCount">1 / 1</b></div></aside>
+<aside class="journal" id="journal"><div class="panel-kicker">JOURNAL</div><h2>The Last Ember</h2><div id="journalBody"></div><div class="journal-tabs"><button data-tab="story" class="active">STORY</button><button data-tab="people">PEOPLE</button><button data-tab="world">WORLD</button></div></aside>
+<div class="hud"><div class="player-card"><div class="player-name">EMBERBOUND <span id="level">LV 1</span></div><div class="bar hp"><i id="playerHp"></i></div><div class="bar stamina"><i id="stamina"></i></div><div class="meta"><span id="status">EXPLORING</span><b id="coins">40 ASHEN</b></div></div><div class="interaction" id="interaction"><b>E</b><span>Interact</span></div><div class="location"><span id="locationName">SANCTUARY</span><small id="locationHint">A safe place beneath the last light.</small></div></div>
+<div class="center-message" id="message"><strong>THE LAST EMBER</strong><span>Explore · meet people · make choices · shape the world</span></div><div class="toast" id="toast"></div>
+<div class="dialogue" id="dialogue"><div class="dialogue-card"><div class="speaker"><span id="speakerName">LYRA</span><small id="speakerRole">SANCTUARY KEEPER</small></div><p id="dialogueText"></p><div id="choices"></div><button class="close-dialogue" id="closeDialogue">Leave</button></div></div>
+<div class="pause" id="pause"><div><span>JOURNEY PAUSED</span><button id="resume">Resume</button><a href="./">Return to Ashen Crown</a></div></div><div class="result" id="result"><div><p>STORY DEMO COMPLETE</p><h1 id="resultTitle">The road opens.</h1><p id="resultText"></p><button id="restart">Begin again</button><a href="./">Back to the showcase</a></div></div></main>
+<section class="controls-strip"><span><b>W A S D</b> move</span><span><b>E</b> interact</span><span><b>LMB</b> ember pulse</span><span><b>SPACE</b> dodge</span><span><b>C</b> rest</span><span><b>J</b> journal</span><span><b>M</b> map</span><span><b>ESC</b> pause</span></section><script src="./play.js"></script></body></html>
