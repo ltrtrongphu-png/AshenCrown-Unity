@@ -12,6 +12,8 @@ namespace AshenCrown.Tests.EditMode
         GameObject equipmentObject;
         GameObject lootObject;
         GameObject shopObject;
+        GameObject skillTreeObject;
+        GameObject statBlockObject;
 
         [SetUp]
         public void SetUp()
@@ -27,6 +29,9 @@ namespace AshenCrown.Tests.EditMode
 
             lootObject = new GameObject("LootSystem_Test");
             lootObject.AddComponent<LootSystem>();
+
+            skillTreeObject = new GameObject("SkillTreeSystem_Test");
+            skillTreeObject.AddComponent<SkillTreeSystem>();
         }
 
         [TearDown]
@@ -37,6 +42,8 @@ namespace AshenCrown.Tests.EditMode
             if (equipmentObject != null) Object.DestroyImmediate(equipmentObject);
             if (inventoryObject != null) Object.DestroyImmediate(inventoryObject);
             if (progressionObject != null) Object.DestroyImmediate(progressionObject);
+            if (skillTreeObject != null) Object.DestroyImmediate(skillTreeObject);
+            if (statBlockObject != null) Object.DestroyImmediate(statBlockObject);
         }
 
         [Test]
@@ -140,8 +147,8 @@ namespace AshenCrown.Tests.EditMode
         [Test]
         public void StatBlock_AppliesEquipmentAndUnlockedSkillModifiers()
         {
-            var statsObject = new GameObject("StatBlock_Test");
-            var stats = statsObject.AddComponent<StatBlock>();
+            statBlockObject = new GameObject("StatBlock_Test");
+            var stats = statBlockObject.AddComponent<StatBlock>();
 
             var weapon = new ItemDefinition { id = "stat_weapon", slot = EquipmentSlot.Weapon, damage = 50 };
             var armor = new ItemDefinition { id = "stat_armor", slot = EquipmentSlot.Chest, health = 30, armor = 20 };
@@ -157,7 +164,8 @@ namespace AshenCrown.Tests.EditMode
             Assert.IsTrue(SkillTreeSystem.Instance.Unlock("ashen_edge"));
             Assert.AreEqual(82.5f, stats.Evaluate(StatType.Damage, 25f), 0.01f);
 
-            Object.DestroyImmediate(statsObject);
+            Object.DestroyImmediate(statBlockObject);
+            statBlockObject = null;
         }
     }
 }
