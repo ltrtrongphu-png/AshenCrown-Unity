@@ -22,7 +22,7 @@ namespace AshenCrown.Core
 
         readonly HashSet<BossController> boundBosses = new HashSet<BossController>();
         readonly HashSet<PlayerCombatSystem> boundPlayers = new HashSet<PlayerCombatSystem>();
-        readonly HashSet<HealthAndDamageSystem> boundPlayerHealth = new HashSet<HealthAndDamageSystem>();
+        readonly Dictionary<BossController, Action> bossDeathHandlers = new Dictionary<BossController, Action>();
         float scanTimer;
 
         void Awake()
@@ -56,13 +56,13 @@ namespace AshenCrown.Core
             EnemyFSM.OnEnemyKilled -= HandleEnemyKilled;
             SceneManager.sceneLoaded -= HandleSceneLoaded;
 
-            foreach (var boss in boundBosses)
-                if (boss != null && boss.Health != null) boss.Health.OnDeath -= () => HandleBossDeath(boss);
+            foreach (var pair in bossDeathHandlers)
+                if (pair.Key != null && pair.Key.Health != null) pair.Key.Health.OnDeath -= pair.Value;
             foreach (var player in boundPlayers)
                 if (player != null) UnbindPlayer(player);
+            bossDeathHandlers.Clear();
             boundBosses.Clear();
             boundPlayers.Clear();
-            boundPlayerHealth.Clear();
         }
 
         void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -80,17 +80,17 @@ namespace AshenCrown.Core
                 player.OnParry += HandleParry;
                 player.OnPerfectDodge += HandlePerfectDodge;
 
-                var health = player.GetComponent<HealthAndDamageSystem>();
-                if (health != null && boundPlayerHealth.Add(health))
-                    health.OnDeath += HandlePlayerDeath;
+                // Death itself is handled by PlayerRespawnDirector; this bridge only records
+                // successful defensive actions and combat progression.
             }
 
             foreach (var boss in FindObjectsOfType<BossController>(true))
             {
                 if (boss == null || boundBosses.Contains(boss) || boss.Health == null) continue;
                 boundBosses.Add(boss);
-                var captured = boss;
-                captured.Health.OnDeath += () => HandleBossDeath(captured);
+                Action handler = () => HandleBossDeath(boss);
+                bossDeathHandlers[boss] = handler;
+                boss.Health.OnDeath += handler;
             }
         }
 
@@ -98,15 +98,8 @@ namespace AshenCrown.Core
         {
             player.OnParry -= HandleParry;
             player.OnPerfectDodge -= HandlePerfectDodge;
-            var health = player.GetComponent<HealthAndDamageSystem>();
-            if (health != null)
-            {
-                health.OnDeath -= HandlePlayerDeath;
-                boundPlayerHealth.Remove(health);
-            }
-        }
 
-        void HandlePlayerDeath() { }
+        }
 
         void HandleParry(GameObject source)
         {
