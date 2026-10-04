@@ -224,12 +224,14 @@ namespace AshenCrown.Player
             if (health == null) health = GetComponent<HealthAndDamageSystem>();
             health.OnDamaged += HandleDamaged;
             health.OnDeath += HandleDeath;
+            PlayerRegistry.Register(this);
         }
 
         void OnDisable()
         {
             health.OnDamaged -= HandleDamaged;
             health.OnDeath -= HandleDeath;
+            PlayerRegistry.Unregister(this);
             if (hitStopping) { Time.timeScale = 1f; hitStopping = false; }
         }
 
