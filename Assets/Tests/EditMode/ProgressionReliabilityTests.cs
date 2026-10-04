@@ -115,6 +115,11 @@ namespace AshenCrown.Tests.EditMode
             var unrelated = new ItemDefinition { id = "not_owned", slot = EquipmentSlot.Helmet, tier = ItemTier.Ascendant };
             Assert.AreEqual(0, EquipmentSystem.Instance.Salvage(unrelated));
             Assert.AreSame(helmet, EquipmentSystem.Instance.Get(EquipmentSlot.Helmet));
+
+            int equippedReward = EquipmentSystem.Instance.Salvage(helmet);
+            Assert.Greater(equippedReward, 0);
+            Assert.IsNull(EquipmentSystem.Instance.Get(EquipmentSlot.Helmet));
+            Assert.AreSame(weapon, EquipmentSystem.Instance.Get(EquipmentSlot.Weapon));
         }
 
         [Test]
