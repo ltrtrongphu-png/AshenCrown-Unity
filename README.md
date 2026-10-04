@@ -245,3 +245,16 @@ The runtime now includes a session persistence director:
 - The profile HUD shows level, XP progress, Essence, Prestige, Journey/Legacy progress, active Expedition room state, and the next autosave.
 
 F5 remains the manual save shortcut and F9 remains the local load shortcut.
+
+## 14. 3D Model + Texture Quality Pipeline
+
+The presentation layer now has a dedicated quality/performance path for production 3D assets:
+
+- `Presentation/ModelPerformanceProfile.cs` controls LOD thresholds, cross-fade, shadow distance, animator culling and skinned-mesh offscreen updates.
+- `Presentation/CharacterModelBinder.cs` uses cached renderers/camera references, supports authored `LODGroup` data from FBX/GLB prefabs, adds real multi-LOD geometry to the procedural fallback, and distance-culls the visual model/animator.
+- `Presentation/TexturePerformanceProfile.cs` provides centralized texture targets for characters, environments and UI.
+- `Editor/Art/ArtAssetPipeline.cs` automatically applies mipmaps, texture streaming, anisotropic filtering, compression, max texture sizes, mesh optimization and removal of unnecessary model cameras/lights during import.
+- `Performance/PerformanceDirector.cs` now uses interval-average FPS with hysteresis/cooldown instead of reacting to a single frame, and keeps Unity texture streaming enabled after quality changes.
+- `Presentation/Item3DPresentationSystem.cs` reuses tier material variants and disables shadows on decorative item particles to reduce draw/state churn.
+
+The repository does not currently contain production FBX/GLB character meshes or authored texture sets. These systems are therefore designed to improve the existing runtime fallback immediately and automatically optimize production assets once they are imported under the project.
