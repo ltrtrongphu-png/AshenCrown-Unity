@@ -159,6 +159,19 @@ namespace AshenCrown.Enemy
         //  VÒNG ĐỜI
         // =====================================================================
 
+        void HandlePlayerChanged(PlayerCombatSystem next)
+        {
+            BindPlayer(next);
+            if (playerHealth == null && state != EnemyState.Die)
+                ChangeState(EnemyState.Patrol);
+        }
+
+        void BindPlayer(PlayerCombatSystem playerCombat)
+        {
+            player = playerCombat != null ? playerCombat.transform : null;
+            playerHealth = playerCombat != null ? playerCombat.GetComponent<HealthAndDamageSystem>() : null;
+        }
+
         void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
@@ -180,8 +193,7 @@ namespace AshenCrown.Enemy
 
         void Start()
         {
-            var p = GameObject.FindGameObjectWithTag("Player");
-            if (p != null) { player = p.transform; playerHealth = p.GetComponent<HealthAndDamageSystem>(); }
+            BindPlayer(PlayerRegistry.CurrentPlayer);
             EnterState(EnemyState.Patrol);
         }
 
@@ -191,6 +203,8 @@ namespace AshenCrown.Enemy
             Health.OnPoiseBroken += HandlePoiseBroken;
             Health.OnDamaged += HandleDamaged;
             Health.OnDeath += HandleDeath;
+            PlayerRegistry.PlayerChanged += HandlePlayerChanged;
+            BindPlayer(PlayerRegistry.CurrentPlayer);
         }
 
         void OnDisable()
@@ -198,6 +212,9 @@ namespace AshenCrown.Enemy
             Health.OnPoiseBroken -= HandlePoiseBroken;
             Health.OnDamaged -= HandleDamaged;
             Health.OnDeath -= HandleDeath;
+            PlayerRegistry.PlayerChanged -= HandlePlayerChanged;
+            player = null;
+            playerHealth = null;
             Unregister(); ReleaseToken();
         }
 
