@@ -409,9 +409,6 @@ function animalPart(type){
   const g=new THREE.Group();
   const body=orb(.36,0xa55432);body.scale.set(1.05,.72,.65);body.position.y=.58;g.add(body);
   const head=orb(.28,0xb25b34);head.position.set(.43,.78,0);g.add(head);
-  const tail=new THREE.Mesh(new THREE.CatmullRomCurve3([new THREE.Vector3(-.38,.72,0),new THREE.Vector3(-.68,1.0,.06),new THREE.Vector3(-.9,.86,0)]).getPoints(12),new THREE.LineBasicMaterial({color:0xa55432}));
-  // Use a low-cost tapered tail instead of a thick spline mesh.
-  tail.visible=false;
   const tailTip=orb(.12,0xa55432);tailTip.position.set(-.65,.96,.06);g.add(tailTip);
   return g;
 }
