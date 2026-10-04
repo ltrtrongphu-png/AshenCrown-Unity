@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using AshenCrown.Core;
+using AshenCrown.Player;
 
 namespace AshenCrown.Combat
 {
@@ -92,6 +93,9 @@ namespace AshenCrown.Combat
             baseMaxHealth = maxHealth;
             baseDefense = defense;
             statBlock = GetComponent<StatBlock>();
+            if (statBlock == null && GetComponent<PlayerCombatSystem>() != null)
+                statBlock = gameObject.AddComponent<StatBlock>();
+
             CurrentHealth = maxHealth;
             CurrentPoise = maxPoise;
             filters = GetComponents<IDamageFilter>();
