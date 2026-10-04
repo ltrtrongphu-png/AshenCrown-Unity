@@ -1175,3 +1175,63 @@ setInterval(()=>{
   if(!state.paused&&!document.hidden&&wildlife.length<20)spawnWildlifeBurst(4);
 },9000);
 let last=performance.now();function frame(t){const dt=Math.min(.033,(t-last)/1000);last=t;if(!state.paused&&!$('dialogue').classList.contains('show')&&!$('tutorial').classList.contains('show')&&!$('inventoryMenu').classList.contains('show')&&!$('worldMap').classList.contains('show'))tick(dt);renderer.render(scene,camera);if(toastTimer>0&&(toastTimer-=dt)<=0)$('toast').classList.remove('show');requestAnimationFrame(frame)}requestAnimationFrame(frame);
+/* Ashen Crown — Super Presentation 2.0 behavior layer. */
+(() => {
+  const root = document.documentElement;
+  const body = document.body;
+  const gameCanvas = document.getElementById('game');
+  const panelIds = ['dialogue','pause','result','metaMenu','inventoryMenu','worldMap','tutorial'];
+  const motionMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let lastPointerWrite = 0;
+
+  const syncMotion = () => body.classList.toggle('reduced-motion', motionMedia.matches);
+  const syncPanels = () => body.classList.toggle('panel-open', panelIds.some(id => {
+    const el = document.getElementById(id);
+    return el && el.classList.contains('show');
+  }));
+  const syncDanger = () => {
+    const hp = document.getElementById('playerHp');
+    const width = hp ? parseFloat(hp.style.width || '100') : 100;
+    body.classList.toggle('danger-state', width <= 28);
+  };
+
+  const syncState = () => { syncPanels(); syncDanger(); };
+  syncMotion();
+  syncState();
+
+  if (motionMedia.addEventListener) motionMedia.addEventListener('change', syncMotion);
+  else motionMedia.addListener(syncMotion);
+
+  const observer = new MutationObserver(syncState);
+  observer.observe(body, {subtree:true, attributes:true, attributeFilter:['class','style']});
+
+  document.addEventListener('visibilitychange', () => body.classList.toggle('page-hidden', document.hidden));
+
+  document.querySelectorAll('button,a,[role="button"]').forEach(el => {
+    el.addEventListener('pointerdown', () => el.classList.add('pressing'));
+    ['pointerup','pointercancel','pointerleave'].forEach(type => el.addEventListener(type, () => el.classList.remove('pressing')));
+  });
+
+  document.addEventListener('focusin', e => e.target?.classList?.add('ac-focused'));
+  document.addEventListener('focusout', e => e.target?.classList?.remove('ac-focused'));
+
+  if (gameCanvas) {
+    gameCanvas.addEventListener('pointerenter', () => body.classList.add('viewport-active'));
+    gameCanvas.addEventListener('pointerleave', () => body.classList.remove('viewport-active'));
+    gameCanvas.addEventListener('pointerdown', () => {
+      body.classList.add('combat-active');
+      window.setTimeout(() => body.classList.remove('combat-active'), motionMedia.matches ? 1 : 420);
+    });
+  }
+
+  window.addEventListener('pointermove', e => {
+    if (motionMedia.matches) return;
+    const now = performance.now();
+    if (now - lastPointerWrite < 34) return;
+    lastPointerWrite = now;
+    root.style.setProperty('--ac-cursor-x', (e.clientX / window.innerWidth * 100).toFixed(2) + '%');
+    root.style.setProperty('--ac-cursor-y', (e.clientY / window.innerHeight * 100).toFixed(2) + '%');
+  }, {passive:true});
+
+  window.setInterval(syncDanger, 160);
+})();

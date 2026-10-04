@@ -147,6 +147,7 @@ namespace AshenCrown.Player
 
         // ----- Sự kiện / trạng thái cho UI & VFX -----
         public event Action<AttackProfile> OnAttackStarted;
+        public event Action<DamageResult, DamageInfo> OnHitConfirmed;
         public event Action<AttackProfile> OnAttackActive;     // bật VFX/SFX lưỡi chém tại khung này
         public event Action<int> OnSkillCast;                  // 0 = Q, 1 = E, 2 = R
         public float UltimateGauge01 => ultimateGauge / ultimateMax;
@@ -196,6 +197,35 @@ namespace AshenCrown.Player
 
         /// <summary>Đang trong khung bất tử của lăn né.</summary>
         public bool IsInvulnerable => state == CombatState.Dodging && dodgeElapsed <= iFrameDuration;
+        // Presentation-only read model; gameplay state remains authoritative.
+        public bool IsAttacking => state == CombatState.Attacking;
+        public bool IsCharging => state == CombatState.Charging;
+        public bool IsDodging => state == CombatState.Dodging;
+        public bool IsBlocking => state == CombatState.Blocking;
+        public bool IsHurt => state == CombatState.Hurt;
+        public bool IsDeadState => state == CombatState.Dead;
+        public bool IsCombatPresentationActive => state != CombatState.Idle && state != CombatState.Dead;
+        public float AttackAnimationSpeed => AttackSpeedMultiplier;
+        public float ActionProgress01
+        {
+            get
+            {
+                switch (state)
+                {
+                    case CombatState.Attacking:
+                        float total = Mathf.Max(0.0001f,
+                            phase == AttackPhase.Windup ? current.windup :
+                            phase == AttackPhase.Active ? current.active : current.recover);
+                        return Mathf.Clamp01(phaseTimer / total);
+                    case CombatState.Charging:
+                        return Mathf.Clamp01(chargeTimer / Mathf.Max(0.0001f, chargeTime));
+                    case CombatState.Dodging:
+                        return Mathf.Clamp01(dodgeElapsed / Mathf.Max(0.0001f, dodgeDuration));
+                    default:
+                        return 0f;
+                }
+            }
+        }
 
         // Thiết lập mặc định khi gắn component lần đầu (hoặc nhấn Reset trong Inspector).
         void Reset()
@@ -535,6 +565,7 @@ namespace AshenCrown.Player
 
             DamageResult r = target.TakeDamage(info);
             if (r.finalDamage <= 0f) return;
+            OnHitConfirmed?.Invoke(r, info);
 
             // Nạp Ultimate (không nạp khi đang bật Soul Harvest).
             if (!SoulHarvestActive) ultimateGauge = Mathf.Min(ultimateMax, ultimateGauge + ultimateGainPerHit);

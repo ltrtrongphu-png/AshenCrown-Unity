@@ -258,3 +258,16 @@ The presentation layer now has a dedicated quality/performance path for producti
 - `Presentation/Item3DPresentationSystem.cs` reuses tier material variants and disables shadows on decorative item particles to reduce draw/state churn.
 
 The repository does not currently contain production FBX/GLB character meshes or authored texture sets. These systems are therefore designed to improve the existing runtime fallback immediately and automatically optimize production assets once they are imported under the project.
+
+
+## Super Presentation 2.0
+
+The presentation stack now bootstraps a unified animation/combat/UI layer at runtime.
+
+- Character locomotion uses a dead-zone, normalized local-space blend model with action de-duplication and safe playback speed.
+- Player combat exposes a read-only presentation state model and confirmed-hit events for camera/HUD feedback.
+- Camera presentation adds movement bob, subtle roll, impact FOV response, parry/perfect-dodge feedback, and reduced-motion suppression.
+- A cinematic HUD is attached automatically and presents health, stamina, ultimate, lock-on target health/poise, skill readiness, combat state, and combat callouts.
+- Settings expose HUD scale, alpha, and reduced HUD pulses.
+- The web story showcase receives a viewport chrome, cinematic reticle, live-state feedback classes, pointer ambience, keyboard/touch focus polish, and reduced-motion support.
+- No third-party runtime package or new animation asset is required.

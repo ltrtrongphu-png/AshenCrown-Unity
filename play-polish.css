@@ -13,3 +13,39 @@ button,a,[role="button"]{-webkit-tap-highlight-color:transparent}button:focus-vi
 @media(max-width:700px){.topbar{height:58px}.trial-title{letter-spacing:.16em}.hud{inset:12px 12px 0}.quest-panel{width:min(280px,calc(100vw - 24px))}.controls-strip{padding-bottom:max(10px,env(safe-area-inset-bottom))}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.choice:hover,.equip-slot:hover,.chapter-card:hover,.rank-filter button:hover,.player-card:hover,.quest-panel:hover,.journal:hover{transform:none}}
 @media(pointer:coarse){button,a,[role="button"]{min-height:40px}.controls-strip{gap:8px 12px}}
+
+/* Ashen Crown — Super Presentation 2.0 */
+:root{--ac-cursor-x:50%;--ac-cursor-y:50%;--ac-surface:rgba(13,10,8,.74);--ac-surface-hi:rgba(24,17,13,.88);--ac-ember-soft:rgba(212,119,64,.16);--ac-gold-soft:rgba(200,164,109,.14)}
+body{isolation:isolate}
+body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at var(--ac-cursor-x) var(--ac-cursor-y),rgba(212,119,64,.055),transparent 22%),linear-gradient(180deg,rgba(0,0,0,.06),transparent 20%,transparent 78%,rgba(0,0,0,.22));mix-blend-mode:screen}
+.stage{contain:layout paint;perspective:1200px}
+#game{filter:saturate(.94) contrast(1.03);transition:filter .35s ease,transform .35s cubic-bezier(.2,.8,.2,1)}
+body.viewport-active #game{filter:saturate(1) contrast(1.05)}
+body.combat-active #game{filter:saturate(1.08) contrast(1.06)}
+.ac-cinematic-chrome{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden}
+.ac-corner{position:absolute;width:54px;height:54px;opacity:.55}
+.ac-corner::before,.ac-corner::after{content:"";position:absolute;background:linear-gradient(90deg,rgba(212,119,64,.7),transparent)}
+.ac-corner::before{left:0;top:0;width:100%;height:1px}.ac-corner::after{left:0;top:0;width:1px;height:100%;background:linear-gradient(180deg,rgba(212,119,64,.7),transparent)}
+.ac-corner-tl{left:16px;top:16px}.ac-corner-tr{right:16px;top:16px;transform:scaleX(-1)}.ac-corner-bl{left:16px;bottom:16px;transform:scaleY(-1)}.ac-corner-br{right:16px;bottom:16px;transform:scale(-1)}
+.ac-live-chip{position:absolute;left:50%;top:18px;transform:translateX(-50%);display:flex;align-items:center;gap:9px;padding:6px 11px;border:1px solid rgba(200,164,109,.18);background:rgba(8,7,6,.5);backdrop-filter:blur(8px);font-size:8px;letter-spacing:.18em;color:#9d9185;text-transform:uppercase}
+.ac-live-chip b{color:#d18a5d;font-weight:600}.ac-live-dot{width:6px;height:6px;border-radius:50%;background:#c96f3c;box-shadow:0 0 12px rgba(212,119,64,.8);animation:ac-live 1.6s ease-in-out infinite}
+@keyframes ac-live{0%,100%{opacity:.5;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+.ac-reticle{position:absolute;left:50%;top:50%;width:30px;height:30px;transform:translate(-50%,-50%);opacity:.48}
+.ac-reticle i{position:absolute;background:#d9c2a4;display:block;box-shadow:0 0 9px rgba(212,119,64,.4)}
+.ac-reticle i:nth-child(1){left:14px;top:0;width:1px;height:9px}.ac-reticle i:nth-child(2){right:0;top:14px;width:9px;height:1px}.ac-reticle i:nth-child(3){left:14px;bottom:0;width:1px;height:9px}.ac-reticle i:nth-child(4){left:0;top:14px;width:9px;height:1px}
+.ac-edge{position:absolute;top:12%;bottom:12%;width:1px;background:linear-gradient(180deg,transparent,rgba(212,119,64,.18),transparent);opacity:.22}
+.ac-edge-left{left:7%}.ac-edge-right{right:7%}
+body.reduced-motion .ac-live-dot{animation:none}
+body.reduced-motion #game{transition:none}
+body.panel-open .ac-live-chip,body.panel-open .ac-reticle{opacity:.08}
+body.danger-state .player-card{border-color:rgba(190,72,54,.58)!important;box-shadow:0 0 28px rgba(190,72,54,.14)}
+body.danger-state .hp i{animation:ac-danger .9s ease-in-out infinite}
+@keyframes ac-danger{0%,100%{opacity:.72}50%{opacity:1}}
+.controls-strip{backdrop-filter:blur(12px);padding-left:18px;padding-right:18px}
+.controls-strip span{white-space:nowrap}
+button:disabled{cursor:not-allowed!important;opacity:.42!important;filter:saturate(.4)}
+.ac-focused{filter:brightness(1.12)}
+.pressing{transform:translateY(1px) scale(.985)!important}
+@media(max-width:900px){.ac-live-chip{top:10px}.ac-corner{width:36px;height:36px}.ac-edge{display:none}}
+@media(max-width:600px){.ac-live-chip{font-size:7px;letter-spacing:.12em}.ac-reticle{transform:translate(-50%,-50%) scale(.85)}}
+@media(prefers-reduced-motion:reduce){body::before{mix-blend-mode:normal;background:linear-gradient(180deg,rgba(0,0,0,.04),transparent 24%,transparent 76%,rgba(0,0,0,.16))}.ac-live-dot{animation:none!important}.player-card,.quest-panel,.journal{box-shadow:none!important}.hp i{animation:none!important}}
