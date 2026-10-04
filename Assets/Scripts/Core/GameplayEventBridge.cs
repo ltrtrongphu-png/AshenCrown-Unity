@@ -8,6 +8,8 @@ using AshenCrown.Enemy;
 using AshenCrown.Endgame;
 using AshenCrown.Player;
 using AshenCrown.Progression;
+using AshenCrown.Quests;
+using AshenCrown.Codex;
 using AshenCrown.World;
 
 namespace AshenCrown.Core
