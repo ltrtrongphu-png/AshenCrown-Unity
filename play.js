@@ -214,7 +214,7 @@ function actor(c,a){
 }
 player.add(actor(0x29221d,0x613724)); const cape=box(.75,.9,.12,0x151213);cape.position.set(0,1,-.38);cape.castShadow=true;player.add(cape);
 
-const groundMat=mat(0x17140f,.98);
+const groundMat=wmat('groundSurface',0x17140f,.98);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240,48,48),groundMat);
 ground.rotation.x=-Math.PI/2;
 world.add(ground);
@@ -243,10 +243,122 @@ path(42,38,58,4,-.42,0x32271f);
 path(-56,-34,48,4,.28,0x29221c);
 
 const worldMats=new Map();
+const textureCache=new Map();
+const lightSources=[];
+
+function texturePattern(kind){
+  if(textureCache.has(kind))return textureCache.get(kind);
+
+  const canvas=document.createElement('canvas');
+  canvas.width=192; canvas.height=192;
+  const ctx=canvas.getContext('2d');
+  const palette={
+    ground:['#29251f','#332e26','#24221d'],
+    wall:['#746051','#806c59','#625247'],
+    wood:['#5b402f','#765238','#412f24'],
+    roof:['#332923','#46332a','#292528'],
+    stone:['#5d5750','#6c665d','#4b4742'],
+    cloth:['#454b58','#586170','#353b47']
+  }[kind]||['#555','#666','#444'];
+
+  ctx.fillStyle=palette[0]; ctx.fillRect(0,0,192,192);
+  const hash=(x,y)=>{
+    let n=(x*374761393+y*668265263)|0;
+    n=(n^(n>>13))*1274126177;
+    return ((n^(n>>16))>>>0)/4294967295;
+  };
+
+  if(kind==='wood'){
+    for(let y=0;y<192;y+=24){
+      ctx.fillStyle=palette[1];
+      ctx.fillRect(0,y,192,20);
+      ctx.fillStyle=palette[2];
+      for(let x=0;x<192;x+=36){
+        ctx.fillRect(x+(y%31)*.2,y,2,20);
+        if(hash(x,y)>.72)ctx.fillRect(x+12,y+5,18,2);
+      }
+    }
+  }else if(kind==='roof'){
+    ctx.fillStyle=palette[1]; ctx.fillRect(0,0,192,192);
+    ctx.strokeStyle=palette[2]; ctx.lineWidth=5;
+    for(let y=-20;y<212;y+=18){
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(192,y+35);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,y+8);ctx.lineTo(192,y+43);ctx.stroke();
+    }
+  }else if(kind==='stone'){
+    for(let i=0;i<45;i++){
+      const x=Math.floor(hash(i,7)*192),y=Math.floor(hash(i,17)*192);
+      const w=8+hash(i,27)*28,h=7+hash(i,31)*18;
+      ctx.fillStyle=palette[i%3];
+      ctx.fillRect(x,y,w,h);
+    }
+  }else if(kind==='wall'){
+    for(let i=0;i<80;i++){
+      const x=Math.floor(hash(i,3)*192),y=Math.floor(hash(i,9)*192);
+      const a=.08+hash(i,11)*.16;
+      ctx.fillStyle='rgba(255,235,210,'+a.toFixed(3)+')';
+      ctx.fillRect(x,y,3+hash(i,15)*8,3+hash(i,19)*6);
+    }
+    ctx.strokeStyle=palette[2];ctx.globalAlpha=.3;ctx.lineWidth=1;
+    for(let y=18;y<192;y+=42){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(192,y);ctx.stroke();}
+    ctx.globalAlpha=1;
+  }else if(kind==='ground'){
+    for(let i=0;i<1400;i++){
+      const x=Math.floor(hash(i,41)*192),y=Math.floor(hash(i,59)*192);
+      const c=i%5===0?palette[1]:palette[2];
+      ctx.fillStyle=c;
+      ctx.globalAlpha=.16+hash(i,71)*.22;
+      ctx.fillRect(x,y,1+hash(i,79)*2,1+hash(i,83)*2);
+    }
+    ctx.globalAlpha=1;
+  }else if(kind==='cloth'){
+    ctx.fillStyle=palette[1];ctx.fillRect(0,0,192,192);
+    ctx.strokeStyle=palette[2];ctx.globalAlpha=.22;ctx.lineWidth=2;
+    for(let i=-192;i<192;i+=14){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+192,192);ctx.stroke();}
+    ctx.globalAlpha=1;
+  }
+
+  const tex=new THREE.CanvasTexture(canvas);
+  tex.colorSpace=THREE.SRGBColorSpace;
+  tex.wrapS=THREE.RepeatWrapping;
+  tex.wrapT=THREE.RepeatWrapping;
+  tex.anisotropy=4;
+  tex.needsUpdate=true;
+  textureCache.set(kind,tex);
+  return tex;
+}
+
 function wmat(key,color,roughness=.78,metalness=0,emission=0){
   const cached=worldMats.get(key);
   if(cached)return cached;
   const m=mat(color,roughness,metalness);
+
+  if(key.toLowerCase().includes('ground')) {
+    m.map=texturePattern('ground');
+    m.bumpMap=texturePattern('ground');
+    m.bumpScale=.045;
+    m.color.set(0xffffff);
+    m.roughness=.98;
+  }else if(key.toLowerCase().includes('wood')||key.toLowerCase().includes('beam')||key.toLowerCase().includes('door')||key.toLowerCase().includes('cart')){
+    m.map=texturePattern('wood');
+    m.bumpMap=texturePattern('wood');
+    m.bumpScale=.035;
+    m.color.set(0xffffff);
+  }else if(key.toLowerCase().includes('roof')){
+    m.map=texturePattern('roof');
+    m.bumpMap=texturePattern('roof');
+    m.bumpScale=.055;
+    m.color.set(0xffffff);
+  }else if(key.toLowerCase().includes('stone')||key.toLowerCase().includes('foundation')||key.toLowerCase().includes('shore')||key.toLowerCase().includes('wall')){
+    m.map=texturePattern(key.toLowerCase().includes('wall')?'wall':'stone');
+    m.bumpMap=m.map;
+    m.bumpScale=.045;
+    m.color.set(0xffffff);
+  }else if(key.toLowerCase().includes('cloth')){
+    m.map=texturePattern('cloth');
+    m.color.set(0xffffff);
+  }
+
   if(emission>0){
     m.emissive=new THREE.Color(color);
     m.emissiveIntensity=emission;
@@ -354,6 +466,8 @@ function lantern(x,z,tall=1){
   g.add(l);
   const glow=new THREE.PointLight(0xff8a4d,1.1,7*tall);
   glow.position.set(0,2.05*tall,0);
+  glow.userData.baseIntensity=glow.intensity;
+  lightSources.push(glow);
   g.add(glow);
   props.add(g);
 }
@@ -560,6 +674,8 @@ function campfire(x,z){
   g.add(flame);
   const light=new THREE.PointLight(0xff7542,1.7,9);
   light.position.y=.75;
+  light.userData.baseIntensity=light.intensity;
+  lightSources.push(light);
   g.add(light);
   props.add(g);
 }
@@ -614,7 +730,11 @@ function forge(x,z){
   const chimney=new THREE.Mesh(new THREE.CylinderGeometry(.30,.36,1.7,10),wmat('forgeChimney',0x3f3633,.98));
   chimney.position.set(.6,2.5,.2);chimney.castShadow=true;g.add(chimney);
   const fire=orb(.22,0xff7f42,true);fire.material=wmat('forgeFire',0xff713d,.3,.02,4);fire.position.y=.92;g.add(fire);
-  const light=new THREE.PointLight(0xff7d43,1.2,7);light.position.y=1;g.add(light);
+  const light=new THREE.PointLight(0xff7d43,1.2,7);
+  light.position.y=1;
+  light.userData.baseIntensity=light.intensity;
+  lightSources.push(light);
+  g.add(light);
   props.add(g);
 }
 forge(14,18);
@@ -980,12 +1100,13 @@ function tick(dt){
     if(e.root.position.distanceTo(player.position)<2.3)state.hp=Math.max(0,state.hp-5*dt);
   }
 
-  // Give nearby light sources a small living flicker.
-  const lightTime=time*5;
-  for(let i=0;i<props.children.length;i+=23){
-    const obj=props.children[i];
-    const point=obj&&obj.getObjectByProperty?'_light':null;
-    if(point) obj.rotation.z=Math.sin(lightTime+i)*.01;
+  // Warm lantern/fire flicker is kept subtle so the scene still reads naturally in daylight.
+  const nightFactor=Math.max(0,(0.28-skyUniforms.uDay.value)/0.28);
+  for(let i=0;i<lightSources.length;i++){
+    const light=lightSources[i];
+    if(!light)continue;
+    const base=light.userData.baseIntensity||1;
+    light.intensity=base*(.35+.65*nightFactor)*(0.9+Math.sin(time*7+i)*.055);
   }
 
   if(state.hp<=0){
