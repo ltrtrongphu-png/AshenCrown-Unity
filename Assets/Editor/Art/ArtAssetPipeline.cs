@@ -2,6 +2,7 @@
 using System;
 using UnityEditor;
 using UnityEngine;
+using AshenCrown.Presentation;
 
 namespace AshenCrown.Editor.Art
 {
@@ -37,27 +38,40 @@ namespace AshenCrown.Editor.Art
             var path = assetPath.Replace('\\', '/');
             bool isNormal = importer.textureType == TextureImporterType.NormalMap;
             bool isSprite = importer.textureType == TextureImporterType.Sprite;
+            var profile = LoadProfile();
 
             importer.isReadable = false;
-            importer.filterMode = FilterMode.Trilinear;
-            importer.anisoLevel = 4;
+            importer.filterMode = profile != null ? profile.filterMode : FilterMode.Trilinear;
+            importer.anisoLevel = profile != null ? profile.anisotropicLevel : 4;
 
             if (!isSprite)
             {
-                importer.mipmapEnabled = true;
-                importer.streamingMipmaps = true;
+                importer.mipmapEnabled = profile == null || profile.generateMipMaps;
+                importer.streamingMipmaps = profile == null || profile.streamMipMaps;
             }
 
-            importer.textureCompression = TextureImporterCompression.CompressedHQ;
-            importer.compressionQuality = 70;
+            importer.textureCompression = profile != null && !profile.highQualityCompression
+                ? TextureImporterCompression.Compressed
+                : TextureImporterCompression.CompressedHQ;
+            importer.compressionQuality = profile != null ? profile.compressionQuality : 70;
 
-            int maxSize = GetMaxTextureSize(path, isNormal);
+            int maxSize = profile != null ? profile.GetMaxSize(path) : GetMaxTextureSize(path, isNormal);
             importer.maxTextureSize = Mathf.Min(Mathf.Max(64, importer.maxTextureSize), maxSize);
 
-            // Crunch is useful for color/albedo textures; normal maps keep the importer defaults
-            // to avoid introducing additional normal-map compression artifacts.
             if (!isNormal && !isSprite)
-                importer.crunchedCompression = true;
+                importer.crunchedCompression = profile == null || profile.crunchCompression;
+        }
+
+        static TexturePerformanceProfile LoadProfile()
+        {
+            string[] guids = AssetDatabase.FindAssets("t:TexturePerformanceProfile");
+            for (int i = 0; i < guids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                var profile = AssetDatabase.LoadAssetAtPath<TexturePerformanceProfile>(path);
+                if (profile != null) return profile;
+            }
+            return null;
         }
 
         void OnPreprocessModel()
