@@ -163,6 +163,7 @@ namespace AshenCrown.Player
         PlayerMovementAndCamera movement;
         PlayerStamina stamina;
         HealthAndDamageSystem health;
+        StatBlock statBlock;
 
         CombatState state = CombatState.Idle;
         AttackPhase phase;
@@ -216,6 +217,8 @@ namespace AshenCrown.Player
             movement = GetComponent<PlayerMovementAndCamera>();
             stamina = GetComponent<PlayerStamina>();
             health = GetComponent<HealthAndDamageSystem>();
+            statBlock = GetComponent<StatBlock>();
+            if (statBlock == null) statBlock = gameObject.AddComponent<StatBlock>();
             if (lightCombo == null || lightCombo.Length == 0) Reset();
         }
 
@@ -513,9 +516,11 @@ namespace AshenCrown.Player
             float mult = kind == ActionKind.Heavy ? Mathf.Lerp(heavyMinMultiplier, heavyMaxMultiplier, chargeRatio)
                                                   : p.damageMultiplier;
             float poise = kind == ActionKind.Heavy ? p.poiseDamage * (1f + chargeRatio * 2f) : p.poiseDamage;
-            float dmg = baseDamage * mult * DamageBuff;
+            float effectiveDamage = statBlock != null ? statBlock.Evaluate(StatType.Damage, baseDamage) : baseDamage;
+            float effectiveCritChance = statBlock != null ? Mathf.Clamp01(statBlock.Evaluate(StatType.CritChance, critChance)) : critChance;
+            float dmg = effectiveDamage * mult * DamageBuff;
 
-            bool crit = UnityEngine.Random.value < critChance;
+            bool crit = UnityEngine.Random.value < effectiveCritChance;
             if (crit) dmg *= critMultiplier;
 
             Vector3 dir = target.Transform.position - transform.position;
