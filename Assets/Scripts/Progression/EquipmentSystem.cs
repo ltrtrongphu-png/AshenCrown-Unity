@@ -16,7 +16,19 @@ namespace AshenCrown.Progression
         void Awake(){if(Instance!=null&&Instance!=this){Destroy(gameObject);return;}Instance=this;DontDestroyOnLoad(gameObject);}
         public ItemDefinition Get(EquipmentSlot slot)=>equipped.TryGetValue(slot,out var x)?x:null;
         public IReadOnlyDictionary<EquipmentSlot,ItemDefinition> Equipped=>equipped;
-        public bool Equip(ItemDefinition item){if(item==null)return false;equipped[item.slot]=item;EquipmentChanged?.Invoke();return true;}
+        public bool Equip(ItemDefinition item)
+        {
+            if (item == null) return false;
+
+            if (equipped.TryGetValue(item.slot, out var previous) &&
+                previous != null && !ReferenceEquals(previous, item) &&
+                LootSystem.Instance != null)
+                LootSystem.Instance.AddLoot(previous);
+
+            equipped[item.slot] = item;
+            EquipmentChanged?.Invoke();
+            return true;
+        }
         public ItemDefinition GenerateDrop(string sourceId,int playerLevel,int luck=0)
         {
             var roll=UnityEngine.Random.value;var tier=roll<.40f?ItemTier.Common:roll<.68f?ItemTier.Uncommon:roll<.86f?ItemTier.Rare:roll<.96f?ItemTier.Epic:roll<.992f?ItemTier.Legendary:ItemTier.Mythic;
@@ -27,12 +39,27 @@ namespace AshenCrown.Progression
         }
         public int Salvage(ItemDefinition item)
         {
-            if(item==null)return 0;var reward=2+(int)item.tier*3+item.upgradeLevel;equipped.Remove(item.slot);EquipmentChanged?.Invoke();if(LongTermProgressionSystem.Instance!=null)LongTermProgressionSystem.Instance.AddEssence(reward);return reward;
+            if (item == null) return 0;
+
+            bool isEquipped = equipped.TryGetValue(item.slot, out var equippedItem) &&
+                              ReferenceEquals(equippedItem, item);
+            bool isLoot = LootSystem.Instance != null && LootSystem.Instance.Items.Contains(item);
+            if (!isEquipped && !isLoot) return 0;
+
+            int reward = 2 + (int)item.tier * 3 + item.upgradeLevel;
+
+            if (isEquipped) equipped.Remove(item.slot);
+            if (isLoot) LootSystem.Instance.Remove(item);
+
+            EquipmentChanged?.Invoke();
+            if (LongTermProgressionSystem.Instance != null)
+                LongTermProgressionSystem.Instance.AddEssence(reward);
+            return reward;
         }
         public bool Upgrade(ItemDefinition item,int essenceCost)
         {
             if(item==null||item.upgradeLevel>=item.maxUpgrade||LongTermProgressionSystem.Instance==null||LongTermProgressionSystem.Instance.Essence<essenceCost)return false;
-            LongTermProgressionSystem.Instance.AddEssence(-essenceCost);item.upgradeLevel++;item.power+=Mathf.Max(1,item.power/12);item.armor+=item.armor>0?Mathf.Max(1,item.armor/14):0;item.damage+=item.damage>0?Mathf.Max(1,item.damage/14):0;EquipmentChanged?.Invoke();return true;
+            if (!LongTermProgressionSystem.Instance.SpendEssence(essenceCost)) return false;item.upgradeLevel++;item.power+=Mathf.Max(1,item.power/12);item.armor+=item.armor>0?Mathf.Max(1,item.armor/14):0;item.damage+=item.damage>0?Mathf.Max(1,item.damage/14):0;EquipmentChanged?.Invoke();return true;
         }
         public EquipmentState Capture(){var s=new EquipmentState();foreach(var p in equipped)s.equipped.Add(p.Value);return s;}
         public void Restore(EquipmentState s){equipped.Clear();if(s?.equipped!=null)foreach(var x in s.equipped)if(x!=null)equipped[x.slot]=x;EquipmentChanged?.Invoke();}
