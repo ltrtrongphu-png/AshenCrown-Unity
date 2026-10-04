@@ -8,10 +8,22 @@ namespace AshenCrown.UI
     public sealed class SettingsHUD : MonoBehaviour
     {
         bool open;
-        Rect window = new Rect(24, 24, 430, 560);
+        Rect window = new Rect(24, 24, 460, 620);
+        HUDPresentationSettings hudPresentation;
 
         void Update()
         {
+            if (hudPresentation == null)
+            {
+                hudPresentation = FindObjectOfType<HUDPresentationSettings>();
+                if (hudPresentation == null)
+                {
+                    var go = new GameObject("Ashen Crown HUD Settings");
+                    hudPresentation = go.AddComponent<HUDPresentationSettings>();
+                    DontDestroyOnLoad(go);
+                }
+            }
+
             if (Input.GetKeyDown(KeyCode.F1))
             {
                 open = !open;
@@ -44,7 +56,35 @@ namespace AshenCrown.UI
             }
 
             GUILayout.Space(10);
-            GUILayout.Label("Graphics");
+            GUILayout.Space(10);
+            GUILayout.Label("HUD & Accessibility");
+            if (hudPresentation != null)
+            {
+                bool hudReduced = GUILayout.Toggle(hudPresentation.ReducedMotion, " Reduce HUD pulses");
+                if (hudReduced != hudPresentation.ReducedMotion)
+                {
+                    hudPresentation.ReducedMotion = hudReduced;
+                    hudPresentation.Save();
+                }
+
+                GUILayout.Label("UI Scale");
+                float hudScale = GUILayout.HorizontalSlider(hudPresentation.UIScale, 0.85f, 1.35f);
+                if (Mathf.Abs(hudScale - hudPresentation.UIScale) > 0.002f)
+                {
+                    hudPresentation.UIScale = hudScale;
+                    hudPresentation.Save();
+                }
+
+                GUILayout.Label("UI Alpha");
+                float hudAlpha = GUILayout.HorizontalSlider(hudPresentation.UIAlpha, 0.65f, 1f);
+                if (Mathf.Abs(hudAlpha - hudPresentation.UIAlpha) > 0.002f)
+                {
+                    hudPresentation.UIAlpha = hudAlpha;
+                    hudPresentation.Save();
+                }
+            }
+
+                        GUILayout.Label("Graphics");
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("30 FPS")) PerformanceDirector.Instance?.SetTargetFps(30);
             if (GUILayout.Button("60 FPS")) PerformanceDirector.Instance?.SetTargetFps(60);

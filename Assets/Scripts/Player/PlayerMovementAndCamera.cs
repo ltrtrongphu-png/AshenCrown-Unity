@@ -54,6 +54,7 @@ namespace AshenCrown.Player
         public bool HasMoveInput { get; private set; }
         public Vector3 MoveInputWorld { get; private set; }
         public Vector3 Velocity => horizontalVelocity;
+        public float MaxPlanarSpeed => Mathf.Max(moveSpeed, sprintSpeed);
 
         /// <summary>Combat bật khi đang vung đòn / lăn... để chặn đi bộ.</summary>
         public bool MovementLocked { get; set; }
