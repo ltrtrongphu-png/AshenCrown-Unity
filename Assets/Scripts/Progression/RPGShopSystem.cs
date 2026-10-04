@@ -75,7 +75,11 @@ namespace AshenCrown.Progression
             if (offer.gear && EquipmentSystem.Instance != null)
             {
                 var item = CreateRelic(offer);
-                EquipmentSystem.Instance.Equip(item);
+                if (!EquipmentSystem.Instance.Equip(item))
+                {
+                    InventorySystem.Instance.Add(CurrencyId, offer.price);
+                    return false;
+                }
             }
             else
             {
