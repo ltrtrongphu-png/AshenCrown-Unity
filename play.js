@@ -28,6 +28,17 @@ const skyUniforms={
   uSunColor:{value:new THREE.Color(0xffdf9e)},
   uDay:{value:1}
 };
+const skyNoonColor=new THREE.Color(0x4c8dca);
+const skySunriseColor=new THREE.Color(0xe8a26c);
+const skyNightColor=new THREE.Color(0x07111f);
+const skyHorizonColor=new THREE.Color(0xf2c99d);
+const skyWarmColor=new THREE.Color(0xcf7d60);
+const skySunColor=new THREE.Color(0xffcf8f);
+const fogNightColor=new THREE.Color(0x14100d);
+const fogDayColor=new THREE.Color(0xc0aa98);
+const sunWarmColor=new THREE.Color(0xffc88b);
+const sunCoolColor=new THREE.Color(0x9db8ff);
+const sunPosition=new THREE.Vector3();
 const skyMaterial=new THREE.ShaderMaterial({
   uniforms:skyUniforms,
   vertexShader:`
@@ -134,39 +145,37 @@ function spawnBird(x,y,z,scale=1){
 for(let i=0;i<7;i++)spawnBird(-45+i*16,15+(i%3)*4,-28+(i%4)*22,.8+(i%3)*.12);
 
 function updateSky(){
-  const cycle=((time+ATMOSPHERE_OFFSET)%DAY_LENGTH)/DAY_LENGTH;
+  const absoluteCycle=(time+ATMOSPHERE_OFFSET)/DAY_LENGTH;
+  state.day=1+Math.floor(absoluteCycle);
+  const cycle=absoluteCycle-Math.floor(absoluteCycle);
   const angle=cycle*Math.PI*2-Math.PI/2;
   const sunY=Math.sin(angle);
   const sunX=Math.cos(angle);
   const sunZ=Math.sin(angle*.67);
-  const sunPos=new THREE.Vector3(sunX*115,sunY*115,sunZ*55);
-  const sunDir=sunPos.clone().normalize();
+  sunPosition.set(sunX*115,sunY*115,sunZ*55);
+  const sunDir=sunPosition.clone().normalize();
   const day=Math.max(0,Math.min(1,(sunY+.16)/.34));
 
-  sun.position.copy(sunPos);
+  sun.position.copy(sunPosition);
   sun.intensity=.28+2.05*day;
-  sun.color.copy(new THREE.Color().lerpColors(new THREE.Color(0x9db8ff),new THREE.Color(0xffc88b),Math.max(.08,day)));
+  sun.color.copy(sunCoolColor).lerp(sunWarmColor,Math.max(.08,day));
   skyUniforms.uSunDir.value.copy(sunDir);
   skyUniforms.uDay.value=day;
 
-  const noonColor=new THREE.Color(0x4c8dca);
-  const sunriseColor=new THREE.Color(0xe8a26c);
-  const nightColor=new THREE.Color(0x07111f);
-  const horizonColor=new THREE.Color(0xf2c99d);
   const duskAmount=Math.max(0,(.24-Math.abs(sunY))/.24)*day;
   const warm=Math.max(duskAmount,.72*(1-day));
 
-  skyUniforms.uZenith.value.copy(noonColor).lerp(sunriseColor,Math.min(1,warm*.72));
-  skyUniforms.uHorizon.value.copy(horizonColor).lerp(new THREE.Color(0xcf7d60),Math.min(1,warm*.6));
-  skyUniforms.uNight.value.copy(nightColor);
-  skyUniforms.uSunColor.value.copy(new THREE.Color(0xffcf8f));
+  skyUniforms.uZenith.value.copy(skyNoonColor).lerp(skySunriseColor,Math.min(1,warm*.72));
+  skyUniforms.uHorizon.value.copy(skyHorizonColor).lerp(skyWarmColor,Math.min(1,warm*.6));
+  skyUniforms.uNight.value.copy(skyNightColor);
+  skyUniforms.uSunColor.value.copy(skySunColor);
 
-  sunDisc.position.copy(sunPos);
-  sunHalo.position.copy(sunPos);
+  sunDisc.position.copy(sunPosition);
+  sunHalo.position.copy(sunPosition);
   sunDisc.material.opacity=Math.max(.05,day);
   sunHalo.material.opacity=.13+.18*day;
 
-  scene.fog.color.copy(new THREE.Color(0x14100d)).lerp(new THREE.Color(0xc0aa98),day*.38);
+  scene.fog.color.copy(fogNightColor).lerp(fogDayColor,day*.38);
   scene.fog.near=day>.25?34:24;
   scene.fog.far=day>.25?190:135;
 }
