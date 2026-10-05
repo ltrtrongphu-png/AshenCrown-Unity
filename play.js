@@ -3,11 +3,12 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.m
 const $=id=>document.getElementById(id);
 const canvas=$('game'), scene=new THREE.Scene();
 scene.background=new THREE.Color(0x080a0d); scene.fog=new THREE.Fog(0x14100d,32,180);
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.75)); renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25)); renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false;
 const camera=new THREE.PerspectiveCamera(55,1,.1,260); camera.position.set(0,4,8);
 scene.add(new THREE.HemisphereLight(0xcbb29e,0x090706,1.5));
-const sun=new THREE.DirectionalLight(0xffc39d,2.2); sun.position.set(-18,22,12); sun.castShadow=true; sun.shadow.mapSize.set(1536,1536); sun.shadow.camera.left=-100; sun.shadow.camera.right=100; sun.shadow.camera.top=100; sun.shadow.camera.bottom=-100; sun.shadow.camera.far=260; scene.add(sun);
+const sun=new THREE.DirectionalLight(0xffc39d,2.2); sun.position.set(-18,22,12); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-100; sun.shadow.camera.right=100; sun.shadow.camera.top=100; sun.shadow.camera.bottom=-100; sun.shadow.camera.far=260; scene.add(sun);
 const world=new THREE.Group(), characters=new THREE.Group(), props=new THREE.Group(), effects=new THREE.Group(); scene.add(world);
 world.add(characters,props,effects);
 
@@ -142,7 +143,7 @@ function spawnBird(x,y,z,scale=1){
   g.userData={speed:1.7+Math.random()*.7,phase:Math.random()*Math.PI*2,radius:7+Math.random()*8,height:y,center:new THREE.Vector3(x,y,z)};
   birds.push(g); scene.add(g);
 }
-for(let i=0;i<7;i++)spawnBird(-45+i*16,15+(i%3)*4,-28+(i%4)*22,.8+(i%3)*.12);
+for(let i=0;i<4;i++)spawnBird(-45+i*16,15+(i%3)*4,-28+(i%4)*22,.8+(i%3)*.12);
 
 function updateSky(){
   const absoluteCycle=(time+ATMOSPHERE_OFFSET)/DAY_LENGTH;
@@ -153,7 +154,7 @@ function updateSky(){
   const sunX=Math.cos(angle);
   const sunZ=Math.sin(angle*.67);
   sunPosition.set(sunX*115,sunY*115,sunZ*55);
-  const sunDir=sunPosition.clone().normalize();
+  const sunDir=skyUniforms.uSunDir.value.copy(sunPosition).normalize();
   const day=Math.max(0,Math.min(1,(sunY+.16)/.34));
 
   sun.position.copy(sunPosition);
@@ -417,14 +418,16 @@ function tree(x,z,s=1,variant=0){
 }
 
 const treeSpots=[];
-for(let i=0;i<118;i++){
+for(let i=0;i<48;i++){
   const a=i*2.399;
   const rx=28+(i%11)*6.3;
   const rz=24+(i%9)*6.8;
   const x=Math.sin(a*1.21)*rx+(i%3-1)*6;
   const z=Math.cos(a*.93)*rz+(i%4-1.5)*7;
   if(Math.abs(x)<12&&Math.abs(z)<15)continue;
-  treeSpots.push(tree(x,z,.72+(i%5)*.09,i));
+  const ts=.72+(i%5)*.09;
+  treeSpots.push(tree(x,z,ts,i));
+  addTreeCollider(x,z,ts);
 }
 
 function rock(x,z,s=1){
@@ -450,12 +453,13 @@ function bush(x,z,s=1,c=0x33452f){
   return g;
 }
 
-for(let i=0;i<76;i++){
+for(let i=0;i<38;i++){
   const a=i*1.71;
   const r=20+(i%8)*9;
-  rock(Math.sin(a*1.31)*r,Math.cos(a*.82)*r,.55+(i%4)*.14);
+  const rx=Math.sin(a*1.31)*r,rz=Math.cos(a*.82)*r,rs=.55+(i%4)*.14;
+  rock(rx,rz,rs); addRockCollider(rx,rz,rs);
 }
-for(let i=0;i<54;i++){
+for(let i=0;i<30;i++){
   const a=i*2.13;
   const r=18+(i%6)*10;
   bush(Math.cos(a*1.2)*r,Math.sin(a*.77)*r,.65+(i%3)*.14);
@@ -539,6 +543,7 @@ function house(x,z,s=1,rot=0,variant=0,name='House'){
   g.add(sign);
 
   props.add(g);
+  addBoxCollider(x,z,2.95*s,2.45*s,rot,'house');
   return g;
 }
 
@@ -563,6 +568,7 @@ function well(x,z,s=1){
   roof.rotation.y=Math.PI/4;
   g.add(roof);
   props.add(g);
+  addCircleCollider(x,z,1.35*s,'well');
 }
 
 function fence(x,z,len=8,rot=0){
@@ -583,6 +589,8 @@ function fence(x,z,len=8,rot=0){
     }
   }
   props.add(g);
+  const half=(len-.5)/2,co=Math.cos(rot),si=Math.sin(rot);
+  addSegmentCollider(x-half*co,z-half*si,x+half*co,z+half*si,.12,'fence');
 }
 
 function bridge(x,z,len=14,rot=0){
@@ -824,9 +832,11 @@ function spawnVillager(id,name,role,x,z,outfit,skin=0xd0b9a5,hair=0x2e231c){
   ['villager_03','Perrin','villager',-7,9,0x425b65,0xb98468,0x171719],
   ['villager_04','Ava','villager',7,9,0x8a624c,0xe4c5a1,0x5b3c2e]
 ].forEach(v=>spawnVillager(...v));
+for(let i=6;i<villagers.length;i++)villagers[i].root.visible=false;
 
 function updateVillagers(dt){
   for(const v of villagers){
+    if(!v.root.visible)continue;
     v.wait-=dt;
     const dx=v.target.x-v.root.position.x;
     const dz=v.target.z-v.root.position.z;
@@ -894,7 +904,7 @@ function addFlower(x,z,c){
   props.add(g);
   return g;
 }
-for(let i=0;i<34;i++){
+for(let i=0;i<16;i++){
   const a=i*2.77,r=15+(i%7)*6;
   addFlower(Math.sin(a)*r,Math.cos(a*1.21)*r,i%3===0?0xe69fb1:i%3===1?0xf0c86f:0x9bc5e0);
 }
@@ -955,7 +965,7 @@ function animalPart(type){
 }
 
 function createWildlife(x,z,typeIndex){
-  if(wildlife.length>=28)return;
+  if(wildlife.length>=14)return;
   const spec=wildlifeTypes[typeIndex%wildlifeTypes.length];
   const g=animalPart(spec.type);
   g.scale.setScalar(spec.scale);
@@ -974,7 +984,7 @@ function spawnWildlifeBurst(count=18){
   const zones=[
     [-45,22,1.0],[-8,-36,0.0],[28,-42,2.0],[66,-2,3.0],[-68,-18,1.0],[48,54,3.0]
   ];
-  for(let i=0;i<count&&wildlife.length<28;i++){
+  for(let i=0;i<count&&wildlife.length<14;i++){
     const z=zones[i%zones.length];
     const ang=Math.random()*Math.PI*2, r=5+Math.random()*18;
     createWildlife(z[0]+Math.cos(ang)*r,z[1]+Math.sin(ang)*r,Math.floor(z[2]+i));
@@ -984,45 +994,35 @@ function spawnWildlifeBurst(count=18){
 function updateWildlife(dt){
   for(const a of wildlife){
     if(!a.root.parent)continue;
-    const toPlayer=a.root.position.clone().sub(player.position); toPlayer.y=0;
-    const distance=toPlayer.length();
-
+    const dx=a.root.position.x-player.position.x,dz=a.root.position.z-player.position.z,distance=Math.hypot(dx,dz);
     if(distance<7){
-      a.dir.copy(toPlayer.normalize());
-      a.dir.add(new THREE.Vector3(Math.random()-.5,0,Math.random()-.5).multiplyScalar(.35)).normalize();
-      a.turnTimer=.8+Math.random()*1.2;
+      const inv=1/Math.max(.001,distance),dirx=dx*inv,dirz=dz*inv;
+      const jx=(Math.random()-.5)*.35,jz=(Math.random()-.5)*.35,jl=Math.hypot(dirx+jx,dirz+jz)||1;
+      a.dir.x=(dirx+jx)/jl;a.dir.y=0;a.dir.z=(dirz+jz)/jl;a.turnTimer=.8+Math.random()*1.2;
     }else{
       a.turnTimer-=dt;
       if(a.turnTimer<=0){
-        a.dir.applyAxisAngle(new THREE.Vector3(0,1,0),(Math.random()-.5)*1.2).normalize();
-        a.turnTimer=2+Math.random()*5;
+        const turn=(Math.random()-.5)*1.2,ct=Math.cos(turn),st=Math.sin(turn);
+        const ndx=a.dir.x*ct-a.dir.z*st,ndz=a.dir.x*st+a.dir.z*ct;
+        a.dir.x=ndx;a.dir.z=ndz;a.turnTimer=2+Math.random()*5;
       }
     }
-
     const runBoost=distance<3.5?1.7:1;
-    a.root.position.addScaledVector(a.dir,a.speed*runBoost*dt);
-    const homeOffset=a.root.position.clone().sub(a.home); homeOffset.y=0;
-    if(homeOffset.length()>18)a.dir.copy(homeOffset.normalize()).multiplyScalar(-1);
-
+    a.root.position.x+=a.dir.x*a.speed*runBoost*dt;a.root.position.z+=a.dir.z*a.speed*runBoost*dt;
+    const hx=a.root.position.x-a.home.x,hz=a.root.position.z-a.home.z;
+    if(hx*hx+hz*hz>324){const inv=1/Math.max(.001,Math.hypot(hx,hz));a.dir.x=-hx*inv;a.dir.z=-hz*inv}
     const edge=Math.max(Math.abs(a.root.position.x),Math.abs(a.root.position.z));
-    if(edge>104){
-      a.root.position.x=THREE.MathUtils.clamp(a.root.position.x,-102,102);
-      a.root.position.z=THREE.MathUtils.clamp(a.root.position.z,-102,102);
-    }
-
+    if(edge>104){a.root.position.x=THREE.MathUtils.clamp(a.root.position.x,-102,102);a.root.position.z=THREE.MathUtils.clamp(a.root.position.z,-102,102)}
     a.root.rotation.y=Math.atan2(a.dir.x,a.dir.z);
-    const bob=Math.sin(time*3.5+a.phase)*.025;
-    const stride=Math.sin(time*10+a.phase)*.035;
-    if(a.type==='rabbit')a.root.position.y=Math.max(0,bob*2);
-    else if(a.type==='deer')a.root.position.y=Math.max(0,bob*.7);
+    const bob=Math.sin(time*3.5+a.phase)*.025,stride=Math.sin(time*10+a.phase)*.035;
+    if(a.type==='rabbit')a.root.position.y=Math.max(0,bob*2);else if(a.type==='deer')a.root.position.y=Math.max(0,bob*.7);
     if(a.type==='deer')a.root.rotation.z=Math.sin(time*10+a.phase)*.02;
     if(a.type==='rabbit')a.root.rotation.z=stride*.7;
     if(a.type==='fox'||a.type==='boar')a.root.position.y=Math.max(0,bob*.4);
   }
 
   for(const b of birds){
-    const u=b.userData;
-    const t=time*.55+u.phase;
+    const u=b.userData,t=time*.55+u.phase;
     b.position.x=u.center.x+Math.cos(t*u.speed)*u.radius;
     b.position.z=u.center.z+Math.sin(t*u.speed*.82)*u.radius;
     b.position.y=u.height+Math.sin(t*1.9)*1.2;
@@ -1030,17 +1030,12 @@ function updateWildlife(dt){
     b.children[1].rotation.z=.25+Math.sin(t*7)*.25;
     b.children[2].rotation.z=-.25-Math.sin(t*7)*.25;
   }
-
-  for(const c of cloudObjects){
-    c.position.x+=c.userData.speed*dt;
-    if(c.position.x>125)c.position.x=-125;
-  }
-
+  for(const cl of cloudObjects){cl.position.x+=cl.userData.speed*dt;if(cl.position.x>125)cl.position.x=-125}
   for(const water of waterSurfaces){
     const u=water.userData;
     if(!u)continue;
-    const s=0.78+Math.sin(time*.65+u.phase)*.13;
-    u.ripple.scale.setScalar(s);
+    const rippleScale=.78+Math.sin(time*.65+u.phase)*.13;
+    u.ripple.scale.setScalar(rippleScale);
     u.ripple2.scale.setScalar(1.6+Math.sin(time*.52+u.phase)*.22);
     u.ripple.material.opacity=.15+.06*(Math.sin(time*.8+u.phase)+1);
   }
@@ -1048,6 +1043,7 @@ function updateWildlife(dt){
 }
 
 let enemies=[];
+let worldSimAccumulator=0;
 function spawnEnemy(){
   if(enemies.length)return;
   const angle=Math.random()*Math.PI*2;
@@ -1074,7 +1070,67 @@ function spawnEnemy(){
   enemies=[encounter];
   toastMsg('A wandering shade has entered the wilds.');
 }
-function dodge(){if(dodgeCooldown>0||state.stamina<18)return;dodgeCooldown=.65;state.stamina-=18;player.position.add(new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw)).multiplyScalar(-2.6));} let dodgeCooldown=0;
+const COLLISION_RADIUS=.38;
+const staticColliders=[];
+function addCircleCollider(x,z,r,tag='obstacle'){staticColliders.push({kind:'circle',x,z,r,tag})}
+function addBoxCollider(x,z,hx,hz,rot=0,tag='obstacle'){staticColliders.push({kind:'box',x,z,hx,hz,rot,cos:Math.cos(rot),sin:Math.sin(rot),tag})}
+function addSegmentCollider(x1,z1,x2,z2,r=.10,tag='obstacle'){staticColliders.push({kind:'segment',x1,z1,x2,z2,r,tag})}
+function addTreeCollider(x,z,s=1){addCircleCollider(x,z,.62*s,'tree')}
+function addRockCollider(x,z,s=1){addCircleCollider(x,z,.78*s,'rock')}
+function resolveCollisions(x,z){
+  let px=x,pz=z;
+  for(let pass=0;pass<2;pass++){
+    for(const c of staticColliders){
+      if(c.kind==='circle'){
+        let dx=px-c.x,dz=pz-c.z,d2=dx*dx+dz*dz;
+        const min=c.r+COLLISION_RADIUS;
+        if(d2<min*min){
+          if(d2<1e-8){dx=1;dz=0;d2=1}
+          const d=Math.sqrt(d2),push=min-d;
+          px+=dx/d*push;pz+=dz/d*push;
+        }
+      }else if(c.kind==='segment'){
+        const vx=c.x2-c.x1,vz=c.z2-c.z1,wx=px-c.x1,wz=pz-c.z1,den=vx*vx+vz*vz||1;
+        const t=THREE.MathUtils.clamp((wx*vx+wz*vz)/den,0,1),qx=c.x1+vx*t,qz=c.z1+vz*t;
+        let dx=px-qx,dz=pz-qz,d2=dx*dx+dz*dz;
+        const min=c.r+COLLISION_RADIUS;
+        if(d2<min*min){
+          if(d2<1e-8){dx=-vz;dz=vx;d2=dx*dx+dz*dz||1}
+          const d=Math.sqrt(d2),push=min-d;
+          px+=dx/d*push;pz+=dz/d*push;
+        }
+      }else{
+        const dx=px-c.x,dz=pz-c.z,lx=dx*c.cos+dz*c.sin,lz=-dx*c.sin+dz*c.cos;
+        const qx=THREE.MathUtils.clamp(lx,-c.hx,c.hx),qz=THREE.MathUtils.clamp(lz,-c.hz,c.hz);
+        const ox=lx-qx,oz=lz-qz,d2=ox*ox+oz*oz;
+        if(d2<COLLISION_RADIUS*COLLISION_RADIUS){
+          let nx=ox,nz=oz,push;
+          if(d2<1e-8){
+            const ex=c.hx-Math.abs(lx),ez=c.hz-Math.abs(lz);
+            if(ex<ez){nx=lx<0?-1:1;nz=0;push=COLLISION_RADIUS+ex}
+            else{nx=0;nz=lz<0?-1:1;push=COLLISION_RADIUS+ez}
+          }else{
+            const d=Math.sqrt(d2);push=COLLISION_RADIUS-d;nx/=d;nz/=d;
+          }
+          const wx=nx*c.cos-nz*c.sin,wz=nx*c.sin+nz*c.cos;
+          px+=wx*push;pz+=wz*push;
+        }
+      }
+    }
+  }
+  return {x:px,z:pz};
+}
+
+function dodge(){
+  if(dodgeCooldown>0||state.stamina<18)return;
+  dodgeCooldown=.65;state.stamina-=18;
+  const next=resolveCollisions(
+    THREE.MathUtils.clamp(player.position.x-Math.sin(yaw)*2.6,-106,106),
+    THREE.MathUtils.clamp(player.position.z-Math.cos(yaw)*2.6,-106,106)
+  );
+  player.position.x=next.x;player.position.z=next.z;
+}
+let dodgeCooldown=0;
 function xp(n){state.meta.mastery+=Math.max(1,Math.floor(n/5));state.meta.points+=Math.max(1,Math.floor(n/20));state.xp+=n;const need=100+state.level*55;if(state.xp>=need){state.xp-=need;state.level++;state.hp=100;toastMsg('Level up — Emberbound Lv '+state.level)}}
 function item(name,type,rarity,attrs){state.meta.renown+=rarity==='Legendary'?4:rarity==='Epic'?3:2;state.meta.points+=1;state.inventory.push({name,type,rarity,attrs});state.log.unshift('Collected '+name+'.')}
 function toastMsg(t){$('toast').textContent=t;$('toast').classList.add('show');toastTimer=3}
@@ -1097,14 +1153,35 @@ else if(a.k==='node'){const n=a.n;n.collected=true;n.root.visible=false;if(n.typ
 else if(a.k==='gate'){if(state.quest<a.n.unlock){toastMsg(a.n.name+' is sealed by the story.');return}toastMsg(a.n.name+' discovered — '+region())}
 else if(a.k==='enemy')pulse()}
 function pulse(){if(!encounter||state.stamina<15)return;state.stamina-=15;encounter.hp-=18+state.level*2;const g=new THREE.Group();g.position.copy(player.position);for(let i=0;i<8;i++){const o=orb(.05,0xff8a4d,true),a=i*Math.PI/4;o.position.set(Math.cos(a),.8,Math.sin(a));g.add(o)}effects.add(g);setTimeout(()=>g.removeFromParent(),280);if(encounter.hp<=0){encounter.root.removeFromParent();enemies=[];state.coins+=25;xp(35);item('Ashen Wisp Fragment','Relic','Rare',['Encounter Drop']);encounter=null;toastMsg('Encounter cleared — loot recovered')}}
-function move(dt){if(dodgeCooldown>0)dodgeCooldown-=dt;let x=(keys.KeyD?1:0)-(keys.KeyA?1:0),z=(keys.KeyS?1:0)-(keys.KeyW?1:0);const l=Math.hypot(x,z);if(!l){state.stamina=Math.min(100,state.stamina+22*dt);return}x/=l;z/=l;const d=new THREE.Vector3(x,0,z).applyAxisAngle(new THREE.Vector3(0,1,0),yaw),run=keys.ShiftLeft||keys.ShiftRight,s=run?7.2:4.7;player.position.addScaledVector(d,s*dt);player.rotation.y=Math.atan2(d.x,d.z);state.stamina=Math.max(0,state.stamina+(run?-9:16)*dt);player.position.x=THREE.MathUtils.clamp(player.position.x,-106,106);player.position.z=THREE.MathUtils.clamp(player.position.z,-106,106)}
+function move(dt){
+  if(dodgeCooldown>0)dodgeCooldown-=dt;
+  let x=(keys.KeyD?1:0)-(keys.KeyA?1:0),z=(keys.KeyS?1:0)-(keys.KeyW?1:0);
+  const l=Math.hypot(x,z);
+  if(!l){state.stamina=Math.min(100,state.stamina+22*dt);return}
+  x/=l;z/=l;
+  const cs=Math.cos(yaw),sn=Math.sin(yaw),dx=x*cs+z*sn,dz=-x*sn+z*cs;
+  const run=keys.ShiftLeft||keys.ShiftRight,speed=run?7.2:4.7;
+  const next=resolveCollisions(
+    THREE.MathUtils.clamp(player.position.x+dx*speed*dt,-106,106),
+    THREE.MathUtils.clamp(player.position.z+dz*speed*dt,-106,106)
+  );
+  player.position.x=next.x;player.position.z=next.z;
+  player.rotation.y=Math.atan2(dx,dz);
+  state.stamina=Math.max(0,state.stamina+(run?-9:16)*dt);
+}
+
 function updateCamera(dt){const target=player.position.clone().add(new THREE.Vector3(0,1.15,0)),back=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));const pos=target.clone().addScaledVector(back,7.2).add(new THREE.Vector3(0,3.2+pitch*2,0));camera.position.lerp(pos,1-Math.pow(.001,dt));camera.lookAt(target)}
 function tick(dt){
   time+=dt;
   move(dt);
   updateCamera(dt);
   updateSky();
-  updateWildlife(dt);
+  worldSimAccumulator+=dt;
+  if(worldSimAccumulator>=.033){
+    const simDt=Math.min(worldSimAccumulator,.066);
+    worldSimAccumulator=0;
+    updateWildlife(simDt);
+  }
 
   for(const n of nodes)if(!n.collected)n.root.rotation.y+=dt;
   for(const e of enemies){
@@ -1115,6 +1192,7 @@ function tick(dt){
   }
 
   // Warm lantern/fire flicker is kept subtle so the scene still reads naturally in daylight.
+  if(Math.floor(time*30)%8===0)renderer.shadowMap.needsUpdate=true;
   const nightFactor=Math.max(0,(0.28-skyUniforms.uDay.value)/0.28);
   for(let i=0;i<lightSources.length;i++){
     const light=lightSources[i];
@@ -1169,14 +1247,16 @@ canvas.addEventListener('mousedown',e=>{if(e.button===0)pulse();drag=true;lx=e.c
 document.querySelectorAll('.journal-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.journal-tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderJournal(b.dataset.tab)});
 $('closeMeta').onclick=()=>$('metaMenu').classList.remove('show');$('closeInventory').onclick=()=>$('inventoryMenu').classList.remove('show');$('closeMap').onclick=()=>$('worldMap').classList.remove('show');$('tutorialStart').onclick=()=>{$('tutorial').classList.remove('show');state.tutorial=false;saveState()};$('helpButton').onclick=()=>$('tutorial').classList.add('show');$('closeDialogue').onclick=()=>$('dialogue').classList.remove('show');$('resume').onclick=()=>{$('pause').classList.remove('show');state.paused=false};
 window.addEventListener('beforeunload',saveState);
+props.traverse(o=>{if(o.isMesh)o.castShadow=false;});
+treeSpots.forEach(g=>g.traverse(o=>{if(o.isMesh)o.castShadow=true;}));
 loadState();setQuest();renderJournal('story');refreshEquipment();resize();
 if(state.tutorial!==false)$('tutorial').classList.add('show');
 time=DAY_LENGTH*.30;
-spawnWildlifeBurst(22);
+spawnWildlifeBurst(10);
 updateSky();
 toastMsg('The world wakes — villages stir, wildlife roam, and the morning sun rises.');
 setInterval(()=>{
   if(!state.paused&&!document.hidden&&Math.random()<.55)spawnEnemy();
-  if(!state.paused&&!document.hidden&&wildlife.length<20)spawnWildlifeBurst(4);
+  if(!state.paused&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
 let last=performance.now();function frame(t){const dt=Math.min(.033,(t-last)/1000);last=t;if(!state.paused&&!$('dialogue').classList.contains('show')&&!$('tutorial').classList.contains('show')&&!$('inventoryMenu').classList.contains('show')&&!$('worldMap').classList.contains('show'))tick(dt);renderer.render(scene,camera);if(toastTimer>0&&(toastTimer-=dt)<=0)$('toast').classList.remove('show');requestAnimationFrame(frame)}requestAnimationFrame(frame);
