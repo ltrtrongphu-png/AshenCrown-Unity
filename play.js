@@ -236,6 +236,10 @@ world.add(grid);
 const paths=new THREE.Group();
 world.add(paths);
 
+const worldMats=new Map();
+const textureCache=new Map();
+const lightSources=[];
+
 function path(x,z,w,d,rot=0,color=0x2a201a){
   const p=new THREE.Mesh(new THREE.PlaneGeometry(w,d),mat(color,.995));
   p.rotation.x=-Math.PI/2;
@@ -251,9 +255,7 @@ path(-22,14,4,70,Math.PI/2);
 path(42,38,58,4,-.42,0x32271f);
 path(-56,-34,48,4,.28,0x29221c);
 
-const worldMats=new Map();
-const textureCache=new Map();
-const lightSources=[];
+
 
 function texturePattern(kind){
   if(textureCache.has(kind))return textureCache.get(kind);
