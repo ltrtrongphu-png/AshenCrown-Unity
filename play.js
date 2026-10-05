@@ -12,6 +12,58 @@ const sun=new THREE.DirectionalLight(0xffc39d,2.2); sun.position.set(-18,22,12);
 const world=new THREE.Group(), characters=new THREE.Group(), props=new THREE.Group(), effects=new THREE.Group(); scene.add(world);
 world.add(characters,props,effects);
 
+const COLLISION_RADIUS=.38;
+const staticColliders=[];
+function addCircleCollider(x,z,r,tag='obstacle'){staticColliders.push({kind:'circle',x,z,r,tag})}
+function addBoxCollider(x,z,hx,hz,rot=0,tag='obstacle'){staticColliders.push({kind:'box',x,z,hx,hz,rot,cos:Math.cos(rot),sin:Math.sin(rot),tag})}
+function addSegmentCollider(x1,z1,x2,z2,r=.10,tag='obstacle'){staticColliders.push({kind:'segment',x1,z1,x2,z2,r,tag})}
+function addTreeCollider(x,z,s=1){addCircleCollider(x,z,.62*s,'tree')}
+function addRockCollider(x,z,s=1){addCircleCollider(x,z,.78*s,'rock')}
+function resolveCollisions(x,z){
+  let px=x,pz=z;
+  for(let pass=0;pass<2;pass++){
+    for(const c of staticColliders){
+      if(c.kind==='circle'){
+        let dx=px-c.x,dz=pz-c.z,d2=dx*dx+dz*dz;
+        const min=c.r+COLLISION_RADIUS;
+        if(d2<min*min){
+          if(d2<1e-8){dx=1;dz=0;d2=1}
+          const d=Math.sqrt(d2),push=min-d;
+          px+=dx/d*push;pz+=dz/d*push;
+        }
+      }else if(c.kind==='segment'){
+        const vx=c.x2-c.x1,vz=c.z2-c.z1,wx=px-c.x1,wz=pz-c.z1,den=vx*vx+vz*vz||1;
+        const t=THREE.MathUtils.clamp((wx*vx+wz*vz)/den,0,1),qx=c.x1+vx*t,qz=c.z1+vz*t;
+        let dx=px-qx,dz=pz-qz,d2=dx*dx+dz*dz;
+        const min=c.r+COLLISION_RADIUS;
+        if(d2<min*min){
+          if(d2<1e-8){dx=-vz;dz=vx;d2=dx*dx+dz*dz||1}
+          const d=Math.sqrt(d2),push=min-d;
+          px+=dx/d*push;pz+=dz/d*push;
+        }
+      }else{
+        const dx=px-c.x,dz=pz-c.z,lx=dx*c.cos+dz*c.sin,lz=-dx*c.sin+dz*c.cos;
+        const qx=THREE.MathUtils.clamp(lx,-c.hx,c.hx),qz=THREE.MathUtils.clamp(lz,-c.hz,c.hz);
+        const ox=lx-qx,oz=lz-qz,d2=ox*ox+oz*oz;
+        if(d2<COLLISION_RADIUS*COLLISION_RADIUS){
+          let nx=ox,nz=oz,push;
+          if(d2<1e-8){
+            const ex=c.hx-Math.abs(lx),ez=c.hz-Math.abs(lz);
+            if(ex<ez){nx=lx<0?-1:1;nz=0;push=COLLISION_RADIUS+ex}
+            else{nx=0;nz=lz<0?-1:1;push=COLLISION_RADIUS+ez}
+          }else{
+            const d=Math.sqrt(d2);push=COLLISION_RADIUS-d;nx/=d;nz/=d;
+          }
+          const wx=nx*c.cos-nz*c.sin,wz=nx*c.sin+nz*c.cos;
+          px+=wx*push;pz+=wz*push;
+        }
+      }
+    }
+  }
+  return {x:px,z:pz};
+}
+
+
 const DAY_LENGTH=210;
 const ATMOSPHERE_OFFSET=DAY_LENGTH*.22;
 const clouds=[];
@@ -1070,57 +1122,6 @@ function spawnEnemy(){
   enemies=[encounter];
   toastMsg('A wandering shade has entered the wilds.');
 }
-const COLLISION_RADIUS=.38;
-const staticColliders=[];
-function addCircleCollider(x,z,r,tag='obstacle'){staticColliders.push({kind:'circle',x,z,r,tag})}
-function addBoxCollider(x,z,hx,hz,rot=0,tag='obstacle'){staticColliders.push({kind:'box',x,z,hx,hz,rot,cos:Math.cos(rot),sin:Math.sin(rot),tag})}
-function addSegmentCollider(x1,z1,x2,z2,r=.10,tag='obstacle'){staticColliders.push({kind:'segment',x1,z1,x2,z2,r,tag})}
-function addTreeCollider(x,z,s=1){addCircleCollider(x,z,.62*s,'tree')}
-function addRockCollider(x,z,s=1){addCircleCollider(x,z,.78*s,'rock')}
-function resolveCollisions(x,z){
-  let px=x,pz=z;
-  for(let pass=0;pass<2;pass++){
-    for(const c of staticColliders){
-      if(c.kind==='circle'){
-        let dx=px-c.x,dz=pz-c.z,d2=dx*dx+dz*dz;
-        const min=c.r+COLLISION_RADIUS;
-        if(d2<min*min){
-          if(d2<1e-8){dx=1;dz=0;d2=1}
-          const d=Math.sqrt(d2),push=min-d;
-          px+=dx/d*push;pz+=dz/d*push;
-        }
-      }else if(c.kind==='segment'){
-        const vx=c.x2-c.x1,vz=c.z2-c.z1,wx=px-c.x1,wz=pz-c.z1,den=vx*vx+vz*vz||1;
-        const t=THREE.MathUtils.clamp((wx*vx+wz*vz)/den,0,1),qx=c.x1+vx*t,qz=c.z1+vz*t;
-        let dx=px-qx,dz=pz-qz,d2=dx*dx+dz*dz;
-        const min=c.r+COLLISION_RADIUS;
-        if(d2<min*min){
-          if(d2<1e-8){dx=-vz;dz=vx;d2=dx*dx+dz*dz||1}
-          const d=Math.sqrt(d2),push=min-d;
-          px+=dx/d*push;pz+=dz/d*push;
-        }
-      }else{
-        const dx=px-c.x,dz=pz-c.z,lx=dx*c.cos+dz*c.sin,lz=-dx*c.sin+dz*c.cos;
-        const qx=THREE.MathUtils.clamp(lx,-c.hx,c.hx),qz=THREE.MathUtils.clamp(lz,-c.hz,c.hz);
-        const ox=lx-qx,oz=lz-qz,d2=ox*ox+oz*oz;
-        if(d2<COLLISION_RADIUS*COLLISION_RADIUS){
-          let nx=ox,nz=oz,push;
-          if(d2<1e-8){
-            const ex=c.hx-Math.abs(lx),ez=c.hz-Math.abs(lz);
-            if(ex<ez){nx=lx<0?-1:1;nz=0;push=COLLISION_RADIUS+ex}
-            else{nx=0;nz=lz<0?-1:1;push=COLLISION_RADIUS+ez}
-          }else{
-            const d=Math.sqrt(d2);push=COLLISION_RADIUS-d;nx/=d;nz/=d;
-          }
-          const wx=nx*c.cos-nz*c.sin,wz=nx*c.sin+nz*c.cos;
-          px+=wx*push;pz+=wz*push;
-        }
-      }
-    }
-  }
-  return {x:px,z:pz};
-}
-
 function dodge(){
   if(dodgeCooldown>0||state.stamina<18)return;
   dodgeCooldown=.65;state.stamina-=18;
