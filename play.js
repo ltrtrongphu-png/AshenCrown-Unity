@@ -223,6 +223,9 @@ function actor(c,a){
 }
 player.add(actor(0x29221d,0x613724)); const cape=box(.75,.9,.12,0x151213);cape.position.set(0,1,-.38);cape.castShadow=true;player.add(cape);
 
+const worldMats=new Map();
+const textureCache=new Map();
+const lightSources=[];
 const groundMat=wmat('groundSurface',0x17140f,.98);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240,48,48),groundMat);
 ground.rotation.x=-Math.PI/2;
@@ -236,9 +239,6 @@ world.add(grid);
 const paths=new THREE.Group();
 world.add(paths);
 
-const worldMats=new Map();
-const textureCache=new Map();
-const lightSources=[];
 
 function path(x,z,w,d,rot=0,color=0x2a201a){
   const p=new THREE.Mesh(new THREE.PlaneGeometry(w,d),mat(color,.995));
