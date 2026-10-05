@@ -854,17 +854,20 @@ const grassGeometry=new THREE.ConeGeometry(.055,.42,4);
 const grassMaterial=new THREE.MeshBasicMaterial({color:0x506d3e,transparent:true,opacity:.72});
 const grassMesh=new THREE.InstancedMesh(grassGeometry,grassMaterial,420);
 const grassMatrix=new THREE.Matrix4();
-for(let i=0;i<420;i++){
-  const a=i*2.399;
-  const r=8+(i%17)*5.2;
+let grassPlaced=0,grassSeed=0;
+while(grassPlaced<420){
+  const a=grassSeed*2.399;
+  const r=8+(grassSeed%17)*5.2;
   const x=Math.sin(a*1.37)*r;
   const z=Math.cos(a*.91)*r;
-  if(Math.abs(x)<10&&Math.abs(z)<13){i--;continue;}
-  const s=.7+(i%5)*.14;
-  grassMatrix.makeRotationY((i%7)*.32);
+  grassSeed++;
+  if(Math.abs(x)<10&&Math.abs(z)<13)continue;
+  const s=.7+(grassSeed%5)*.14;
+  grassMatrix.makeRotationY((grassSeed%7)*.32);
   grassMatrix.setPosition(x,.21,z);
   grassMatrix.scale(new THREE.Vector3(s,1,s));
-  grassMesh.setMatrixAt(i,grassMatrix);
+  grassMesh.setMatrixAt(grassPlaced,grassMatrix);
+  grassPlaced++;
 }
 grassMesh.instanceMatrix.needsUpdate=true;
 grassMesh.castShadow=false;
