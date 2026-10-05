@@ -2,13 +2,14 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.m
 
 const $=id=>document.getElementById(id);
 const canvas=$('game'), scene=new THREE.Scene();
-scene.background=new THREE.Color(0x080a0d); scene.fog=new THREE.Fog(0x14100d,32,180);
+scene.background=new THREE.Color(0x0a0b0e); scene.fog=new THREE.Fog(0x151311,58,245);
 const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25)); renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false;
+renderer.setPixelRatio(1); renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=.82;
+renderer.shadowMap.enabled=false; renderer.shadowMap.autoUpdate=false;
 const camera=new THREE.PerspectiveCamera(55,1,.1,260); camera.position.set(0,4,8);
-scene.add(new THREE.HemisphereLight(0xcbb29e,0x090706,1.5));
-const sun=new THREE.DirectionalLight(0xffc39d,2.2); sun.position.set(-18,22,12); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-100; sun.shadow.camera.right=100; sun.shadow.camera.top=100; sun.shadow.camera.bottom=-100; sun.shadow.camera.far=260; scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xbfc5cf,0x0b0908,.85));
+const sun=new THREE.DirectionalLight(0xffd0a4,1.05); sun.position.set(-18,22,12); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-100; sun.shadow.camera.right=100; sun.shadow.camera.top=100; sun.shadow.camera.bottom=-100; sun.shadow.camera.far=260; scene.add(sun);
 const world=new THREE.Group(), characters=new THREE.Group(), props=new THREE.Group(), effects=new THREE.Group(); scene.add(world);
 world.add(characters,props,effects);
 
@@ -210,7 +211,7 @@ function updateSky(){
   const day=Math.max(0,Math.min(1,(sunY+.16)/.34));
 
   sun.position.copy(sunPosition);
-  sun.intensity=.28+2.05*day;
+  sun.intensity=.38+.72*day;
   sun.color.copy(sunCoolColor).lerp(sunWarmColor,Math.max(.08,day));
   skyUniforms.uSunDir.value.copy(sunDir);
   skyUniforms.uDay.value=day;
@@ -228,9 +229,9 @@ function updateSky(){
   sunDisc.material.opacity=Math.max(.05,day);
   sunHalo.material.opacity=.13+.18*day;
 
-  scene.fog.color.copy(fogNightColor).lerp(fogDayColor,day*.38);
-  scene.fog.near=day>.25?34:24;
-  scene.fog.far=day>.25?190:135;
+  scene.fog.color.copy(fogNightColor).lerp(fogDayColor,.12+.12*day);
+  scene.fog.near=58;
+  scene.fog.far=245;
 }
 
 
@@ -1096,6 +1097,9 @@ function updateWildlife(dt){
 
 let enemies=[];
 let worldSimAccumulator=0;
+let fpsAccumulator=0;
+let fpsFrames=0;
+let adaptiveDpr=1;
 function spawnEnemy(){
   if(enemies.length)return;
   const angle=Math.random()*Math.PI*2;
@@ -1178,8 +1182,8 @@ function tick(dt){
   updateCamera(dt);
   updateSky();
   worldSimAccumulator+=dt;
-  if(worldSimAccumulator>=.033){
-    const simDt=Math.min(worldSimAccumulator,.066);
+  if(worldSimAccumulator>=.05){
+    const simDt=Math.min(worldSimAccumulator,.10);
     worldSimAccumulator=0;
     updateWildlife(simDt);
   }
@@ -1198,8 +1202,9 @@ function tick(dt){
   for(let i=0;i<lightSources.length;i++){
     const light=lightSources[i];
     if(!light)continue;
+    light.visible=nightFactor>.12;
     const base=light.userData.baseIntensity||1;
-    light.intensity=base*(.35+.65*nightFactor)*(0.9+Math.sin(time*7+i)*.055);
+    light.intensity=base*(.25+.75*nightFactor)*(0.9+Math.sin(time*7+i)*.045);
   }
 
   if(state.hp<=0){
@@ -1260,4 +1265,22 @@ setInterval(()=>{
   if(!state.paused&&!document.hidden&&Math.random()<.55)spawnEnemy();
   if(!state.paused&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
-let last=performance.now();function frame(t){const dt=Math.min(.033,(t-last)/1000);last=t;if(!state.paused&&!$('dialogue').classList.contains('show')&&!$('tutorial').classList.contains('show')&&!$('inventoryMenu').classList.contains('show')&&!$('worldMap').classList.contains('show'))tick(dt);renderer.render(scene,camera);if(toastTimer>0&&(toastTimer-=dt)<=0)$('toast').classList.remove('show');requestAnimationFrame(frame)}requestAnimationFrame(frame);
+let last=performance.now();
+function frame(t){
+  const rawDt=Math.min(.05,(t-last)/1000);last=t;
+  fpsAccumulator+=rawDt;fpsFrames++;
+  if(fpsAccumulator>=1){
+    const avgFrame=fpsAccumulator/Math.max(1,fpsFrames);
+    if(avgFrame>.024)adaptiveDpr=Math.max(.72,adaptiveDpr-.08);
+    else if(avgFrame<.017)adaptiveDpr=Math.min(1,adaptiveDpr+.05);
+    renderer.setPixelRatio(adaptiveDpr);
+    resize();
+    fpsAccumulator=0;fpsFrames=0;
+  }
+  const dt=Math.min(.033,rawDt);
+  if(!state.paused&&!$('dialogue').classList.contains('show')&&!$('tutorial').classList.contains('show')&&!$('inventoryMenu').classList.contains('show')&&!$('worldMap').classList.contains('show'))tick(dt);
+  renderer.render(scene,camera);
+  if(toastTimer>0&&(toastTimer-=dt)<=0)$('toast').classList.remove('show');
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
