@@ -8,6 +8,17 @@ Chép thư mục `Assets/Scripts` vào project của bạn là dùng được.
 
 > **Trạng thái repo:** Có bộ gameplay C# cho Unity và một story demo chạy trên trình duyệt bằng Three.js. Repo hiện chưa có `ProjectSettings/`, `Packages/` hay scene Unity hoàn chỉnh; cần tạo project Unity rồi nhập `Assets/` để tích hợp và kiểm tra trong Unity Editor. Story demo trên web không phải bản build Unity.
 
+## Vercel deployment
+
+Vercel is configured to deploy only the browser experience:
+
+- `node tools/build-web.mjs` creates an allow-listed `dist/` containing the two HTML pages, their CSS/JS, and the site logo.
+- `vercel.json` skips dependency installation, publishes `dist/`, keeps clean URLs, and sets static caching plus baseline security headers.
+- Unity C# sources, GLB models, texture maps, Supabase migrations, backend code, and documentation remain in GitHub and are excluded from the Vercel CLI upload by `.vercelignore`.
+- No `ignoreCommand` is configured: Vercel marks ignored builds as canceled, and canceled builds still count toward deployment quotas.
+
+Connect the repository root to Vercel and leave the build and output settings to `vercel.json`. The build has no npm dependencies. The site still loads Three.js and Google Fonts from their pinned public CDNs at runtime.
+
 ---
 
 ## 1. Sơ đồ kiến trúc
