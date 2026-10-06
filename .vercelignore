@@ -1,0 +1,15 @@
+# The website build copies an explicit allow-list into dist/. Exclude the game
+# framework and content-heavy source from CLI upload payloads.
+Assets/Editor/**
+Assets/Models/**
+Assets/Resources/**
+Assets/Scripts/**
+Assets/Tests/**
+docs/**
+server/**
+supabase/**
+tools/generate_ashen_production_assets.py
+tools/.gitignore
+*.cs
+*.glb
+*.png
