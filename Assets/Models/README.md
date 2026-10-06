@@ -1,12 +1,25 @@
 # Production 3D model pipeline
 
-FBX: Unity imports it natively. Put character/boss FBX files under Assets/Models/Characters or Assets/Models/Bosses, configure Rig as Humanoid or Generic, then create a prefab.
+## Included character art
 
-GLB: use a GLB/GLTF Unity importer, import the .glb and create a prefab from the imported hierarchy. The gameplay code does not depend on the importer.
+The repository includes two original, rigged, stylized dark-fantasy characters:
 
-Assign the resulting prefab to CharacterModelBinder.modelPrefab. Keep the gameplay root (colliders, NavMeshAgent, HealthAndDamageSystem and combat scripts) separate from the visual prefab.
+| Asset | Role | Height | Distinguishing details |
+|---|---|---:|---|
+| `Characters/AshenSentinel.glb` | Humanoid player/enemy | 2.0 m | Layered obsidian plate, brass diadem, ember heart, greatsword, short mantle |
+| `Bosses/AshenRegent.glb` | Boss | 2.24 m | Broader armor, seven-spire crown, ember crests and long mantle |
 
-Recommended Animator parameters: Speed, MoveX, MoveY, Grounded, Combat.
-Recommended triggers: Light1, Light2, Light3, Light4, Heavy, VoidThrust, AshenEruption, Enrage, PhaseTransition, Stagger, Execute, Die.
+Both models use a 19-joint humanoid rig and six clips: `Idle`, `Walk`, `Run`, `Light1`, `Heavy`, and `Enrage`. The rig joint names follow Unity Humanoid naming conventions. Armor and cloth sections are parented rigidly to their matching joints, which preserves hard-surface silhouettes during motion; they are not skinned meshes. The self-contained GLB files carry their material images and can be imported independently.
 
-AnimatorSafe ignores missing parameters, so prototype and production models remain compatible.
+The shared 1024 × 1024 texture sources are in `Textures/`: neutral base color, tangent-space normal, metallic/roughness/occlusion, and emissive ember fissures. GLB materials reference these maps with separate obsidian, cloth, brass, and emissive-glass material factors. The deterministic source generator is `tools/generate_ashen_production_assets.py` (Python 3, NumPy, Pillow).
+
+## Import into Unity
+
+Unity does not import GLB by default. Add a compatible glTF/GLB importer to the consuming Unity project, then import the `.glb` files from this folder. Configure the imported rig as **Humanoid** when the importer exposes rig settings; otherwise use **Generic**. Verify the skeleton and clips in Unity, then create a prefab from the imported hierarchy.
+
+Assign the resulting prefab to `CharacterModelBinder.modelPrefab`. Keep the gameplay root (colliders, `NavMeshAgent`, `HealthAndDamageSystem`, and combat scripts) separate from the visual prefab. The binder supports authored `LODGroup`s, but these included assets currently ship as one LOD each.
+
+Recommended Animator parameters: `Speed`, `MoveX`, `MoveY`, `Grounded`, `Combat`.
+Recommended triggers: `Light1`, `Light2`, `Light3`, `Light4`, `Heavy`, `VoidThrust`, `AshenEruption`, `Enrage`, `PhaseTransition`, `Stagger`, `Execute`, `Die`.
+
+`AnimatorSafe` ignores missing parameters, so prototype and production models remain compatible. The GLB clips are source animations; create or assign an Animator Controller to map gameplay states to the imported clips.

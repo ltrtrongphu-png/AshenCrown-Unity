@@ -156,9 +156,9 @@ CharacterModelBinder supports one runtime pipeline for Unity-imported FBX or GLB
 3. Or assign ModelSource.modelPrefab directly.
 4. The model Animator is connected automatically.
 5. ModelPerformanceProfile provides distance/shadow tuning and a LOD foundation.
-6. Without a production asset, the system uses a 3D capsule fallback so scenes remain runnable.
+6. If no imported model prefab is assigned, the system uses a 3D capsule fallback so scenes remain runnable.
 
-The repository currently contains the runtime integration and pipeline, but not third-party binary FBX/GLB assets.
+Original production character assets are included under `Assets/Models`: the rigged Ashen Sentinel and Ashen Regent GLBs, with 1024 px PBR texture maps and source animation clips. Unity needs a compatible GLB importer to bring them into the project. See `Assets/Models/README.md` for import and prefab setup.
 
 
 ## 9. Multi-Camera Gameplay
@@ -257,4 +257,4 @@ The presentation layer now has a dedicated quality/performance path for producti
 - `Performance/PerformanceDirector.cs` now uses interval-average FPS with hysteresis/cooldown instead of reacting to a single frame, and keeps Unity texture streaming enabled after quality changes.
 - `Presentation/Item3DPresentationSystem.cs` reuses tier material variants and disables shadows on decorative item particles to reduce draw/state churn.
 
-The repository does not currently contain production FBX/GLB character meshes or authored texture sets. These systems are therefore designed to improve the existing runtime fallback immediately and automatically optimize production assets once they are imported under the project.
+The repository includes the Ashen Sentinel and Ashen Regent character meshes plus authored PBR texture maps. The importer pipeline optimizes these and later FBX/GLB assets when they are brought into the consuming Unity project.
