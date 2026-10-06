@@ -6,6 +6,8 @@ Bộ mã nguồn lõi cho 3D Dark Fantasy ARPG (Soulslike), viết cho **Unity 2
 
 Chép thư mục `Assets/Scripts` vào project của bạn là dùng được.
 
+> **Trạng thái repo:** Có bộ gameplay C# cho Unity và một story demo chạy trên trình duyệt bằng Three.js. Repo hiện chưa có `ProjectSettings/`, `Packages/` hay scene Unity hoàn chỉnh; cần tạo project Unity rồi nhập `Assets/` để tích hợp và kiểm tra trong Unity Editor. Story demo trên web không phải bản build Unity.
+
 ---
 
 ## 1. Sơ đồ kiến trúc

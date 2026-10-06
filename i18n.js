@@ -1,10 +1,10 @@
 (() => {
   const dictionaries = {
-    en:{world:"World",combat:"Combat",systems:"Systems",progression:"Progression",controls:"Controls",play:"Play Trial",trial:"Enter the combat trial",enterWorld:"Enter the world",showcase:"Inspect the ember.",inspect:"Rotate · zoom · explore the interactive presentation.",tryTrial:"Try the trial →",source:"View source ↗",language:"Language"},
-    vi:{world:"Thế giới",combat:"Chiến đấu",systems:"Hệ thống",progression:"Tiến trình",controls:"Điều khiển",play:"Chơi thử",trial:"Bước vào màn chiến đấu",enterWorld:"Khám phá thế giới",showcase:"Quan sát ngọn lửa.",inspect:"Xoay · phóng to · khám phá mô hình 3D.",tryTrial:"Thử màn chiến đấu →",source:"Xem mã nguồn ↗",language:"Ngôn ngữ"},
-    ja:{world:"世界",combat:"戦闘",systems:"システム",progression:"進行",controls:"操作",play:"試練をプレイ",trial:"戦闘試練へ",enterWorld:"世界へ",showcase:"炎を観察する。",inspect:"回転 · ズーム · 3Dモデルを探索。",tryTrial:"試練をプレイ →",source:"ソースを見る ↗",language:"言語"},
-    ko:{world:"세계",combat:"전투",systems:"시스템",progression:"진행",controls:"조작",play:"시험 플레이",trial:"전투 시험으로",enterWorld:"세계로 들어가기",showcase:"불꽃을 살펴본다.",inspect:"회전 · 확대 · 3D 모델 탐험.",tryTrial:"시험 플레이 →",source:"소스 보기 ↗",language:"언어"},
-    zh:{world:"世界",combat:"战斗",systems:"系统",progression:"进程",controls:"操作",play:"开始试炼",trial:"进入战斗试炼",enterWorld:"进入世界",showcase:"凝视余烬。",inspect:"旋转 · 缩放 · 探索3D模型。",tryTrial:"开始试炼 →",source:"查看源码 ↗",language:"语言"}
+    en:{world:"World",combat:"Combat",systems:"Systems",progression:"Progression",controls:"Controls",play:"Story Demo",trial:"Enter the story demo",enterWorld:"Enter the world",showcase:"Inspect the ember.",inspect:"Rotate · zoom · explore the interactive presentation.",tryTrial:"Play the story demo →",source:"View source ↗",language:"Language"},
+    vi:{world:"Thế giới",combat:"Chiến đấu",systems:"Hệ thống",progression:"Tiến trình",controls:"Điều khiển",play:"Demo cốt truyện",trial:"Vào bản demo cốt truyện",enterWorld:"Khám phá thế giới",showcase:"Quan sát ngọn lửa.",inspect:"Xoay · phóng to · khám phá mô hình 3D.",tryTrial:"Chơi demo cốt truyện →",source:"Xem mã nguồn ↗",language:"Ngôn ngữ"},
+    ja:{world:"世界",combat:"戦闘",systems:"システム",progression:"進行",controls:"操作",play:"ストーリーデモ",trial:"ストーリーデモを始める",enterWorld:"世界へ",showcase:"炎を観察する。",inspect:"回転 · ズーム · 3Dモデルを探索。",tryTrial:"ストーリーデモをプレイ →",source:"ソースを見る ↗",language:"言語"},
+    ko:{world:"세계",combat:"전투",systems:"시스템",progression:"진행",controls:"조작",play:"스토리 데모",trial:"스토리 데모 시작",enterWorld:"세계로 들어가기",showcase:"불꽃을 살펴본다.",inspect:"회전 · 확대 · 3D 모델 탐험.",tryTrial:"스토리 데모 플레이 →",source:"소스 보기 ↗",language:"언어"},
+    zh:{world:"世界",combat:"战斗",systems:"系统",progression:"进程",controls:"操作",play:"剧情试玩",trial:"进入剧情试玩",enterWorld:"进入世界",showcase:"凝视余烬。",inspect:"旋转 · 缩放 · 探索3D模型。",tryTrial:"开始剧情试玩 →",source:"查看源码 ↗",language:"语言"}
   };
   const supported=["en","vi","ja","ko","zh"];
   const saved=localStorage.getItem("ashen.language"),browser=(navigator.language||"en").slice(0,2).toLowerCase();

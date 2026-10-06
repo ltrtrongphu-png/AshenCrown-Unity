@@ -235,8 +235,8 @@ function updateSky(){
 }
 
 
-const state={day:1,xp:0,level:1,hp:100,maxHp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],equipment:{core:null,charm:null,armor:null,relic:null},stats:{vitality:0,focus:0,ward:0},meta:{renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0},tutorial:true,log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
-const keys={}; let yaw=0,pitch=.28,drag=false,lx=0,ly=0,time=0,toastTimer=0,encounter=null;
+const state={day:1,xp:0,level:1,hp:100,maxHp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],equipment:{core:null,charm:null,armor:null,relic:null},stats:{vitality:0,focus:0,ward:0},meta:{renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0},collectedNodes:[],tutorial:true,log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
+const keys={}; let yaw=0,pitch=.28,drag=false,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,attackCooldown=0,dodgeIFrames=0;
 const player=new THREE.Group(); player.position.set(0,0,7); characters.add(player);
 
 const mat=(c,r=.75,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
@@ -1095,6 +1095,12 @@ function updateWildlife(dt){
   updateVillagers(dt);
 }
 
+let encounterHud;
+function setEncounterHud(enemy){
+  if(!encounterHud){encounterHud=document.createElement('div');encounterHud.className='encounter-hud';encounterHud.innerHTML='<span>WANDERING SHADE</span><b>45 / 45</b><i><em></em></i>';document.querySelector('.stage').appendChild(encounterHud)}
+  encounterHud.classList.toggle('visible',!!enemy);
+  if(enemy){encounterHud.querySelector('b').textContent=Math.ceil(enemy.hp)+' / '+enemy.maxHp;encounterHud.querySelector('em').style.width=Math.max(0,enemy.hp/enemy.maxHp*100)+'%';encounterHud.classList.toggle('warning',enemy.state==='windup')}
+}
 let enemies=[];
 let worldSimAccumulator=0;
 let fpsAccumulator=0;
@@ -1122,13 +1128,15 @@ function spawnEnemy(){
   e1.position.set(-.13,1.08,.35); e2.position.set(.13,1.08,.35);
   g.add(e1,e2);
   characters.add(g);
-  encounter={root:g,hp:state.quest>=3?90:45};
+  const maxHp=state.quest>=3?90:45;
+  encounter={root:g,hp:maxHp,maxHp,state:'approach',cooldown:1.1+Math.random(),windup:0,attackDamage:state.quest>=3?14:9,body:b};
   enemies=[encounter];
+  setEncounterHud(encounter);
   toastMsg('A wandering shade has entered the wilds.');
 }
 function dodge(){
-  if(dodgeCooldown>0||state.stamina<18)return;
-  dodgeCooldown=.65;state.stamina-=18;
+  if(anyOverlayOpen()||dodgeCooldown>0||state.stamina<18)return;
+  dodgeCooldown=.72;dodgeIFrames=.34;state.stamina-=18;
   const next=resolveCollisions(
     THREE.MathUtils.clamp(player.position.x-Math.sin(yaw)*2.6,-106,106),
     THREE.MathUtils.clamp(player.position.z-Math.cos(yaw)*2.6,-106,106)
@@ -1137,8 +1145,8 @@ function dodge(){
 }
 let dodgeCooldown=0;
 function recalculateEquipmentStats(){const next={vitality:0,focus:0,ward:0};for(const gear of Object.values(state.equipment)){if(!gear)continue;const s=gear.stats||{};next.vitality+=Number(s.vitality||0);next.focus+=Number(s.focus||0);next.ward+=Number(s.ward||0)}state.stats=next;state.maxHp=100+next.vitality*12;state.hp=Math.min(state.hp,state.maxHp)}
-function xp(n){state.meta.mastery+=Math.max(1,Math.floor(n/5));state.meta.points+=Math.max(1,Math.floor(n/20));state.xp+=n;const need=100+state.level*55;if(state.xp>=need){state.xp-=need;state.level++;recalculateEquipmentStats();state.hp=state.maxHp;toastMsg('Level up — Emberbound Lv '+state.level)}}
-function item(name,type,rarity,attrs,stats={}){state.meta.renown+=rarity==='Legendary'?4:rarity==='Epic'?3:2;state.meta.points+=1;const inferred={...stats};if(attrs.includes('Ward')&&!inferred.ward)inferred.ward=1;if(attrs.includes('Vitality')&&!inferred.vitality)inferred.vitality=1;if(attrs.includes('Focus')&&!inferred.focus)inferred.focus=1;state.inventory.push({name,type,rarity,attrs,stats:inferred});state.log.unshift('Collected '+name+'.')}
+function xp(n){state.meta.mastery+=Math.max(1,Math.floor(n/5));state.meta.points+=Math.max(1,Math.floor(n/20));state.xp+=n;let need=100+state.level*55;while(state.xp>=need){state.xp-=need;state.level++;recalculateEquipmentStats();state.hp=state.maxHp;toastMsg('Level up — Emberbound Lv '+state.level);need=100+state.level*55}scheduleSave()}
+function item(name,type,rarity,attrs,stats={}){state.meta.renown+=rarity==='Legendary'?4:rarity==='Epic'?3:2;state.meta.points+=1;const inferred={...stats};if(attrs.includes('Ward')&&!inferred.ward)inferred.ward=1;if(attrs.includes('Vitality')&&!inferred.vitality)inferred.vitality=1;if(attrs.includes('Focus')&&!inferred.focus)inferred.focus=1;state.inventory.push({name,type,rarity,attrs,stats:inferred});state.log.unshift('Collected '+name+'.');scheduleSave()}
 function toastMsg(t){$('toast').textContent=t;$('toast').classList.add('show');toastTimer=3}
 const SHOP_STOCK={merchant_01:[{name:'Hearthguard Coat',type:'Armor',rarity:'Rare',price:55,level:1,attrs:['+Vitality','+Ward'],stats:{vitality:2,ward:2},desc:'A reinforced coat for long roads.'},{name:'Ember Focus Ring',type:'Trinket',rarity:'Rare',price:70,level:2,attrs:['+Focus'],stats:{focus:2},desc:'Sharpens the ember pulse.'},{name:'Wayfarer Core',type:'Core',rarity:'Epic',price:110,level:3,attrs:['+Vitality','+Focus'],stats:{vitality:2,focus:2},desc:'A balanced core for explorers.'}],merchant_02:[{name:'Roadwarden Mantle',type:'Armor',rarity:'Epic',price:120,level:3,attrs:['+Ward','+Vitality'],stats:{ward:3,vitality:2},desc:'Built for guards beyond the old gate.'},{name:'Glassheart Relic',type:'Relic',rarity:'Epic',price:135,level:4,attrs:['+Focus','+Ward'],stats:{focus:2,ward:2},desc:'Stores a second pulse of ember light.'},{name:'Crownroad Sigil',type:'Relic',rarity:'Legendary',price:220,level:5,attrs:['+Vitality','+Focus','+Ward'],stats:{vitality:3,focus:3,ward:3},desc:'A rare mark from the old crownlands.'}]};
 let shopMenu=null;
@@ -1159,11 +1167,23 @@ function region(){
 }
 function nearby(){let best=null,d=3;for(const n of npcs){const x=n.root.position.distanceTo(player.position);if(x<d){d=x;best={k:'npc',n}}}for(const n of nodes)if(!n.collected){const x=n.root.position.distanceTo(player.position);if(x<d){d=x;best={k:'node',n}}}for(const g of gates){const x=g.root.position.distanceTo(player.position);if(x<d){d=x;best={k:'gate',n:g}}}if(encounter){const x=encounter.root.position.distanceTo(player.position);if(x<d)best={k:'enemy',n:encounter}}return best}
 function dialogue(n,text,opts){$('dialogue').classList.add('show');$('speakerName').textContent=n.name.toUpperCase();$('speakerRole').textContent=n.role.toUpperCase();$('dialogueText').textContent=text;const c=$('choices');c.innerHTML='';opts.forEach(o=>{const b=document.createElement('button');b.textContent=o.label;b.onclick=()=>{o.fn();$('dialogue').classList.remove('show')};c.appendChild(b)})}
-function interact(){const a=nearby();if(!a)return;if(a.k==='npc'){const n=a.n;if(n.role==='merchant'){openShop(n)}else if(n.id==='lyra'&&state.quest===0)dialogue(n,'You carry the last ember. I can open the sanctuary road, but I need to know your intent.',[{label:'Protect the sanctuary',fn:()=>{state.rep.lyra++;state.quest=1;xp(25);item('Sanctuary Sigil','Relic','Rare',['Ward','Story Bound']);toastMsg('Quest started: gather Emberleaf');setQuest()}},{label:'Ask for the truth',fn:()=>{state.rep.lyra+=2;state.flags.truth=true;state.quest=1;xp(30);item('Emberleaf Charm','Trinket','Epic',['Lore','Luck']);toastMsg('Lyra respects your questions');setQuest()}}]);else if(n.id==='orren'&&state.quest===2)dialogue(n,'The old gate is unstable. I can show you the safe route, but the road beyond it is yours to discover.',[{label:'Trust Orren',fn:()=>{state.rep.orren+=2;state.quest=3;state.flags.gate=true;xp(35);toastMsg('Ashen Gate opened');setQuest()}},{label:'Study his map',fn:()=>{state.rep.orren++;state.quest=3;state.flags.gate=true;item('Tideglass Compass','Relic','Rare',['Discovery']);toastMsg('You found a hidden route');setQuest()}}]);else if(n.id==='lyra'&&state.quest===4)dialogue(n,'The road is open. What should the sanctuary become?',[{label:'Open it to everyone',fn:()=>{state.quest=5;state.rep.lyra++;xp(70);item('Crownless Signet','Quest Item','Legendary',['Legacy']);toastMsg('Your choice changed the sanctuary');setQuest()}},{label:'Keep it hidden',fn:()=>{state.quest=5;state.rep.lyra+=2;xp(70);item('Hearth Memory','Relic','Legendary',['Reputation']);toastMsg('The sanctuary remains hidden');setQuest()}}]);else toastMsg(n.name+': The road remembers every choice.')}
-else if(a.k==='node'){const n=a.n;n.collected=true;n.root.visible=false;if(n.type==='ember'){state.shards++;xp(18);item(n.label,'Material',state.shards>=2?'Rare':'Uncommon',['Crafting','Ember']);toastMsg('Emberleaf collected');if(state.quest===1&&state.shards>=2)state.quest=2}else if(n.type==='echo'){state.echoes++;xp(22);item(n.label,'Quest Item','Epic',['Memory','Lore']);toastMsg('Memory Echo recovered');if(state.quest===3&&state.echoes>=2)state.quest=4}else{state.coins+=35;xp(30);item('Ancient Relic','Relic','Legendary',['Collection','Value']);toastMsg('Hidden relic discovered')}setQuest()}
+function anyOverlayOpen(){return state.paused||['dialogue','tutorial','inventoryMenu','worldMap','metaMenu'].some(id=>$(id)?.classList.contains('show'))||shopMenu?.classList.contains('show')}
+function interact(){if(anyOverlayOpen())return;const a=nearby();if(!a)return;if(a.k==='npc'){const n=a.n;if(n.role==='merchant'){openShop(n)}else if(n.id==='lyra'&&state.quest===0)dialogue(n,'You carry the last ember. I can open the sanctuary road, but I need to know your intent.',[{label:'Protect the sanctuary',fn:()=>{state.rep.lyra++;state.quest=1;xp(25);item('Sanctuary Sigil','Relic','Rare',['Ward','Story Bound']);toastMsg('Quest started: gather Emberleaf');setQuest()}},{label:'Ask for the truth',fn:()=>{state.rep.lyra+=2;state.flags.truth=true;state.quest=1;xp(30);item('Emberleaf Charm','Trinket','Epic',['Lore','Luck']);toastMsg('Lyra respects your questions');setQuest()}}]);else if(n.id==='orren'&&state.quest===2)dialogue(n,'The old gate is unstable. I can show you the safe route, but the road beyond it is yours to discover.',[{label:'Trust Orren',fn:()=>{state.rep.orren+=2;state.quest=3;state.flags.gate=true;xp(35);toastMsg('Ashen Gate opened');setQuest()}},{label:'Study his map',fn:()=>{state.rep.orren++;state.quest=3;state.flags.gate=true;item('Tideglass Compass','Relic','Rare',['Discovery']);toastMsg('You found a hidden route');setQuest()}}]);else if(n.id==='lyra'&&state.quest===4)dialogue(n,'The road is open. What should the sanctuary become?',[{label:'Open it to everyone',fn:()=>{state.quest=5;state.rep.lyra++;xp(70);item('Crownless Signet','Quest Item','Legendary',['Legacy']);toastMsg('Your choice changed the sanctuary');setQuest()}},{label:'Keep it hidden',fn:()=>{state.quest=5;state.rep.lyra+=2;xp(70);item('Hearth Memory','Relic','Legendary',['Reputation']);toastMsg('The sanctuary remains hidden');setQuest()}}]);else toastMsg(n.name+': The road remembers every choice.')}
+else if(a.k==='node'){const n=a.n;n.collected=true;n.root.visible=false;state.collectedNodes.push(nodeKey(n));if(n.type==='ember'){state.shards++;xp(18);item(n.label,'Material',state.shards>=2?'Rare':'Uncommon',['Crafting','Ember']);toastMsg('Emberleaf collected');if(state.quest===1&&state.shards>=2)state.quest=2}else if(n.type==='echo'){state.echoes++;xp(22);item(n.label,'Quest Item','Epic',['Memory','Lore']);toastMsg('Memory Echo recovered');if(state.quest===3&&state.echoes>=2)state.quest=4}else{state.coins+=35;xp(30);item('Ancient Relic','Relic','Legendary',['Collection','Value']);toastMsg('Hidden relic discovered')}setQuest();saveState()}
 else if(a.k==='gate'){if(state.quest<a.n.unlock){toastMsg(a.n.name+' is sealed by the story.');return}toastMsg(a.n.name+' discovered — '+region())}
 else if(a.k==='enemy')pulse()}
-function pulse(){if(!encounter||state.stamina<15)return;state.stamina-=15;encounter.hp-=18+state.level*2+state.stats.focus*3;const g=new THREE.Group();g.position.copy(player.position);for(let i=0;i<8;i++){const o=orb(.05,0xff8a4d,true),a=i*Math.PI/4;o.position.set(Math.cos(a),.8,Math.sin(a));g.add(o)}effects.add(g);setTimeout(()=>g.removeFromParent(),280);if(encounter.hp<=0){encounter.root.removeFromParent();enemies=[];state.coins+=25;xp(35);item('Ashen Wisp Fragment','Relic','Rare',['Encounter Drop'],{focus:1});encounter=null;toastMsg('Encounter cleared — loot recovered')}}
+function pulse(){
+  if(anyOverlayOpen()||!encounter||attackCooldown>0||state.stamina<15)return;
+  const toEnemy=encounter.root.position.clone().sub(player.position);toEnemy.y=0;
+  const distance=toEnemy.length();
+  if(distance>4.6){toastMsg('Too far away — close the distance.');return}
+  player.rotation.y=Math.PI+yaw;
+  const facing=new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y));
+  if(distance>1.35&&facing.dot(toEnemy.normalize())<.12){toastMsg('Turn toward the shade before striking.');return}
+  attackCooldown=.38;state.stamina-=15;encounter.hp-=18+state.level*2+state.stats.focus*3;
+  const g=new THREE.Group();g.position.copy(player.position);for(let i=0;i<8;i++){const o=orb(.05,0xff8a4d,true),a=i*Math.PI/4;o.position.set(Math.cos(a),.8,Math.sin(a));g.add(o)}effects.add(g);setTimeout(()=>g.removeFromParent(),280);
+  if(encounter.hp<=0){encounter.root.removeFromParent();enemies=[];state.coins+=25;xp(35);item('Ashen Wisp Fragment','Relic','Rare',['Encounter Drop'],{focus:1});encounter=null;setEncounterHud(null);toastMsg('Encounter cleared — loot recovered');saveState()}else{setEncounterHud(encounter);encounter.cooldown=Math.max(encounter.cooldown,.55)}
+}
 function move(dt){
   if(dodgeCooldown>0)dodgeCooldown-=dt;
   let x=(keys.KeyD?1:0)-(keys.KeyA?1:0),z=(keys.KeyS?1:0)-(keys.KeyW?1:0);
@@ -1184,6 +1204,7 @@ function move(dt){
 function updateCamera(dt){const target=player.position.clone().add(new THREE.Vector3(0,1.15,0)),back=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));const pos=target.clone().addScaledVector(back,7.2).add(new THREE.Vector3(0,3.2+pitch*2,0));camera.position.lerp(pos,1-Math.pow(.001,dt));camera.lookAt(target)}
 function tick(dt){
   time+=dt;
+  if(Math.floor(time/12)!==Math.floor((time-dt)/12))saveState();
   move(dt);
   updateCamera(dt);
   updateSky();
@@ -1195,12 +1216,18 @@ function tick(dt){
   }
 
   for(const n of nodes)if(!n.collected)n.root.rotation.y+=dt;
+  attackCooldown=Math.max(0,attackCooldown-dt);dodgeIFrames=Math.max(0,dodgeIFrames-dt);
   for(const e of enemies){
     if(!e||!e.root)continue;
-    e.root.rotation.y+=dt;
+    const dx=player.position.x-e.root.position.x,dz=player.position.z-e.root.position.z,distance=Math.hypot(dx,dz)||1;
+    e.root.rotation.y=Math.atan2(dx,dz);
     e.root.position.y=.15+Math.sin(time*2+(e.root.id||0))*.12;
-    if(e.root.position.distanceTo(player.position)<2.3){const mitigation=Math.min(.6,state.stats.ward*.06);state.hp=Math.max(0,state.hp-5*dt*(1-mitigation));}
+    if(e.state==='windup'){
+      e.windup-=dt;e.body.material.emissive.setHex(0xff321c);e.root.scale.setScalar(1.08+.07*Math.sin(time*28));
+      if(e.windup<=0){e.state='approach';e.cooldown=1.25+Math.random()*.45;e.root.scale.setScalar(1);e.body.material.emissive.setHex(0x684a79);if(distance<2.75&&dodgeIFrames<=0){const mitigation=Math.min(.55,state.stats.ward*.055);state.hp=Math.max(0,state.hp-e.attackDamage*(1-mitigation));toastMsg('The shade struck you — dodge when its glow flares.')}}
+    }else{e.cooldown-=dt;if(distance<2.15&&e.cooldown<=0){e.state='windup';e.windup=.68;e.body.material.emissive.setHex(0xff321c)}else if(distance>1.65){const step=Math.min(distance-1.65,2.15*dt);const next=resolveCollisions(e.root.position.x+dx/distance*step,e.root.position.z+dz/distance*step);e.root.position.x=next.x;e.root.position.z=next.z}}
   }
+  setEncounterHud(encounter);
 
   // Warm lantern/fire flicker is kept subtle so the scene still reads naturally in daylight.
   if(Math.floor(time*30)%8===0)renderer.shadowMap.needsUpdate=true;
@@ -1214,9 +1241,9 @@ function tick(dt){
   }
 
   if(state.hp<=0){
-    state.hp=100;
-    player.position.set(0,0,7);
-    toastMsg('You returned to the sanctuary');
+    state.hp=state.maxHp;state.stamina=100;player.position.set(0,0,7);dodgeIFrames=0;
+    if(encounter){encounter.root.removeFromParent();encounter=null;enemies=[];setEncounterHud(null)}
+    toastMsg('You fell in battle and woke at the sanctuary.');saveState();
   }
 
   $('playerHp').style.width=Math.max(0,Math.min(100,state.hp/state.maxHp*100))+'%';
@@ -1246,31 +1273,91 @@ function tick(dt){
 }
 function renderJournal(tab='story'){if(tab==='story')$('journalBody').innerHTML=state.log.slice(0,12).map(x=>'<div class="journal-line">◈ '+x+'</div>').join('');if(tab==='people')$('journalBody').innerHTML=npcs.map(n=>'<div class="journal-line"><b>'+n.name+' · '+n.role+'</b>Reputation: '+state.rep[n.id]+'</div>').join('');if(tab==='world')$('journalBody').innerHTML=gates.map(g=>'<div class="journal-line"><b>'+g.name+'</b> '+(state.quest>=g.unlock?'Accessible':'Sealed by story')+'</div>').join('');if(tab==='campaign')$('journalBody').innerHTML='<div class="campaign-grid">'+(window.ASHEN_CAMPAIGN||[]).map(ch=>'<article class="chapter-card '+(ch.id===state.chapter?'active':'')+'"><div class="num">CHAPTER '+String(ch.id).padStart(2,'0')+' · '+ch.theme.toUpperCase()+'</div><h3>'+ch.title+'</h3><p>'+ch.summary+'</p><div class="chapter-meta"><span>'+ch.region+'</span><span>'+ch.activities.length+' activities</span><span>'+ch.items.length+' unique items</span></div><div class="story-items">'+ch.items.map(i=>'<span>'+i+'</span>').join('')+'</div></article>').join('')+'</div>'}
 function archive(){const m=$('metaMenu');m.classList.add('show');const next=100+state.level*40,rank=state.meta.renown>=40?'CROWNBOUND':state.meta.renown>=20?'PATHFINDER':state.meta.renown>=8?'WAYFARER':'EMBERBOUND';$('metaContent').innerHTML='<div class="meta-dashboard"><div class="meta-hero"><span>LEGACY RANK</span><strong>'+rank+'</strong><small>Permanent progression · '+state.meta.legacy+' Legacy</small></div><div class="meta-stats"><div><b>'+state.meta.mastery+'</b><span>Mastery XP</span></div><div><b>'+state.meta.renown+'</b><span>Renown</span></div><div><b>'+state.meta.points+'</b><span>Growth Points</span></div><div><b>'+state.inventory.length+'</b><span>Discoveries</span></div></div><div class="meta-progress"><div><span>LEVEL '+state.level+'</span><b>'+state.xp+' / '+next+' XP</b></div><i style="width:'+Math.min(100,state.xp/next*100)+'%"></i></div><div class="meta-goals"><article><span>WEEKLY PATH</span><b>Discover 5 locations</b><small>'+Math.min(5,state.inventory.length)+' / 5 · Reward: +3 Renown</small></article><article><span>MASTER STUDY</span><b>Collect 3 story items</b><small>'+Math.min(3,state.inventory.length)+' / 3 · Reward: +2 Growth Points</small></article><article><span>LEGACY</span><b>Complete Chapter 01</b><small>'+(state.quest>=5?'Complete · Legacy unlocked':'In progress · finish the current story')+'</small></article></div><div class="meta-list"><div class="journal-line"><b>REPUTATION</b> Lyra '+state.rep.lyra+' · Orren '+state.rep.orren+' · Seer '+state.rep.seer+'</div><div class="journal-line"><b>EQUIPMENT</b> '+Object.values(state.equipment).filter(Boolean).length+' / 4 slots equipped · Ward '+state.stats.ward+' · Focus '+state.stats.focus+'</div><div class="journal-line"><b>WORLD</b> '+gates.filter(g=>state.quest>=g.unlock).length+' / '+gates.length+' routes available</div></div></div>'}
-function loadState(){try{const raw=localStorage.getItem('ashen-crown-3d');if(raw){const saved=JSON.parse(raw);Object.assign(state,saved);state.equipment=Object.assign({core:null,charm:null,armor:null,relic:null},saved.equipment||{});state.meta=Object.assign({renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0},saved.meta||{});state.inventory=(saved.inventory||[]).map(i=>({...i,attrs:Array.isArray(i.attrs)?i.attrs:[],stats:i.stats||{}}));state.maxHp=Number(saved.maxHp||100);state.tutorial=false}}catch{}recalculateEquipmentStats()}
-function saveState(){try{localStorage.setItem('ashen-crown-3d',JSON.stringify(state))}catch{}}
-function refreshEquipment(){document.querySelectorAll('.equip-slot').forEach(b=>{const x=state.equipment[b.dataset.slot];b.innerHTML=b.dataset.slot.toUpperCase()+'<span>'+(x?x.name:'Empty')+'</span>});}
+function loadState(){
+  try{
+    const raw=localStorage.getItem('ashen-crown-3d');
+    if(raw){
+      const saved=JSON.parse(raw);
+      if(saved&&typeof saved==='object'&&!Array.isArray(saved)){
+        const numeric=['xp','level','hp','stamina','coins','shards','echoes','quest','chapter','day'];
+        for(const key of numeric)if(Number.isFinite(Number(saved[key])))state[key]=Number(saved[key]);
+        state.xp=Math.max(0,state.xp);state.level=Math.max(1,state.level);state.quest=THREE.MathUtils.clamp(state.quest,0,5);state.hp=Math.max(0,state.hp);state.stamina=THREE.MathUtils.clamp(state.stamina,0,100);state.coins=Math.max(0,state.coins);state.shards=Math.max(0,state.shards);state.echoes=Math.max(0,state.echoes);
+        state.rep=Object.assign(state.rep,saved.rep&&typeof saved.rep==='object'?saved.rep:{});
+        state.flags=Object.assign(state.flags,saved.flags&&typeof saved.flags==='object'?saved.flags:{});
+        state.meta=Object.assign(state.meta,saved.meta&&typeof saved.meta==='object'?saved.meta:{});
+        state.equipment=Object.assign(state.equipment,saved.equipment&&typeof saved.equipment==='object'?saved.equipment:{});
+        state.inventory=Array.isArray(saved.inventory)?saved.inventory.filter(i=>i&&typeof i.name==='string').map(i=>({...i,attrs:Array.isArray(i.attrs)?i.attrs:[],stats:i.stats&&typeof i.stats==='object'?i.stats:{}})):[];
+        state.collectedNodes=Array.isArray(saved.collectedNodes)?saved.collectedNodes.filter(x=>typeof x==='string'):[];
+        state.log=Array.isArray(saved.log)?saved.log.filter(x=>typeof x==='string').slice(0,80):state.log;
+        state.tutorial=saved.tutorial===true;
+        if(saved.playerPosition&&Number.isFinite(saved.playerPosition.x)&&Number.isFinite(saved.playerPosition.z)){player.position.x=THREE.MathUtils.clamp(saved.playerPosition.x,-106,106);player.position.z=THREE.MathUtils.clamp(saved.playerPosition.z,-106,106)}
+      }
+    }
+  }catch{toastMsg('Save data could not be read; a fresh journey has started.')}
+  recalculateEquipmentStats();state.hp=THREE.MathUtils.clamp(state.hp,0,state.maxHp);restoreCollectedNodes();
+}
+function nodeKey(n){return n.type+':'+n.x+':'+n.z}
+function restoreCollectedNodes(){const collected=new Set(Array.isArray(state.collectedNodes)?state.collectedNodes:[]);for(const n of nodes){n.collected=collected.has(nodeKey(n));n.root.visible=!n.collected}}
+function saveState(){try{state.saveVersion=2;state.playerPosition={x:player.position.x,z:player.position.z};localStorage.setItem('ashen-crown-3d',JSON.stringify(state))}catch{toastMsg('Unable to save: browser storage is unavailable.') }}
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveState,180)}
+function refreshEquipment(){
+  document.querySelectorAll('.equip-slot').forEach(button=>{
+    const equipped=state.equipment[button.dataset.slot];
+    const label=equipped?equipped.name:'Empty';
+    button.innerHTML=button.dataset.slot.toUpperCase()+'<span>'+label+'</span>';
+  });
+}
 function openInventory(){refreshEquipment();const grid=$('inventoryGrid');grid.innerHTML=state.inventory.length?state.inventory.slice().reverse().map((i,idx)=>{const stats=Object.entries(i.stats||{}).map(([k,v])=>'+'+v+' '+k[0].toUpperCase()+k.slice(1)).join(' · ');return '<div class="inventory-item"><b>'+i.name+'</b><small>'+i.type+' · '+i.rarity+'</small><em>'+i.attrs.join(' · ')+(stats?' · '+stats:'')+'</em><button data-item="'+(state.inventory.length-1-idx)+'">EQUIP</button></div>'}).join(''):'<div class="inventory-item"><b>Your pack is empty</b><small>Explore the world and discover story items.</small></div>';$('inventoryMenu').classList.add('show');grid.querySelectorAll('button[data-item]').forEach(b=>b.onclick=()=>equipItem(Number(b.dataset.item)))}
 function equipItem(index){const i=state.inventory[index];if(!i)return;const slot=i.type==='Armor'?'armor':i.type==='Trinket'?'charm':i.type==='Relic'?'relic':'core';state.equipment[slot]=i;recalculateEquipmentStats();toastMsg(i.name+' equipped as '+slot);refreshEquipment();saveState()}
 function renderWorldMap(){const el=$('mapWorld');el.innerHTML='';const points=[['Sanctuary',12,50,0,true],['Sanctuary Hamlet',28,35,1,true],['Ember Grove',42,26,1,true],['Hollow Ruins',70,22,2,state.quest>=2],['Riverlands',58,52,2,true],['Starfall Meadow',52,68,3,state.quest>=3],['Veil Lake',20,78,5,state.quest>=5],['Crown Road',82,58,6,state.quest>=6],['Glass Observatory',86,30,7,state.quest>=7],['Starless Path',12,20,4,state.quest>=4],['Starless Wilds',72,82,9,state.quest>=9]];points.forEach(p=>{const d=document.createElement('div');d.className='map-node '+(p[4]?'open':'')+(p[0]===region()?' quest':'');d.style.left=p[1]+'%';d.style.top=p[2]+'%';d.innerHTML='<i></i><b>'+p[0]+'</b><small>'+(p[4]?'DISCOVERED':'LOCKED')+'</small>';el.appendChild(d)})}
 function openMap(){renderWorldMap();$('worldMap').classList.add('show')}
 function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}
-window.addEventListener('resize',resize);window.addEventListener('keydown',e=>{if(e.repeat&&['Space','KeyE','KeyF','KeyI','KeyJ','KeyK','KeyM'].includes(e.code))return;keys[e.code]=true;if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','Space'].includes(e.code))e.preventDefault();if(e.code==='KeyE')interact();if(e.code==='KeyF')pulse();if(e.code==='Space')dodge();if(e.code==='KeyI')openInventory();if(e.code==='KeyM')openMap();if(e.code==='Slash'||e.code==='F1')$('tutorial').classList.add('show');if(e.code==='KeyJ'){$('journal').classList.toggle('show');renderJournal('story')}if(e.code==='KeyK')archive();if(e.code==='Escape'){if(shopMenu?.classList.contains('show')){shopMenu.classList.remove('show');return}$('pause').classList.toggle('show');state.paused=!state.paused}});window.addEventListener('keyup',e=>keys[e.code]=false);window.addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);drag=false});
+window.addEventListener('resize',resize);window.addEventListener('keydown',e=>{
+  if(e.repeat&&['Space','KeyE','KeyF','KeyI','KeyJ','KeyK','KeyM','Escape'].includes(e.code))return;
+  if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','Space'].includes(e.code))e.preventDefault();
+  if(e.code==='Escape'){
+    if(shopMenu?.classList.contains('show'))shopMenu.classList.remove('show');
+    else if($('dialogue').classList.contains('show'))$('dialogue').classList.remove('show');
+    else if($('inventoryMenu').classList.contains('show'))$('inventoryMenu').classList.remove('show');
+    else if($('worldMap').classList.contains('show'))$('worldMap').classList.remove('show');
+    else if($('metaMenu').classList.contains('show'))$('metaMenu').classList.remove('show');
+    else if($('tutorial').classList.contains('show')){$('tutorial').classList.remove('show');state.tutorial=false;saveState()}
+    else{$('pause').classList.toggle('show');state.paused=$('pause').classList.contains('show')}
+    Object.keys(keys).forEach(k=>keys[k]=false);return;
+  }
+  if(anyOverlayOpen())return;
+  keys[e.code]=true;
+  if(e.code==='KeyE')interact();if(e.code==='KeyF')pulse();if(e.code==='Space')dodge();if(e.code==='KeyI')openInventory();if(e.code==='KeyM')openMap();if(e.code==='Slash'||e.code==='F1')$('tutorial').classList.add('show');if(e.code==='KeyJ'){$('journal').classList.toggle('show');renderJournal('story')}if(e.code==='KeyK')archive();
+});window.addEventListener('keyup',e=>keys[e.code]=false);window.addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);drag=false});
 canvas.addEventListener('mousedown',e=>{if(e.button===0)pulse();drag=true;lx=e.clientX;ly=e.clientY});window.addEventListener('mouseup',()=>drag=false);window.addEventListener('mousemove',e=>{if(!drag)return;yaw-=(e.clientX-lx)*.005;pitch=THREE.MathUtils.clamp(pitch-(e.clientY-ly)*.003,-.1,.8);lx=e.clientX;ly=e.clientY});canvas.addEventListener('wheel',e=>{camera.fov=THREE.MathUtils.clamp(camera.fov+e.deltaY*.025,42,68);camera.updateProjectionMatrix()},{passive:true});
 document.querySelectorAll('.journal-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.journal-tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderJournal(b.dataset.tab)});
 $('closeMeta').onclick=()=>$('metaMenu').classList.remove('show');$('closeInventory').onclick=()=>$('inventoryMenu').classList.remove('show');$('closeMap').onclick=()=>$('worldMap').classList.remove('show');$('tutorialStart').onclick=()=>{$('tutorial').classList.remove('show');state.tutorial=false;saveState()};$('helpButton').onclick=()=>$('tutorial').classList.add('show');$('closeDialogue').onclick=()=>$('dialogue').classList.remove('show');$('resume').onclick=()=>{$('pause').classList.remove('show');state.paused=false};
 window.addEventListener('beforeunload',saveState);
 props.traverse(o=>{if(o.isMesh)o.castShadow=false;});
 treeSpots.forEach(g=>g.traverse(o=>{if(o.isMesh)o.castShadow=true;}));
-loadState();setQuest();renderJournal('story');refreshEquipment();resize();
+function setupTouchControls(){
+  const controls=document.createElement('div');controls.className='touch-controls';controls.innerHTML='<div class="touch-stick" aria-label="Movement joystick"><i></i></div><div class="touch-actions"><button data-action="interact">USE</button><button data-action="attack">HIT</button><button data-action="dodge">ROLL</button><button data-action="inventory">BAG</button></div>';document.querySelector('.stage').appendChild(controls);
+  const stick=controls.querySelector('.touch-stick'),knob=stick.querySelector('i');let pointerId=null;
+  const clearStick=()=>{pointerId=null;keys.KeyW=keys.KeyA=keys.KeyS=keys.KeyD=false;knob.style.transform='translate(0,0)'};
+  stick.addEventListener('pointerdown',e=>{e.preventDefault();pointerId=e.pointerId;stick.setPointerCapture(pointerId);moveStick(e)});
+  stick.addEventListener('pointermove',e=>{if(e.pointerId===pointerId)moveStick(e)});
+  stick.addEventListener('pointerup',e=>{if(e.pointerId===pointerId)clearStick()});stick.addEventListener('pointercancel',clearStick);
+  function moveStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,42/len),nx=dx*scale,ny=dy*scale;knob.style.transform='translate('+nx+'px,'+ny+'px)';keys.KeyD=nx>17;keys.KeyA=nx< -17;keys.KeyS=ny>17;keys.KeyW=ny< -17}
+  controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='inventory')openInventory()}));
+}
+loadState();setupTouchControls();setQuest();renderJournal('story');refreshEquipment();resize();
 if(state.tutorial!==false)$('tutorial').classList.add('show');
 time=DAY_LENGTH*.30;
 spawnWildlifeBurst(10);
 updateSky();
 state.meta.developmentDay=Math.max(1,Number(state.meta.developmentDay||0)+1);toastMsg('Development Day '+state.meta.developmentDay+' — the world wakes, villages stir, and the morning sun rises.');
 setInterval(()=>{
-  if(!state.paused&&!document.hidden&&Math.random()<.55)spawnEnemy();
-  if(!state.paused&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
+  if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55)spawnEnemy();
+  if(!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
+setInterval(()=>{if(!document.hidden)saveState()},15000);
+window.addEventListener('pagehide',saveState);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState()});
 let last=performance.now();
 function frame(t){
   const rawDt=Math.min(.05,(t-last)/1000);last=t;
