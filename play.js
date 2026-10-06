@@ -4,7 +4,8 @@ const $=id=>document.getElementById(id);
 const canvas=$('game'), scene=new THREE.Scene();
 scene.background=new THREE.Color(0x0a0b0e); scene.fog=new THREE.Fog(0x151311,58,245);
 const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
-renderer.setPixelRatio(1); renderer.outputColorSpace=THREE.SRGBColorSpace;
+const maxDpr=Math.min(window.devicePixelRatio||1,1.25);
+renderer.setPixelRatio(maxDpr); renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=.82;
 renderer.shadowMap.enabled=false; renderer.shadowMap.autoUpdate=false;
 const camera=new THREE.PerspectiveCamera(55,1,.1,260); camera.position.set(0,4,8);
@@ -1311,7 +1312,8 @@ function openInventory(){refreshEquipment();const grid=$('inventoryGrid');grid.i
 function equipItem(index){const i=state.inventory[index];if(!i)return;const slot=i.type==='Armor'?'armor':i.type==='Trinket'?'charm':i.type==='Relic'?'relic':'core';state.equipment[slot]=i;recalculateEquipmentStats();toastMsg(i.name+' equipped as '+slot);refreshEquipment();saveState()}
 function renderWorldMap(){const el=$('mapWorld');el.innerHTML='';const points=[['Sanctuary',12,50,0,true],['Sanctuary Hamlet',28,35,1,true],['Ember Grove',42,26,1,true],['Hollow Ruins',70,22,2,state.quest>=2],['Riverlands',58,52,2,true],['Starfall Meadow',52,68,3,state.quest>=3],['Veil Lake',20,78,5,state.quest>=5],['Crown Road',82,58,6,state.quest>=6],['Glass Observatory',86,30,7,state.quest>=7],['Starless Path',12,20,4,state.quest>=4],['Starless Wilds',72,82,9,state.quest>=9]];points.forEach(p=>{const d=document.createElement('div');d.className='map-node '+(p[4]?'open':'')+(p[0]===region()?' quest':'');d.style.left=p[1]+'%';d.style.top=p[2]+'%';d.innerHTML='<i></i><b>'+p[0]+'</b><small>'+(p[4]?'DISCOVERED':'LOCKED')+'</small>';el.appendChild(d)})}
 function openMap(){renderWorldMap();$('worldMap').classList.add('show')}
-function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}
+let lastWidth=0,lastHeight=0;
+function resize(){const r=canvas.getBoundingClientRect(),w=Math.max(1,Math.round(r.width)),h=Math.max(1,Math.round(r.height));if(w===lastWidth&&h===lastHeight)return;lastWidth=w;lastHeight=h;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 window.addEventListener('resize',resize);window.addEventListener('keydown',e=>{
   if(e.repeat&&['Space','KeyE','KeyF','KeyI','KeyJ','KeyK','KeyM','Escape'].includes(e.code))return;
   if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','Space'].includes(e.code))e.preventDefault();
@@ -1364,16 +1366,20 @@ function frame(t){
   fpsAccumulator+=rawDt;fpsFrames++;
   if(fpsAccumulator>=1){
     const avgFrame=fpsAccumulator/Math.max(1,fpsFrames);
+    const previousDpr=adaptiveDpr;
     if(avgFrame>.024)adaptiveDpr=Math.max(.72,adaptiveDpr-.08);
-    else if(avgFrame<.017)adaptiveDpr=Math.min(1,adaptiveDpr+.05);
-    renderer.setPixelRatio(adaptiveDpr);
-    resize();
+    else if(avgFrame<.017)adaptiveDpr=Math.min(maxDpr,adaptiveDpr+.05);
+    if(Math.abs(adaptiveDpr-previousDpr)>.04){renderer.setPixelRatio(adaptiveDpr);lastWidth=0;resize()}
     fpsAccumulator=0;fpsFrames=0;
   }
   const dt=Math.min(.033,rawDt);
   if(!state.paused&&!$('dialogue').classList.contains('show')&&!$('tutorial').classList.contains('show')&&!$('inventoryMenu').classList.contains('show')&&!$('worldMap').classList.contains('show')&&!$('shopMenu')?.classList.contains('show'))tick(dt);
   renderer.render(scene,camera);
   if(toastTimer>0&&(toastTimer-=dt)<=0)$('toast').classList.remove('show');
-  requestAnimationFrame(frame);
+  if(!document.hidden)requestAnimationFrame(frame);
 }
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){Object.keys(keys).forEach(k=>keys[k]=false);saveState()}
+  else{last=performance.now();requestAnimationFrame(frame)}
+});
 requestAnimationFrame(frame);
