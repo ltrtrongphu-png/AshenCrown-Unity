@@ -79,9 +79,19 @@ if (host) {
 
   const loader=new GLTFLoader();
   const configuredModel=host.dataset.model;
-  if (configuredModel) {
+  let modelRequested=false;
+  function loadConfiguredModel(){
+    if(modelRequested||!configuredModel)return;
+    modelRequested=true;
     loader.load(configuredModel, gltf => {
-      root.clear();
+      for(const child of [...root.children]){
+        root.remove(child);
+        child.traverse?.(object=>{
+          object.geometry?.dispose();
+          const materials=Array.isArray(object.material)?object.material:[object.material];
+          materials.filter(Boolean).forEach(material=>material.dispose());
+        });
+      }
       root.add(gltf.scene);
       gltf.scene.scale.setScalar(1.35);
     }, undefined, err => console.warn("Ashen Crown model fallback active:", err));
@@ -93,17 +103,34 @@ if (host) {
     camera.aspect=w/h;
     camera.updateProjectionMatrix();
   };
-  new ResizeObserver(resize).observe(host);
+  let inView=false,rafId=0;
+  const resizeObserver=new ResizeObserver(()=>{resize();if(inView)renderFrame()});
+  resizeObserver.observe(host);
   resize();
 
   const clock=new THREE.Clock();
+  function renderFrame(){
+    if(!inView||document.hidden||rafId)return;
+    rafId=requestAnimationFrame(frame);
+  }
   function frame(){
-    requestAnimationFrame(frame);
+    rafId=0;
+    if(!inView||document.hidden)return;
     const t=clock.getElapsedTime();
     core.rotation.y=t*.8;
     aura.scale.setScalar(1+Math.sin(t*2)*.08);
     controls.update();
     renderer.render(scene,camera);
+    renderFrame();
   }
-  frame();
+  const visibilityObserver=new IntersectionObserver(entries=>{
+    inView=entries.some(entry=>entry.isIntersecting);
+    if(inView){loadConfiguredModel();renderFrame()}
+    else if(rafId){cancelAnimationFrame(rafId);rafId=0}
+  },{rootMargin:"120px"});
+  visibilityObserver.observe(host);
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden&&rafId){cancelAnimationFrame(rafId);rafId=0}
+    else renderFrame();
+  });
 }
