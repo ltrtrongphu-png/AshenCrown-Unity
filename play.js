@@ -1462,7 +1462,7 @@ function tick(dt){
     if(!e||!e.root)continue;
     const dx=player.position.x-e.root.position.x,dz=player.position.z-e.root.position.z,distance=Math.hypot(dx,dz)||1;
     e.root.rotation.y=Math.atan2(dx,dz);
-    if(state.settings.animations!==false)e.root.position.y=.15+Math.sin(time*2+(e.root.id||0))*.12;
+    if(state.settings.animations!==false)e.root.position.y=.15+Math.sin(time*2+(e.root.id||0))*.12;if(e.isBoss){const ratio=e.hp/e.maxHp;const phase=ratio<=.33?3:ratio<=.66?2:1;if(phase>e.phase){e.phase=phase;e.cooldown=Math.min(e.cooldown,.55);e.attackSkill=phase;toastMsg('Warden phase '+phase+' — attack pattern changed.')}}
     if(e.state==='windup'){
       e.windup-=dt;e.body.material.emissive.setHex(e.isBoss&&e.attackSkill===2?0xffbd52:e.isBoss&&e.attackSkill===3?0xd267fc:0xff321c);if(state.settings.animations!==false)e.root.scale.setScalar(1.08+.07*Math.sin(time*28));
       if(e.windup<=0){e.state='approach';e.cooldown=1.25+Math.random()*.45;e.root.scale.setScalar(1);e.body.material.emissive.setHex(0x684a79);const reach=e.isBoss?(e.attackSkill===2?4.4:e.attackSkill===3?3.6:2.75):2.75;if(distance<reach&&dodgeIFrames<=0){const mitigation=Math.min(.55,state.stats.ward*.055),moveScale=e.isBoss&&e.attackSkill===3?1.45:e.isBoss&&e.attackSkill===2?1.2:1;state.hp=Math.max(0,state.hp-e.attackDamage*moveScale*(1-mitigation));playGameSound('hurt');toastMsg(e.isBoss?'Warden skill '+e.attackSkill+' hit · dodge the next tell':'The shade struck you — dodge when its glow flares.')}}
