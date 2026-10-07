@@ -11,7 +11,7 @@ if (outputDir !== expectedOutputDir || relative(repoRoot, outputDir).startsWith(
 }
 
 // Keep the Vercel artifact limited to files used by the browser experience.
-// Unity source, model meshes, textures, backend code and docs stay in GitHub only.
+// Unity source, unused art, textures, backend code and docs stay in GitHub only.
 const webFiles = [
   'index.html',
   'play.html',
@@ -23,12 +23,22 @@ const webFiles = [
   'campaign.js',
   'model3d.js',
   'play.js',
+  'sw.js',
   'Assets/ashen-crown-logo.svg',
+  'Assets/Models/Bosses/AshenRegent.glb',
+  'Assets/Models/Characters/AshenSentinel.glb',
+  'resource-pack.json',
 ];
 const optionalAssets = new Set(['Assets/ashen-crown-logo.svg']);
+const generatedFiles = new Set(['resource-pack.json']);
+const resourceFiles = [
+  'Assets/Models/Characters/AshenSentinel.glb',
+  'Assets/Models/Bosses/AshenRegent.glb',
+];
 
 for (const file of webFiles) {
   const source = join(repoRoot, file);
+  if (generatedFiles.has(file)) continue;
   if ((!existsSync(source) || !statSync(source).isFile()) && !optionalAssets.has(file)) {
     throw new Error(`Required web deployment file is missing: ${file}`);
   }
@@ -51,7 +61,17 @@ mkdirSync(outputDir, { recursive: true });
 for (const file of webFiles) {
   const destination = join(outputDir, file);
   mkdirSync(dirname(destination), { recursive: true });
-  if (existsSync(join(repoRoot, file))) {
+  if (file === 'resource-pack.json') {
+    const manifest = {
+      version: 'ashen-production-2026-10-07-v1',
+      label: 'Ashen Crown Production Models',
+      files: resourceFiles.map((path) => ({
+        url: `/${path.replaceAll('\\', '/')}`,
+        size: statSync(join(repoRoot, path)).size,
+      })),
+    };
+    writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`);
+  } else if (existsSync(join(repoRoot, file))) {
     cpSync(join(repoRoot, file), destination);
   } else if (file === 'Assets/ashen-crown-logo.svg') {
     writeFileSync(destination, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Ashen Crown emblem"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3c08a"/><stop offset=".5" stop-color="#c96b3d"/><stop offset="1" stop-color="#71331f"/></linearGradient></defs><path d="M128 18 159 69 204 38 194 104c-13 43-38 68-66 81-28-13-53-38-66-81L52 38l45 31z" fill="#0b0908" stroke="url(#g)" stroke-width="6" stroke-linejoin="round"/><path d="M69 104c18 13 38 19 59 19s41-6 59-19M83 105l10-37 35 55 35-55 10 37m-87 40c17 12 30 18 42 22 12-4 25-10 42-22" fill="none" stroke="#d98a58" stroke-width="4"/><path d="m128 91 13 25-13 29-13-29z" fill="#f0a46d"/><circle cx="128" cy="116" r="7" fill="#fff0d8"/></svg>\n`);
@@ -60,4 +80,4 @@ for (const file of webFiles) {
 }
 
 const artifactBytes = webFiles.reduce((total, file) => total + statSync(join(outputDir, file)).size, 0);
-console.log(`Prepared ${webFiles.length} browser files (${(artifactBytes / 1024).toFixed(1)} KiB) in dist/.`);
+console.log(`Prepared ${webFiles.length} browser files (${(artifactBytes / 1024 / 1024).toFixed(2)} MiB) in dist/.`);

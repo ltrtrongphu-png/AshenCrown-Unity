@@ -13,3 +13,8 @@ tools/.gitignore
 *.cs
 *.glb
 *.png
+!Assets/Models/
+!Assets/Models/Bosses/
+!Assets/Models/Bosses/AshenRegent.glb
+!Assets/Models/Characters/
+!Assets/Models/Characters/AshenSentinel.glb
