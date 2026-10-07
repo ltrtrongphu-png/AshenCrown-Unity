@@ -1287,7 +1287,7 @@ function spawnEnemy(){
   g.add(e1,e2);
   characters.add(g);
   const maxHp=Math.round((isBoss?150:state.quest>=3?90:45)*(1+(state.chapter-1)*.18)+Math.max(0,state.level-1)*4);
-  encounter={root:g,hp:maxHp,maxHp,state:'approach',cooldown:1.1+Math.random(),windup:0,attackDamage:(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2),attackSkill:0,body:b,isBoss};
+  encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,attackDamage:(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2),attackSkill:0,body:b,isBoss};
   enemies=[encounter];
   if(isBoss)attachProductionBoss(encounter);
   setEncounterHud(encounter);
