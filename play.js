@@ -1604,7 +1604,7 @@ time=DAY_LENGTH*.30;
 showChapterTitle((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.title)||'THE LAST EMBER','Explore · meet people · make choices · shape the world');
 if(activeMapId==='sanctuary')spawnWildlifeBurst(10);
 updateSky();
-state.meta.developmentDay=Math.max(1,Number(state.meta.developmentDay||0)+1);toastMsg('Development Day '+state.meta.developmentDay+' — the world wakes, villages stir, and the morning sun rises.');
+const DEVELOPMENT_DAY=9;state.meta.developmentDay=Math.max(Number(state.meta.developmentDay||0),DEVELOPMENT_DAY);toastMsg('Development Day '+state.meta.developmentDay+' — the world wakes, villages stir, and the morning sun rises.');
 setInterval(()=>{
   if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!(state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated))spawnEnemy();
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
