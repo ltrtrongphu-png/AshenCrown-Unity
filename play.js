@@ -237,7 +237,7 @@ function updateSky(){
 
 
 const state={day:1,xp:0,level:1,hp:100,maxHp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],equipment:{core:null,charm:null,armor:null,relic:null},stats:{vitality:0,focus:0,ward:0},meta:{renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0},collectedNodes:[],tutorial:true,log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
-const keys={}; let yaw=0,pitch=.28,drag=false,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,attackCooldown=0,dodgeIFrames=0;
+const keys={}; let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0;
 const player=new THREE.Group(); player.position.set(0,0,7); characters.add(player);
 
 const mat=(c,r=.75,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
@@ -1299,7 +1299,7 @@ function loadState(){
 }
 function nodeKey(n){return n.type+':'+n.x+':'+n.z}
 function restoreCollectedNodes(){const collected=new Set(Array.isArray(state.collectedNodes)?state.collectedNodes:[]);for(const n of nodes){n.collected=collected.has(nodeKey(n));n.root.visible=!n.collected}}
-function saveState(){try{state.saveVersion=2;state.playerPosition={x:player.position.x,z:player.position.z};localStorage.setItem('ashen-crown-3d',JSON.stringify(state))}catch{toastMsg('Unable to save: browser storage is unavailable.') }}
+function saveState(){try{state.saveVersion=2;state.playerPosition={x:player.position.x,z:player.position.z};localStorage.setItem('ashen-crown-3d',JSON.stringify(state));const status=$('saveStatus');if(status){status.textContent='SAVED LOCALLY';status.dataset.state='saved'}}catch{const status=$('saveStatus');if(status){status.textContent='SAVE UNAVAILABLE';status.dataset.state='error'}if(!saveWarningShown){saveWarningShown=true;toastMsg('Unable to save: browser storage is unavailable.')}}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveState,180)}
 function refreshEquipment(){
   document.querySelectorAll('.equip-slot').forEach(button=>{
@@ -1330,8 +1330,10 @@ window.addEventListener('resize',resize);window.addEventListener('keydown',e=>{
   if(anyOverlayOpen())return;
   keys[e.code]=true;
   if(e.code==='KeyE')interact();if(e.code==='KeyF')pulse();if(e.code==='Space')dodge();if(e.code==='KeyI')openInventory();if(e.code==='KeyM')openMap();if(e.code==='Slash'||e.code==='F1')$('tutorial').classList.add('show');if(e.code==='KeyJ'){$('journal').classList.toggle('show');renderJournal('story')}if(e.code==='KeyK')archive();
-});window.addEventListener('keyup',e=>keys[e.code]=false);window.addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);drag=false});
-canvas.addEventListener('mousedown',e=>{if(e.button===0)pulse();drag=true;lx=e.clientX;ly=e.clientY});window.addEventListener('mouseup',()=>drag=false);window.addEventListener('mousemove',e=>{if(!drag)return;yaw-=(e.clientX-lx)*.005;pitch=THREE.MathUtils.clamp(pitch-(e.clientY-ly)*.003,-.1,.8);lx=e.clientX;ly=e.clientY});canvas.addEventListener('wheel',e=>{camera.fov=THREE.MathUtils.clamp(camera.fov+e.deltaY*.025,42,68);camera.updateProjectionMatrix()},{passive:true});
+});window.addEventListener('keyup',e=>keys[e.code]=false);window.addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);drag=false;dragPointerId=null});
+canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0)pulse();drag=true;dragPointerId=e.pointerId;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==dragPointerId)return;yaw-=(e.clientX-lx)*.005;pitch=THREE.MathUtils.clamp(pitch-(e.clientY-ly)*.003,-.1,.8);lx=e.clientX;ly=e.clientY});
+const endCameraDrag=e=>{if(e.pointerId!==dragPointerId)return;drag=false;dragPointerId=null};canvas.addEventListener('pointerup',endCameraDrag);canvas.addEventListener('pointercancel',endCameraDrag);canvas.addEventListener('lostpointercapture',()=>{drag=false;dragPointerId=null});canvas.addEventListener('contextmenu',e=>e.preventDefault());canvas.addEventListener('wheel',e=>{camera.fov=THREE.MathUtils.clamp(camera.fov+e.deltaY*.025,42,68);camera.updateProjectionMatrix()},{passive:true});
 document.querySelectorAll('.journal-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.journal-tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderJournal(b.dataset.tab)});
 $('closeMeta').onclick=()=>$('metaMenu').classList.remove('show');$('closeInventory').onclick=()=>$('inventoryMenu').classList.remove('show');$('closeMap').onclick=()=>$('worldMap').classList.remove('show');$('tutorialStart').onclick=()=>{$('tutorial').classList.remove('show');state.tutorial=false;saveState()};$('helpButton').onclick=()=>$('tutorial').classList.add('show');$('closeDialogue').onclick=()=>$('dialogue').classList.remove('show');$('resume').onclick=()=>{$('pause').classList.remove('show');state.paused=false};
 window.addEventListener('beforeunload',saveState);
