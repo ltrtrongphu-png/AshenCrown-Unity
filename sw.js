@@ -7,6 +7,8 @@ const APP_FILES = [
   './play.css',
   './campaign.js',
   './play.js',
+  './auth-config.js',
+  './auth.js',
   './i18n.js',
   './model3d.js',
   './model3d.css',
