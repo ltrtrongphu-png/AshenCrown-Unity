@@ -25,6 +25,7 @@ const webFiles = [
   'campaign.js',
   'model3d.js',
   'play.js',
+  'play-boot.js',
   'auth-config.js',
   'auth.js',
   'sw.js',
@@ -82,7 +83,7 @@ function checkJavaScriptSyntax(file, module = false) {
     throw new Error(`JavaScript syntax check failed for ${file}: ${result.stderr || result.error?.message || 'unknown error'}`);
   }
 }
-for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js']) {
+for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js', 'play-boot.js']) {
   checkJavaScriptSyntax(file, false);
 }
 for (const file of ['play.js', 'model3d.js']) {

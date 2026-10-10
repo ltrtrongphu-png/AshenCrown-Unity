@@ -130,7 +130,9 @@ function renderAuthModal() {
   const showForm = !isSignedIn || recoveryMode;
   document.getElementById('ashenAuthFormView').hidden = !showForm;
   document.getElementById('ashenAuthAccountView').hidden = showForm;
-  document.getElementById('ashenAuthAccountText').textContent = isSignedIn ? 'Signed in as ' + (currentSession.user.email || 'player') + '. Your browser save will sync to your private cloud slot.' : '';
+  const accountPrefix = window.AshenI18n?.t?.('Signed in as') || 'Signed in as';
+  const accountSuffix = window.AshenI18n?.t?.('. Your browser save will sync to your private cloud slot.') || '. Your browser save will sync to your private cloud slot.';
+  document.getElementById('ashenAuthAccountText').textContent = isSignedIn ? accountPrefix + ' ' + (currentSession.user.email || 'player') + accountSuffix : '';
   document.getElementById('ashenAuthTabs').hidden = recoveryMode;
   if (recoveryMode) {
     document.getElementById('ashenAuthTitle').textContent = 'Set a new password';

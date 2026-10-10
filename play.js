@@ -2810,7 +2810,7 @@ setInterval(()=>{
 setInterval(()=>{if(!document.hidden)saveState()},15000);
 window.addEventListener('pagehide',saveState);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState()});
-let last=performance.now();
+let last=performance.now(),gameRenderReady=false;
 function frame(t){
   const rawDt=Math.min(.05,(t-last)/1000);last=t;
   fpsAccumulator+=rawDt;fpsFrames++;
@@ -2825,7 +2825,10 @@ function frame(t){
     fpsAccumulator=0;fpsFrames=0;
   }
   const dt=Math.min(.033,rawDt);
-  if(!anyOverlayOpen()){tick(dt);renderer.render(scene,camera)}
+  if(!anyOverlayOpen())tick(dt);
+  // Keep rendering the world while menus/tutorials are open; only the simulation pauses.
+  renderer.render(scene,camera);
+  if(!gameRenderReady){gameRenderReady=true;window.dispatchEvent(new Event('ashen:game-ready'))}
   if(toastTimer>0&&(toastTimer-=dt)<=0)$('toast').classList.remove('show');
   if(!document.hidden)requestAnimationFrame(frame);
 }
