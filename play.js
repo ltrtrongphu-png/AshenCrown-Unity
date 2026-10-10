@@ -233,7 +233,7 @@ renderer.setPixelRatio(maxDpr); renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
 renderer.shadowMap.enabled=false; renderer.shadowMap.autoUpdate=false; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const camera=new THREE.PerspectiveCamera(55,1,.1,260); camera.position.set(0,4,8);
-scene.add(new THREE.HemisphereLight(0xcbd3d8,0x24201c,1.2));
+scene.add(new THREE.HemisphereLight(0xcbd3d8,0x24201c,1.05));
 const fillLight=new THREE.DirectionalLight(0xffd6b0,.38);
 fillLight.position.set(16,9,12);scene.add(fillLight);
 const rimLight=new THREE.DirectionalLight(0x789dcc,.42);
@@ -241,8 +241,8 @@ rimLight.position.set(-12,7,-18);scene.add(rimLight);
 
 const sun=new THREE.DirectionalLight(0xffd0a4,1.05);
 sun.position.set(-18,22,12);sun.castShadow=true;
-sun.shadow.mapSize.set(1024,1024);
-sun.shadow.camera.left=-42;sun.shadow.camera.right=42;sun.shadow.camera.top=42;sun.shadow.camera.bottom=-42;sun.shadow.camera.near=.5;sun.shadow.camera.far=180;
+sun.shadow.mapSize.set(768,768);
+sun.shadow.camera.left=-30;sun.shadow.camera.right=30;sun.shadow.camera.top=30;sun.shadow.camera.bottom=-30;sun.shadow.camera.near=.5;sun.shadow.camera.far=110;
 sun.shadow.bias=-.0002;sun.shadow.normalBias=.025;sun.shadow.radius=2.5;
 scene.add(sun,sun.target);
 
@@ -275,7 +275,7 @@ environmentTexture.colorSpace=THREE.SRGBColorSpace;
 environmentTexture.mapping=THREE.EquirectangularReflectionMapping;
 environmentTexture.needsUpdate=true;
 scene.environment=environmentTexture;
-scene.environmentIntensity=.32;
+scene.environmentIntensity=.22;
 const world=new THREE.Group(), characters=new THREE.Group(), props=new THREE.Group(), effects=new THREE.Group(); scene.add(world);
 const sanctuaryBuild=new THREE.Group();world.add(sanctuaryBuild);
 world.add(characters,props,effects);
@@ -744,41 +744,53 @@ function wbox(x,y,z,color,key,emission=0){
   mesh.receiveShadow=true;
   return mesh;
 }
+// Batch the repeated forest geometry into a handful of instanced draw calls.
+// The old per-tree hierarchy generated hundreds of independent renderer submissions.
+const TREE_BATCH_MAX=48;
+const treeDummy=new THREE.Object3D();
+const treeTrunkBatch=new THREE.InstancedMesh(
+  new THREE.BoxGeometry(.32,2.4,.32),wmat('trunk',0x3b2920,.94),TREE_BATCH_MAX
+);
+const treeBranchGeometry=new THREE.BoxGeometry(.13,1,.13);
+const treeBranchMaterial=wmat('branch',0x4a3225,.94);
+const treeBranchLeftBatch=new THREE.InstancedMesh(treeBranchGeometry,treeBranchMaterial,TREE_BATCH_MAX);
+const treeBranchRightBatch=new THREE.InstancedMesh(treeBranchGeometry,treeBranchMaterial,TREE_BATCH_MAX);
+const treeLeafColors=[0x26392c,0x30452f,0x1f352c];
+const treeLeafBatches=treeLeafColors.map((color,index)=>new THREE.InstancedMesh(
+  new THREE.SphereGeometry(1,9,7),wmat('leaf'+index,color,.96),TREE_BATCH_MAX*4
+));
+const treeBatchMeshes=[treeTrunkBatch,treeBranchLeftBatch,treeBranchRightBatch,...treeLeafBatches];
+treeBatchMeshes.forEach(mesh=>{mesh.castShadow=false;mesh.receiveShadow=true;mesh.frustumCulled=true;props.add(mesh)});
+let treeCount=0;
+const leafCounts=[0,0,0];
+function setTreeInstance(mesh,index,x,y,z,scale,rotationZ=0){
+  treeDummy.position.set(x,y,z);
+  treeDummy.rotation.set(0,0,rotationZ);
+  treeDummy.scale.setScalar(scale);
+  treeDummy.updateMatrix();
+  mesh.setMatrixAt(index,treeDummy.matrix);
+}
 function tree(x,z,s=1,variant=0){
-  const g=new THREE.Group();g.name='AshenTree';g.userData.shadowCaster=true;
-  g.position.set(x,0,z);
-  g.scale.setScalar(s);
-
-  const trunk=wbox(.32,2.4,.32,0x3b2920,'trunk');
-  trunk.position.y=1.2; g.add(trunk);
-
-  const branchMat=wmat('branch',0x4a3225,.94);
-  for(const side of [-1,1]){
-    const branch=wbox(.13,1.0,.13,0x4a3225,'branch');
-    branch.position.set(side*.27,1.62,0);
-    branch.rotation.z=side*.68;
-    branch.material=branchMat;
-    g.add(branch);
-  }
-
-  const c1=variant%3===0?0x26392c:variant%3===1?0x30452f:0x1f352c;
+  if(treeCount>=TREE_BATCH_MAX)return null;
+  const index=treeCount++,leafVariant=((variant%3)+3)%3;
+  setTreeInstance(treeTrunkBatch,index,x,1.2*s,z,s);
+  setTreeInstance(treeBranchLeftBatch,index,x-.27*s,1.62*s,z,s,-.68);
+  setTreeInstance(treeBranchRightBatch,index,x+.27*s,1.62*s,z,s,.68);
   const clumps=[
     [0,2.20,0,.88],[-.42,2.42,.05,.62],[.42,2.42,-.06,.64],[0,2.92,-.12,.56]
   ];
-  clumps.forEach((p,i)=>{
-    const crown=orb(p[3],c1);
-    crown.material=wmat('leaf'+(variant%3),c1,.92);
-    crown.position.set(p[0],p[1],p[2]);
-    crown.castShadow=true;
-    g.add(crown);
-  });
-
-  props.add(g);
-  return g;
+  for(const p of clumps){
+    const mesh=treeLeafBatches[leafVariant],leafIndex=leafCounts[leafVariant]++;
+    treeDummy.position.set(x+p[0]*s,p[1]*s,z+p[2]*s);
+    treeDummy.rotation.set(0,(variant%5)*.13,0);
+    treeDummy.scale.setScalar(p[3]*s);
+    treeDummy.updateMatrix();
+    mesh.setMatrixAt(leafIndex,treeDummy.matrix);
+  }
+  return {x,z,scale:s,variant};
 }
 
-const treeSpots=[];
-for(let i=0;i<48;i++){
+for(let i=0;i<TREE_BATCH_MAX;i++){
   const a=i*2.399;
   const rx=28+(i%11)*6.3;
   const rz=24+(i%9)*6.8;
@@ -786,9 +798,14 @@ for(let i=0;i<48;i++){
   const z=Math.cos(a*.93)*rz+(i%4-1.5)*7;
   if(Math.abs(x)<12&&Math.abs(z)<15)continue;
   const ts=.72+(i%5)*.09;
-  treeSpots.push(tree(x,z,ts,i));
+  tree(x,z,ts,i);
   addTreeCollider(x,z,ts);
 }
+treeTrunkBatch.count=treeCount;
+treeBranchLeftBatch.count=treeCount;
+treeBranchRightBatch.count=treeCount;
+treeLeafBatches.forEach((mesh,index)=>{mesh.count=leafCounts[index];mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere()});
+treeBatchMeshes.slice(0,3).forEach(mesh=>{mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere()});
 
 function rock(x,z,s=1){
   const g=new THREE.Group();g.name='RockCluster';g.userData.shadowCaster=true;
@@ -1600,7 +1617,7 @@ function advanceChapter(){if(state.quest<5||state.chapter>=10)return;state.meta.
 function syncRenderQuality(){
   const quality=state.settings.quality||'auto';
   const shadowsAllowed=state.settings.visualEffects!==false&&(
-    quality==='high'||(quality==='auto'&&currentFps>=55&&adaptiveDpr>=.98)
+    quality==='high'||(quality==='auto'&&currentFps>=59&&adaptiveDpr<=1.02)
   );
   if(renderer.shadowMap.enabled!==shadowsAllowed){
     renderer.shadowMap.enabled=shadowsAllowed;
@@ -1611,9 +1628,9 @@ function syncRenderQuality(){
 }
 function applySettings(){
   const settings=state.settings,native=window.devicePixelRatio||1,r=canvas.getBoundingClientRect();
-  const pixelBudget=Math.sqrt(3600000/Math.max(1,r.width*r.height));
-  const qualityCap=settings.quality==='performance'?1:settings.quality==='high'?2:1.6;
-  maxDpr=Math.max(.85,Math.min(native,qualityCap,pixelBudget));
+  const pixelBudget=Math.sqrt(2400000/Math.max(1,r.width*r.height));
+  const qualityCap=settings.quality==='performance'?.85:settings.quality==='high'?1.65:1.25;
+  maxDpr=Math.max(.75,Math.min(native,qualityCap,pixelBudget));
   adaptiveDpr=settings.quality==='high'?maxDpr:Math.min(maxDpr,Math.max(.95,adaptiveDpr));
   renderer.setPixelRatio(adaptiveDpr);
   document.documentElement.classList.toggle('animations-off',settings.animations===false);
@@ -2044,7 +2061,8 @@ function tick(dt){
 
   // Warm lantern/fire flicker is kept subtle so the scene still reads naturally in daylight.
   const nightFactor=Math.max(0,(0.28-skyUniforms.uDay.value)/0.28);
-  for(let i=0;i<lightSources.length;i++){
+  const updateLights=(Math.floor(time*8)%2)===0;
+  if(updateLights)for(let i=0;i<lightSources.length;i++){
     const light=lightSources[i];
     if(!light)continue;
     light.visible=nightFactor>.12;
@@ -2203,7 +2221,7 @@ function frame(t){
     const avgFrame=fpsAccumulator/Math.max(1,fpsFrames);
     const previousDpr=adaptiveDpr;
     currentFps=fpsFrames/Math.max(.001,fpsAccumulator);
-    if(state.settings.quality==='auto'&&avgFrame>.024)adaptiveDpr=Math.max(.85,adaptiveDpr-.05);
+    if(state.settings.quality==='auto'&&avgFrame>.024)adaptiveDpr=Math.max(.75,adaptiveDpr-.06);
     else if((state.settings.quality==='auto'||state.settings.quality==='high')&&avgFrame<.017)adaptiveDpr=Math.min(maxDpr,adaptiveDpr+.04);
     if(Math.abs(adaptiveDpr-previousDpr)>.04){renderer.setPixelRatio(adaptiveDpr);lastWidth=0;resize()}
     syncRenderQuality();
