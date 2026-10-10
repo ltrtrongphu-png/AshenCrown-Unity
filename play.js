@@ -145,6 +145,15 @@ let playLanguage = PLAY_LOCALES.includes(localStorage.getItem('ashen.language'))
   ? localStorage.getItem('ashen.language')
   : (PLAY_LOCALES.includes((navigator.language||'en').slice(0,2).toLowerCase())?(navigator.language||'en').slice(0,2).toLowerCase():'en');
 const translatedTextNodes = new WeakMap();
+function replaceIgnoreCase(source,search,replacement){
+  const lower=source.toLowerCase(),needle=search.toLowerCase();
+  let from=0,index,out='';
+  while((index=lower.indexOf(needle,from))!==-1){
+    out+=source.slice(from,index)+replacement;
+    from=index+search.length;
+  }
+  return out+source.slice(from);
+}
 function playTranslateText(source, locale=playLanguage) {
   if(locale==='en')return source;
   const trimmed=source.trim();
@@ -152,14 +161,10 @@ function playTranslateText(source, locale=playLanguage) {
   const exact=PLAY_TRANSLATION_MAP.get(trimmed);
   let value=exact?exact[PLAY_LOCALES.indexOf(locale)+1]:trimmed;
   if(!exact){
-    const rows=[...PLAY_LOCALE_ROWS].sort((a,b)=>b[0].length-a[0].length);
-    for(const row of rows){
+    for(const row of PLAY_LOCALE_ROWS){
       const [english,...translations]=row;
       if(!english||english.length<3)continue;
-      const translated=translations[PLAY_LOCALES.indexOf(locale)];
-      const escaped=english.replace(/[.*+?^${}()|[\]\\]/g,'\\import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js';
-');
-      value=value.replace(new RegExp(escaped,'gi'),translated);
+      value=replaceIgnoreCase(value,english,translations[PLAY_LOCALES.indexOf(locale)]);
     }
   }
   const leading=source.match(/^\\s*/)?.[0]||'';
