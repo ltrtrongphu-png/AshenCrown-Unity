@@ -34,7 +34,7 @@ const optionalAssets = new Set(['Assets/ashen-crown-logo.svg']);
 const generatedFiles = new Set(['resource-pack.json']);
 
 // Build a content-derived identifier so the service worker and production
-// model pack are invalidated whenever any shipped web asset changes.
+// shell cache is invalidated whenever any shipped web asset changes.
 const buildHash = createHash('sha256');
 for (const file of webFiles) {
   if (generatedFiles.has(file)) continue;
@@ -58,6 +58,14 @@ for (const file of webFiles) {
   }
 }
 
+const resourceHash = createHash('sha256');
+for (const file of resourceFiles) {
+  resourceHash.update(file).update('\\0');
+  resourceHash.update(readFileSync(join(repoRoot, file)));
+  resourceHash.update('\\0');
+}
+const resourceVersion = 'ashen-production-' + resourceHash.digest('hex').slice(0, 16);
+
 for (const page of ['index.html', 'play.html']) {
   const html = readFileSync(join(repoRoot, page), 'utf8');
   const references = html.matchAll(/(?:href|src)="([^"]+\.(?:js|css|svg|png|jpe?g|webp|woff2|json)(?:\?[^\"]*)?)"/gi);
@@ -77,7 +85,7 @@ for (const file of webFiles) {
   mkdirSync(dirname(destination), { recursive: true });
   if (file === 'resource-pack.json') {
     const manifest = {
-      version: 'ashen-production-${buildId}',
+      version: `${resourceVersion}`,
       label: 'Ashen Crown Production Models',
       files: resourceFiles.map((path) => ({
         url: `/${path.replaceAll('\\', '/')}`,
