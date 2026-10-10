@@ -1387,6 +1387,7 @@ function setActiveMap(id,teleport=true){
   const def=MAPS[activeMapId];scene.fog.color.setHex(def.fog);scene.fog.near=activeMapId==='sanctuary'?58:30;scene.fog.far=activeMapId==='sanctuary'?245:105;
   $('locationName').textContent=def.name.toUpperCase();$('locationHint').textContent=def.hint;
   nearbyTarget=null;nearbyRefresh=0;
+  if(typeof updateQuestGuide==='function')updateQuestGuide(true);
 }
 function canFastTravel(){return state.chapter>=10&&state.quest>=5&&(state.meta.chaptersComplete>=10||state.flags.legacyHome)}
 function fastTravel(id){if(!canFastTravel()||!MAPS[id])return;encounter?.root.removeFromParent();encounter=null;enemies=[];setEncounterHud(null);setActiveMap(id,true);player.position.set(0,0,id==='sanctuary'?7:14);state.hp=state.maxHp;state.stamina=100;saveState();$('systemMenu').classList.remove('show');toastMsg('Travelled to '+MAPS[id].name)}
@@ -1847,6 +1848,136 @@ let shopMenu=null;
 function ensureShopMenu(){if(shopMenu)return shopMenu;shopMenu=document.createElement('section');shopMenu.id='shopMenu';shopMenu.innerHTML='<div class="shop-panel"><button class="shop-close">×</button><div class="shop-kicker">SANCTUARY HAMLET · MERCHANT</div><h2 id="shopTitle">Merchant</h2><p>Trade Ashen for equipment that changes your build.</p><div class="shop-wallet">ASHEN <b id="shopCoins">0</b></div><div id="shopGrid" class="shop-grid"></div></div>';document.body.appendChild(shopMenu);const style=document.createElement('style');style.textContent='#shopMenu{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(5,4,4,.78);backdrop-filter:blur(7px)}#shopMenu.show{display:flex}.shop-panel{position:relative;width:min(920px,92vw);max-height:82vh;overflow:auto;padding:30px;background:linear-gradient(145deg,#17120f,#0c0a09);border:1px solid #5b3c2d;box-shadow:0 25px 80px rgba(0,0,0,.55);color:#eadfd4}.shop-close{position:absolute;right:18px;top:14px;background:none;border:0;color:#b99a86;font-size:28px;cursor:pointer}.shop-kicker{font-size:10px;letter-spacing:3px;color:#a87555}.shop-panel h2{margin:8px 0 4px;font:32px Georgia,serif}.shop-panel p{margin:0 0 18px;color:#9c8c80}.shop-wallet{display:inline-block;padding:8px 12px;border:1px solid #3f3027;font-size:11px;letter-spacing:1px}.shop-wallet b{color:#e49a61}.shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:12px;margin-top:18px}.shop-card{padding:16px;border:1px solid #30241e;background:#100d0b}.shop-card h3{margin:0 0 5px;font:20px Georgia,serif}.shop-card small{display:block;color:#9c806d;margin-bottom:8px}.shop-card p{font-size:12px;line-height:1.5;min-height:38px}.shop-card .stats{color:#d9a77f;font-size:12px;margin-bottom:12px}.shop-buy{width:100%;padding:10px;border:1px solid #6b4732;background:#24160f;color:#eed7c4;cursor:pointer}.shop-buy:disabled{opacity:.38;cursor:not-allowed}';document.head.appendChild(style);shopMenu.querySelector('.shop-close').onclick=()=>shopMenu.classList.remove('show');return shopMenu}
 function openShop(n){const menu=ensureShopMenu(),stock=SHOP_STOCK[n.id]||SHOP_STOCK.merchant_01;menu.querySelector('#shopTitle').textContent=n.name+' · '+n.role;menu.querySelector('#shopCoins').textContent=state.coins;const grid=menu.querySelector('#shopGrid');grid.innerHTML=stock.map((g,i)=>{const locked=state.level<g.level,poor=state.coins<g.price,statText=Object.entries(g.stats).map(([k,v])=>'+'+v+' '+k[0].toUpperCase()+k.slice(1)).join(' · ');return '<article class="shop-card"><h3>'+g.name+'</h3><small>'+g.rarity+' · '+g.type+' · Lv '+g.level+'</small><p>'+g.desc+'</p><div class="stats">'+statText+'</div><button class="shop-buy" data-buy="'+i+'" '+((locked||poor)?'disabled':'')+'>'+ (locked?'Requires Lv '+g.level:poor?'Need '+g.price+' Ashen':'Buy · '+g.price+' Ashen')+'</button></article>'}).join('');grid.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>buyShopItem(n.id,Number(b.dataset.buy)));menu.classList.add('show')}
 function buyShopItem(merchantId,index){const stock=SHOP_STOCK[merchantId]||SHOP_STOCK.merchant_01,g=stock[index];if(!g||state.level<g.level||state.coins<g.price)return;state.coins-=g.price;state.meta.renown+=g.rarity==='Legendary'?5:g.rarity==='Epic'?3:2;state.inventory.push({name:g.name,type:g.type,rarity:g.rarity,attrs:[...g.attrs],stats:{...g.stats},source:'merchant',price:g.price});state.log.unshift('Purchased '+g.name+'.');saveState();openShop(npcs.find(x=>x.id===merchantId)||{id:merchantId,name:'Merchant',role:'merchant'});toastMsg(g.name+' added to your inventory')}
+const questWaypoint=new THREE.Group();
+const questWaypointRing=new THREE.Mesh(
+  new THREE.TorusGeometry(.62,.07,8,28),
+  new THREE.MeshBasicMaterial({color:0xffb86b,transparent:true,opacity:.92,depthWrite:false,toneMapped:false})
+);
+questWaypointRing.rotation.x=-Math.PI/2;
+questWaypoint.add(questWaypointRing);
+const questWaypointBeam=new THREE.Mesh(
+  new THREE.CylinderGeometry(.035,.12,2.6,7,1,true),
+  new THREE.MeshBasicMaterial({color:0xff9853,transparent:true,opacity:.20,depthWrite:false,side:THREE.DoubleSide,toneMapped:false})
+);
+questWaypointBeam.position.y=1.42;
+questWaypoint.add(questWaypointBeam);
+const questWaypointGem=new THREE.Mesh(
+  new THREE.OctahedronGeometry(.19,0),
+  new THREE.MeshBasicMaterial({color:0xffc47b,toneMapped:false})
+);
+questWaypointGem.position.y=2.8;
+questWaypoint.add(questWaypointGem);
+questWaypoint.visible=false;
+world.add(questWaypoint);
+let questTargetRefresh=0,questUiRefresh=0;
+let currentQuestTarget=null;
+
+function getQuestTarget(){
+  const activeNpc=id=>npcs.find(n=>n.id===id&&n.root.visible)||npcs.find(n=>n.id===id);
+  const nextNode=type=>nodes.find(n=>n.type===type&&!n.collected&&n.mapId===activeMapId)
+    ||nodes.find(n=>n.type===type&&!n.collected);
+  if(state.quest===0)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
+  if(state.quest===1){
+    const target=nextNode('ember');
+    if(target)return {kind:'node',label:'Emberleaf',entity:target};
+    return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
+  }
+  if(state.quest===2)return {kind:'npc',label:'Orren',entity:activeNpc('orren')};
+  if(state.quest===3&&state.echoes<2){
+    const target=nextNode('echo');
+    if(target)return {kind:'node',label:'Memory Echo',entity:target};
+    return {kind:'gate',label:'Hollow Gate',entity:gates?.find(g=>g.name==='Hollow Ruins')};
+  }
+  if(state.quest===3&&encounter)return {kind:'enemy',label:encounter.isBoss?'Bell Warden':'Wandering Shade',entity:encounter};
+  if(state.quest===4)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
+  if(state.quest>=5){
+    if(activeMapId!=='sanctuary')return {kind:'home',label:'Sanctuary',position:new THREE.Vector3(0,0,7)};
+    return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
+  }
+  return null;
+}
+function getQuestSteps(){
+  const q=state.quest;
+  if(q===0)return [
+    ['Go to Lyra at Sanctuary (-5, -3).',false],
+    ['Press E to talk to the character.',false],
+    ['Choose whether to protect the Sanctuary or seek the truth.',false]
+  ];
+  if(q===1)return [
+    ['Collect 2 Emberleaf',state.chapterGathered>=2],
+    ['Reach the glowing orange orb, then press E to gather the item.',false],
+    ['Progress: '+state.chapterGathered+' / 2',state.chapterGathered>=2]
+  ];
+  if(q===2)return [
+    ['Go to Orren at Sanctuary (7, -1).',false],
+    ['Press E to talk to the character.',false],
+    ['Choose a route in the dialogue to continue.',false]
+  ];
+  if(q===3&&state.echoes<2)return [
+    ['Collect 2 Memory Echoes',state.echoes>=2],
+    ['Look for purple glowing objects and their ground rings.',false],
+    ['Press E near each Echo to collect it.',false],
+    ['Progress: '+state.echoes+' / 2',state.echoes>=2]
+  ];
+  if(q===3)return [
+    ['Dodge when the Warden telegraphs, then attack during recovery.',false],
+    ['Use LMB for Ember Pulse or keys 1 / 2 / 3 for role skills.',false],
+    ['Watch the colored ring: a larger ring signals a wider attack.',false]
+  ];
+  if(q===4)return [
+    ['Return to Lyra at Sanctuary.',false],
+    ['Press E to speak and choose one of the story options.',false],
+    ['Your choice changes the Sanctuary ending.',false]
+  ];
+  if(activeMapId!=='sanctuary')return [
+    ['Return to the Sanctuary.',false],
+    ['Travel back, then speak with Lyra.',false]
+  ];
+  return [
+    ['Speak with Lyra at the Sanctuary.',false],
+    [state.chapter<10?'Prepare to begin the next chapter.':'Found your legacy at the Sanctuary.',false]
+  ];
+}
+function updateQuestGuide(force=false){
+  const list=$('questSteps'),targetLine=$('questTarget');
+  if(!list||!targetLine)return;
+  const rows=getQuestSteps();
+  const signature=state.chapter+'|'+state.quest+'|'+state.chapterGathered+'|'+state.echoes+'|'+rows.map(r=>r[0]+r[1]).join('|');
+  if(force||list.dataset.signature!==signature){
+    list.dataset.signature=signature;
+    list.replaceChildren();
+    for(const [label,done] of rows){
+      const item=document.createElement('li');
+      item.className=done?'done':'';
+      item.textContent=label;
+      list.appendChild(item);
+    }
+  }
+  currentQuestTarget=getQuestTarget();
+  if(!currentQuestTarget){
+    targetLine.textContent='TARGET · No active target';
+    questWaypoint.visible=false;
+    return;
+  }
+  let targetPosition=null;
+  if(currentQuestTarget.position)targetPosition=currentQuestTarget.position.clone();
+  else if(currentQuestTarget.entity?.root){
+    targetPosition=currentQuestTarget.entity.root.getWorldPosition(new THREE.Vector3());
+  }
+  const targetMap=currentQuestTarget.entity?.mapId||'sanctuary';
+  if(!targetPosition||targetMap!==activeMapId){
+    targetLine.textContent='TRAVEL TO · '+(currentQuestTarget.kind==='home'?'Sanctuary':MAPS[targetMap]?.name||currentQuestTarget.label);
+    questWaypoint.visible=false;
+    return;
+  }
+  const distance=Math.hypot(targetPosition.x-player.position.x,targetPosition.z-player.position.z);
+  targetLine.textContent='TARGET · '+currentQuestTarget.label+' · '+distance.toFixed(1)+' m';
+  questWaypoint.position.set(targetPosition.x,0,targetPosition.z);
+  questWaypoint.visible=distance>3.2;
+  questWaypointRing.rotation.z=time*.7;
+  questWaypointGem.rotation.y=time*.8;
+  questWaypointGem.position.y=2.75+Math.sin(time*2.5)*.12;
+}
 function setQuest(){
   const q=state.quest,title=$('questTitle'),desc=$('questDesc'),obj=$('objective'),count=$('questCount'),chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
   $('chapterNumber').textContent='CHAPTER '+String(state.chapter).padStart(2,'0');$('chapterTitle').textContent=(chapter?.title||'THE LAST EMBER').toUpperCase();
@@ -1858,6 +1989,7 @@ function setQuest(){
   else if(q===4){title.textContent=state.chapter===1?'A Choice in the Ash':chapter.title;desc.textContent=state.chapter===1?'Return the stolen name to Lyra. Decide what the sanctuary is for.':chapter.summary+' Return to Lyra and make the chapter choice.';obj.textContent='◈ Return to Lyra';count.textContent='03'}
   else{title.textContent=chapter?.title||'The Hearthbound Vow';desc.textContent=state.chapter===10?'All ten roads lead home. Found your legacy at the Sanctuary.':state.chapter>1?'The choice in '+chapter.title+' is remembered. Return to the Sanctuary and prepare for the next expedition.':state.flags.sanctuaryOpen?'The lost village has a name again. Its people can begin to return.':'One name remains to guard the last refuge; the others are free.';obj.textContent=state.chapter===10?'◈ Return to Lyra · Found your home':'◈ Chapter '+String(state.chapter).padStart(2,'0')+' complete · Return to Sanctuary';count.textContent='COMPLETE'}
   $('regionLabel').textContent=region().toUpperCase();
+  updateQuestGuide(true);
 }
 function region(){
   if(activeMapId!=='sanctuary')return MAPS[activeMapId]?.name||'Sanctuary';
@@ -1951,6 +2083,8 @@ function tick(dt){
   move(dt);
   updateCamera(dt);
   updateSky();
+  questUiRefresh-=dt;
+  if(questUiRefresh<=0){questUiRefresh=.24;updateQuestGuide(false)}
   nameplateAccumulator+=dt;if(nameplateAccumulator>=.08){nameplateAccumulator=0;updateNpcNameplates()}
   worldSimAccumulator+=dt;
   if(state.settings.animations!==false&&worldSimAccumulator>=.05){
@@ -2100,7 +2234,11 @@ function tick(dt){
 
   const phase=((time+ATMOSPHERE_OFFSET)%DAY_LENGTH)/DAY_LENGTH;
   const period=phase<.26?'NIGHT':phase<.40?'MORNING':phase<.68?'NOON':phase<.84?'DUSK':'NIGHT';
-  $('dayLabel').textContent='DAY '+state.day+' · '+period;
+  const dayText='DAY '+state.day+' · '+period;
+  if($('dayLabel').dataset.rawDayLabel!==dayText){
+    $('dayLabel').dataset.rawDayLabel=dayText;
+    $('dayLabel').textContent=dayText;
+  }
 }
 function renderJournal(tab='story'){if(tab==='story')$('journalBody').innerHTML=state.log.slice(0,12).map(x=>'<div class="journal-line">◈ '+x+'</div>').join('');if(tab==='people')$('journalBody').innerHTML=npcs.map(n=>'<div class="journal-line"><b>'+n.name+' · '+n.role+'</b>Reputation: '+state.rep[n.id]+'</div>').join('');if(tab==='world')$('journalBody').innerHTML=gates.map(g=>'<div class="journal-line"><b>'+g.name+'</b> '+(state.quest>=g.unlock?'Accessible':'Sealed by story')+'</div>').join('');if(tab==='campaign')$('journalBody').innerHTML='<div class="campaign-grid">'+(window.ASHEN_CAMPAIGN||[]).map(ch=>'<article class="chapter-card '+(ch.id===state.chapter?'active':'')+'"><div class="num">CHAPTER '+String(ch.id).padStart(2,'0')+' · '+ch.theme.toUpperCase()+'</div><h3>'+ch.title+'</h3><p>'+ch.summary+'</p><div class="chapter-meta"><span>'+ch.region+'</span><span>'+ch.activities.length+' activities</span><span>'+ch.items.length+' unique items</span></div><div class="story-items">'+ch.items.map(i=>'<span>'+i+'</span>').join('')+'</div></article>').join('')+'</div>'}
 function archive(){const m=$('metaMenu');m.classList.add('show');const next=100+state.level*40,rank=state.meta.renown>=40?'CROWNBOUND':state.meta.renown>=20?'PATHFINDER':state.meta.renown>=8?'WAYFARER':'EMBERBOUND';$('metaContent').innerHTML='<div class="meta-dashboard"><div class="meta-hero"><span>LEGACY RANK</span><strong>'+rank+'</strong><small>Permanent progression · '+state.meta.legacy+' Legacy</small></div><div class="meta-stats"><div><b>'+state.meta.mastery+'</b><span>Mastery XP</span></div><div><b>'+state.meta.renown+'</b><span>Renown</span></div><div><b>'+state.meta.points+'</b><span>Growth Points</span></div><div><b>'+state.inventory.length+'</b><span>Discoveries</span></div></div><div class="meta-progress"><div><span>LEVEL '+state.level+'</span><b>'+state.xp+' / '+next+' XP</b></div><i style="width:'+Math.min(100,state.xp/next*100)+'%"></i></div><div class="meta-goals"><article><span>WEEKLY PATH</span><b>Discover 5 locations</b><small>'+Math.min(5,state.inventory.length)+' / 5 · Reward: +3 Renown</small></article><article><span>MASTER STUDY</span><b>Collect 3 story items</b><small>'+Math.min(3,state.inventory.length)+' / 3 · Reward: +2 Growth Points</small></article><article><span>LEGACY</span><b>Complete Chapter 01</b><small>'+(state.quest>=5?'Complete · Legacy unlocked':'In progress · finish the current story')+'</small></article></div><div class="meta-list"><div class="journal-line"><b>REPUTATION</b> Lyra '+state.rep.lyra+' · Orren '+state.rep.orren+' · Seer '+state.rep.seer+'</div><div class="journal-line"><b>EQUIPMENT</b> '+Object.values(state.equipment).filter(Boolean).length+' / 4 slots equipped · Ward '+state.stats.ward+' · Focus '+state.stats.focus+'</div><div class="journal-line"><b>WORLD</b> '+gates.filter(g=>state.quest>=g.unlock).length+' / '+gates.length+' routes available</div></div></div>'}
