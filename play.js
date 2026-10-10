@@ -145,12 +145,23 @@ let playLanguage = PLAY_LOCALES.includes(localStorage.getItem('ashen.language'))
   ? localStorage.getItem('ashen.language')
   : (PLAY_LOCALES.includes((navigator.language||'en').slice(0,2).toLowerCase())?(navigator.language||'en').slice(0,2).toLowerCase():'en');
 const translatedTextNodes = new WeakMap();
+const PLAY_TRANSLATION_ROWS_SORTED=[...PLAY_LOCALE_ROWS].sort((a,b)=>b[0].length-a[0].length);
+function isAsciiWordChar(char){return !!char&&/[A-Za-z0-9_]/.test(char)}
 function replaceIgnoreCase(source,search,replacement){
   const lower=source.toLowerCase(),needle=search.toLowerCase();
   let from=0,index,out='';
   while((index=lower.indexOf(needle,from))!==-1){
-    out+=source.slice(from,index)+replacement;
-    from=index+search.length;
+    const left=source[index-1],right=source[index+search.length];
+    const leftBoundary=!isAsciiWordChar(search[0])||!isAsciiWordChar(left);
+    const rightBoundary=!isAsciiWordChar(search[search.length-1])||!isAsciiWordChar(right);
+    if(leftBoundary&&rightBoundary){
+      out+=source.slice(from,index)+replacement;
+      from=index+search.length;
+    }
+    index=lower.indexOf(needle,Math.max(index+1,from));
+    if(index===-1)return out+source.slice(from);
+    // Re-enter with the next match if the just-found occurrence was skipped.
+    lower.indexOf; 
   }
   return out+source.slice(from);
 }
@@ -161,7 +172,7 @@ function playTranslateText(source, locale=playLanguage) {
   const exact=PLAY_TRANSLATION_MAP.get(trimmed);
   let value=exact?exact[PLAY_LOCALES.indexOf(locale)+1]:trimmed;
   if(!exact){
-    for(const row of PLAY_LOCALE_ROWS){
+    for(const row of PLAY_TRANSLATION_ROWS_SORTED){
       const [english,...translations]=row;
       if(!english||english.length<3)continue;
       value=replaceIgnoreCase(value,english,translations[PLAY_LOCALES.indexOf(locale)]);
