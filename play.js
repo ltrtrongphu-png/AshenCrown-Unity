@@ -138,6 +138,63 @@ const PLAY_LOCALE_ROWS = [
 ['The world wakes — villages stir, wildlife roam, and the morning sun rises.','Thế giới thức giấc — dân làng bắt đầu hoạt động, động vật rong ruổi và mặt trời buổi sáng mọc lên.','世界が目覚める。村人が動き、野生動物が歩き、朝日が昇る。','세계가 깨어납니다. 주민들이 움직이고 야생동물이 돌아다니며 아침 해가 떠오릅니다.','世界苏醒了——村民开始活动，野生动物四处漫游，朝阳升起。'],
 ['Loading production 3D models and embedded PBR textures in the background…','Đang tải model 3D production và texture PBR trong nền…','高品質3DモデルとPBRテクスチャをバックグラウンドで読み込み中…','프로덕션 3D 모델과 PBR 텍스처를 백그라운드에서 불러오는 중…','正在后台加载正式 3D 模型与嵌入式 PBR 纹理…'],
 ['Production character and boss models loaded with aligned PBR textures.','Đã tải model nhân vật và boss production với texture PBR đồng bộ.','キャラクターとボスの本番モデルをPBRテクスチャ付きで読み込みました。','PBR 텍스처가 정렬된 프로덕션 캐릭터 및 보스 모델을 불러왔습니다.','已加载角色与 Boss 正式模型及匹配的 PBR 纹理。']
+['DAWN','BÌNH MINH','夜明け','새벽','黎明'],
+['AFTERNOON','BUỔI CHIỀU','午後','오후','下午'],
+['ARCHIVE','LƯU TRỮ','アーカイブ','기록 보관소','档案'],
+['MAP','BẢN ĐỒ','地図','지도','地图'],
+['CONTROLS','ĐIỀU KHIỂN','操作','조작','控制'],
+['PAUSE','TẠM DỪNG','一時停止','일시 정지','暂停'],
+['HUNT','SĂN','狩り','사냥','狩猎'],
+['ROLE','VAI TRÒ','ロール','역할','职业'],
+['WORLD','THẾ GIỚI','世界','세계','世界'],
+['STATS','CHỈ SỐ','ステータス','능력치','属性'],
+['CORE','LÕI','コア','코어','核心'],
+['CHARM','BÙA','チャーム','부적','护符'],
+['ARMOR','GIÁP','防具','방어구','护甲'],
+['RELIC','DI VẬT','遺物','유물','遗物'],
+['Inventory','Túi đồ','インベントリ','인벤토리','背包'],
+['Equip','Trang bị','装備','장착','装备'],
+['Unequip','Tháo trang bị','装備解除','장착 해제','卸下装备'],
+['Heavy blade','Đại kiếm','大剣','대검','巨剑'],
+['Longbow','Trường cung','長弓','장궁','长弓'],
+['Cinder Cleave','Chém Tàn Lửa','残り火の断撃','잿불 가르기','余烬裂斩'],
+['Rift Charge','Xung Kích Khe Nứt','裂け目突撃','균열 돌진','裂隙冲锋'],
+['Crownfall','Vương Miện Sụp Đổ','王冠崩落','왕관 낙하','王冠坠落'],
+['Cinder Lance','Thương Tàn Lửa','残り火の槍','잿불 창','余烬之枪'],
+['Starburst','Bùng Nổ Sao','星爆','별 폭발','星爆'],
+['Ashfall','Mưa Tro','灰降り','잿비','灰烬降临'],
+['Thornbolt','Tên Gai','茨の矢','가시 화살','荆棘箭'],
+['Briar Volley','Loạt Tên Gai','茨の斉射','가시 연사','荆棘齐射'],
+['Huntmark','Dấu Săn','狩りの印','사냥 표식','狩猎标记'],
+['SANCTUARY HAMLET','LÀNG THÁNH ĐỊA','聖域の集落','성역 마을','圣所村庄'],
+['Sanctuary Hamlet','Làng Thánh Địa','聖域の集落','성역 마을','圣所村庄'],
+['Hollow Reach','Miền Hollow','Hollowの地','Hollow 지역','Hollow 地带'],
+['Crownlands','Vùng Vương Miện','王冠領','왕관 영지','王冠之地'],
+['Choir of Ash','Dàn Hợp Xướng Tro Tàn','灰の聖歌隊','잿빛 합창단','灰烬圣歌团'],
+['Glass Expanse','Vùng Kính Vỡ','ガラスの広原','유리 평원','玻璃荒原'],
+['Ember Grove','Lùm Tàn Lửa','残り火の林','잿불 숲','余烬林地'],
+['Hollow Ruins','Tàn Tích Hollow','Hollowの遺跡','Hollow 폐허','Hollow 遗迹'],
+['Starless Path','Con Đường Không Sao','星なき道','별 없는 길','无星之路'],
+['Veil Lake','Hồ Màn Sương','ヴェール湖','베일 호수','帷幕湖'],
+['Crown Road','Đường Vương Miện','王冠の道','왕관 길','王冠之路'],
+['Moonlit Hamlet','Làng Trăng','月明かりの集落','달빛 마을','月照村庄'],
+['Riverlands','Vùng Sông Nước','川辺の地','강 유역','河原地带'],
+['Glass Observatory','Đài Quan Sát Kính','ガラスの天文台','유리 관측소','玻璃观测台'],
+['Outer Wilds','Vùng Hoang Dã','外縁の荒野','외곽 야생지','外围荒野'],
+['A village was erased from the Crown’s record. The last ember carries its names. Cross the hamlet, face the keeper beneath Hollow, and decide what the sanctuary will remember.','Một ngôi làng bị xóa khỏi sử sách của Vương Miện. Tàn lửa cuối cùng mang theo những cái tên ấy. Băng qua làng, đối mặt người canh giữ dưới Hollow và quyết định Thánh Địa sẽ ghi nhớ điều gì.','村は王冠の記録から消された。最後の残り火はその名を運ぶ。集落を越え、Hollowの地下の守護者と対峙し、聖域が何を記憶するか決めよう。','마을은 왕관의 기록에서 지워졌습니다. 마지막 잿불은 그 이름들을 품고 있습니다. 마을을 지나 Hollow 아래의 수호자를 만나고 성역이 무엇을 기억할지 결정하세요.','一个村庄被从王冠的记录中抹去。最后的余烬承载着那些名字。穿过村庄，面对 Hollow 地底的守护者，并决定圣所将铭记什么。'],
+['Meet Lyra. The ember carries the last unburned name of a village erased by the Crown.','Gặp Lyra. Tàn lửa mang theo cái tên cuối cùng chưa bị thiêu rụi của ngôi làng bị Vương Miện xóa bỏ.','Lyraに会おう。残り火は王冠に消された村の最後の名を運んでいる。','Lyra를 만나세요. 잿불은 왕관이 지운 마을의 마지막 이름을 품고 있습니다.','去见 Lyra。余烬承载着被王冠抹去的村庄最后一个未被焚毁的名字。'],
+['A new road opens from the Sanctuary.','Một con đường mới mở ra từ Thánh Địa.','聖域から新しい道が開く。','성역에서 새로운 길이 열립니다.','一条新道路从圣所开启。'],
+['Find two living embers before the bell beneath Hollow can be heard.','Tìm hai tàn lửa còn sống trước khi nghe thấy tiếng chuông dưới Hollow.','Hollowの地下の鐘が聞こえる前に、生きた残り火を2つ見つけよう。','Hollow 아래 종소리가 들리기 전에 살아 있는 잿불 두 개를 찾으세요.','在听见 Hollow 地底的钟声前，找到两枚仍在燃烧的余烬。'],
+['Return the stolen name to Lyra. Decide what the sanctuary is for.','Trả lại cái tên bị đánh cắp cho Lyra. Quyết định mục đích của Thánh Địa.','奪われた名をLyraに返し、聖域の役目を決めよう。','빼앗긴 이름을 Lyra에게 돌려주고 성역의 목적을 결정하세요.','把被夺走的名字交还给 Lyra，并决定圣所的意义。'],
+['The lost village has a name again. Its people can begin to return.','Ngôi làng thất lạc đã có lại tên. Người dân có thể bắt đầu trở về.','失われた村に再び名が戻った。人々は帰り始められる。','잃어버린 마을이 다시 이름을 찾았습니다. 주민들이 돌아올 수 있습니다.','失落的村庄重新拥有了名字。村民可以开始返回。'],
+['One name remains to guard the last refuge; the others are free.','Một cái tên ở lại để bảo vệ nơi trú ẩn cuối cùng; những cái tên khác được tự do.','最後の避難所を守る名が一つ残り、ほかの名は解放された。','마지막 피난처를 지킬 이름 하나만 남고 나머지는 자유로워졌습니다.','一个名字留下守护最后的避难所，其余名字重获自由。'],
+['Return to the Sanctuary and prepare for the next expedition.','Trở về Thánh Địa và chuẩn bị cho chuyến thám hiểm tiếp theo.','聖域へ戻り、次の遠征に備えよう。','성역으로 돌아가 다음 원정을 준비하세요.','返回圣所，为下一次远征做准备。'],
+['The name inside the bell has a guardian. Silence the Bell Warden.','Cái tên bên trong chuông có người bảo vệ. Hãy đánh bại Hộ Vệ Chuông.','鐘の中の名には守護者がいる。鐘の守護者を倒そう。','종 안의 이름에는 수호자가 있습니다. 종의 수호자를 처치하세요.','钟中的名字有守护者。击败钟之守卫。'],
+['The chapter warden is drawn to the traces. Read its tell, dodge its three skills, then strike.','Hộ vệ chương bị thu hút bởi các dấu tích. Quan sát báo hiệu, né ba kỹ năng rồi phản công.','章の守護者が痕跡に引き寄せられた。予兆を読み、3つの技を回避して反撃しよう。','챕터 수호자가 흔적에 이끌렸습니다. 전조를 읽고 세 기술을 회피한 다음 공격하세요.','章节守卫被痕迹吸引。观察预兆，闪避它的三种技能后反击。'],
+['The chapter warden is drawn to the traces. Recover two traces to draw out the chapter warden.','Hộ vệ chương bị thu hút bởi dấu tích. Thu thập hai dấu tích để dẫn dụ nó xuất hiện.','章の守護者は痕跡に引き寄せられる。2つの痕跡を集めておびき出そう。','챕터 수호자는 흔적에 이끌립니다. 흔적 두 개를 모아 유인하세요.','章节守卫会被痕迹吸引。收集两份痕迹将其引出。'],
+['The chapter warden is drawn to the traces. Recover two traces to draw out the chapter warden.','Hộ vệ chương bị thu hút bởi dấu tích. Thu thập hai dấu tích để dẫn dụ nó xuất hiện.','章の守護者は痕跡に引き寄せられる。2つの痕跡を集めておびき出そう。','챕터 수호자는 흔적에 이끌립니다. 흔적 두 개를 모아 유인하세요.','章节守卫会被痕迹吸引。收集两份痕迹将其引出。'],
+['The name inside the bell has a guardian. Silence the Bell Warden.','Cái tên bên trong chuông có người bảo vệ. Hãy đánh bại Hộ Vệ Chuông.','鐘の中の名には守護者がいる。鐘の守護者を倒そう。','종 안의 이름에는 수호자가 있습니다. 종의 수호자를 처치하세요.','钟中的名字有守护者。击败钟之守卫。'],
+['All ten roads lead home. Found your legacy at the Sanctuary.','Cả mười con đường đều dẫn về nhà. Hãy xây dựng di sản tại Thánh Địa.','十本の道はすべて故郷へ続く。聖域で遺産を築こう。','열 개의 길은 모두 집으로 이어집니다. 성역에서 유산을 세우세요.','十条道路都通向家。去圣所建立你的传承。']
 ];
 const PLAY_LOCALES = ['en','vi','ja','ko','zh'];
 const PLAY_TRANSLATION_MAP = new Map(PLAY_LOCALE_ROWS.map(row=>[row[0],row]));
@@ -198,11 +255,39 @@ function translateTextNode(node){
   translatedTextNodes.set(node,record);
   if(current!==next)node.nodeValue=next;
 }
+const translatedAttributes=new WeakMap();
+function translatePlayAttributes(root=document.body){
+  if(!root)return;
+  const selector='[title],[aria-label],[placeholder],[alt]';
+  const elements=[];
+  if(root.nodeType===Node.ELEMENT_NODE){
+    if(root.matches(selector))elements.push(root);
+    elements.push(...root.querySelectorAll(selector));
+  }else if(root.querySelectorAll)elements.push(...root.querySelectorAll(selector));
+  for(const element of elements){
+    let record=translatedAttributes.get(element);
+    if(!record){record=new Map();translatedAttributes.set(element,record)}
+    for(const attr of ['title','aria-label','placeholder','alt']){
+      if(!element.hasAttribute(attr))continue;
+      const current=element.getAttribute(attr);
+      let entry=record.get(attr);
+      if(!entry)entry={source:current,rendered:current};
+      else if(current!==entry.rendered){
+        const row=PLAY_TRANSLATION_MAP.get(entry.source.trim());
+        if(!(row&&row.slice(1).includes(current.trim())))entry.source=current;
+      }
+      const next=playTranslateText(entry.source);
+      entry.rendered=next;record.set(attr,entry);
+      if(current!==next)element.setAttribute(attr,next);
+    }
+  }
+}
 function translatePlayTree(root=document.body){
   if(!root)return;
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   let node;
   while((node=walker.nextNode()))translateTextNode(node);
+  translatePlayAttributes(root);
 }
 function changePlayLanguage(locale){
   if(!PLAY_LOCALES.includes(locale))return;
@@ -232,20 +317,20 @@ new MutationObserver(records=>{
     if(node.nodeType===Node.TEXT_NODE)translateTextNode(node);
     else if(node.nodeType===Node.ELEMENT_NODE)translatePlayTree(node);
   }
-}).observe(document.body,{subtree:true,childList:true});
+}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['title','aria-label','placeholder','alt']});
 window.addEventListener('storage',event=>{
   if(event.key==='ashen.language'&&PLAY_LOCALES.includes(event.newValue))changePlayLanguage(event.newValue);
 });
 
 const $=id=>document.getElementById(id);
-function setUiText(id,value){
-  const element=$(id);
+function setUiNodeText(element,value){
   if(!element)return;
   const text=String(value);
   if(element.dataset.rawUiText===text)return;
   element.dataset.rawUiText=text;
   element.textContent=text;
 }
+function setUiText(id,value){setUiNodeText($(id),value)}
 
 const canvas=$('game'), scene=new THREE.Scene();
 scene.background=new THREE.Color(0x0a0b0e); scene.fog=new THREE.Fog(0x151311,58,245);
@@ -1668,7 +1753,7 @@ function syncRenderQuality(){
 function applySettings(){
   const settings=state.settings,native=window.devicePixelRatio||1,r=canvas.getBoundingClientRect();
   const pixelBudget=Math.sqrt(2400000/Math.max(1,r.width*r.height));
-  const qualityCap=settings.quality==='performance'?.85:settings.quality==='high'?1.65:1.25;
+  const qualityCap=settings.quality==='performance' ? 0.85 : settings.quality==='high' ? 1.65 : 1.25;
   maxDpr=Math.max(.75,Math.min(native,qualityCap,pixelBudget));
   adaptiveDpr=settings.quality==='high'?maxDpr:Math.min(maxDpr,Math.max(.95,adaptiveDpr));
   renderer.setPixelRatio(adaptiveDpr);
@@ -2271,8 +2356,8 @@ function tick(dt){
 
   const a=nearby();
   $('interaction').classList.toggle('show',!!a);
-  if(a)$('interaction').querySelector('span').textContent=
-    a.k==='npc'?(a.n.role==='merchant'?'Shop':'Talk'):a.k==='node'?'Gather':a.k==='gate'?'Enter':'Pulse';
+  if(a)setUiNodeText($('interaction').querySelector('span'),
+    a.k==='npc'?(a.n.role==='merchant'?'Shop':'Talk'):a.k==='node'?'Gather':a.k==='gate'?'Enter':'Pulse');
 
   const phase=((time+ATMOSPHERE_OFFSET)%DAY_LENGTH)/DAY_LENGTH;
   const period=phase<.26?'NIGHT':phase<.40?'MORNING':phase<.68?'NOON':phase<.84?'DUSK':'NIGHT';
