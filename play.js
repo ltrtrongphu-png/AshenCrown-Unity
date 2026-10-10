@@ -1,6 +1,467 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js';
 
+// One locale setting is shared with the landing page; the DOM translation layer
+// also handles UI/GUI fragments created later by menus, dialogue, shop and journal.
+const PLAY_LOCALE_ROWS = [
+['CURRENT JOURNEY','NHIỆM VỤ HIỆN TẠI','現在の旅','현재 여정','当前旅程'],
+['JOURNAL','NHẬT KÝ','ジャーナル','일지','日志'],
+['FIRST JOURNEY','HÀNH TRÌNH ĐẦU TIÊN','最初の旅','첫 여정','初次旅程'],
+['Welcome to Ashen Crown','Chào mừng đến Ashen Crown','Ashen Crownへようこそ','Ashen Crown에 오신 것을 환영합니다','欢迎来到 Ashen Crown'],
+['Learn the basics before stepping into the wider world. You can reopen this guide with','Hãy học các thao tác cơ bản trước khi bước ra thế giới rộng lớn. Bạn có thể mở lại hướng dẫn này bằng phím','広い世界へ進む前に基本操作を学びましょう。このガイドは次のキーで再表示できます：','더 넓은 세계로 나가기 전에 기본 조작을 익히세요. 이 안내서는 다음 키로 다시 열 수 있습니다:','进入广阔世界前先学习基本操作。可使用以下按键重新打开指南：'],
+['Begin the journey','Bắt đầu hành trình','旅を始める','여정 시작','开始旅程'],
+['Move','Di chuyển','移動','이동','移动'],
+['Look around','Quan sát xung quanh','周囲を見る','주변 보기','环顾四周'],
+['Interact','Tương tác','調べる','상호작용','互动'],
+['Role skills','Kỹ năng vai trò','ロールスキル','역할 기술','职业技能'],
+['Ember Pulse','Xung Hỏa Tàn','残り火の波動','잿불 파동','余烬脉冲'],
+['Sprint','Chạy nhanh','ダッシュ','질주','冲刺'],
+['Dodge','Né tránh','回避','회피','闪避'],
+['Inventory','Túi đồ','インベントリ','인벤토리','背包'],
+['World Map','Bản đồ thế giới','ワールドマップ','월드 맵','世界地图'],
+['INVENTORY & EQUIPMENT','TÚI ĐỒ & TRANG BỊ','インベントリと装備','인벤토리 및 장비','背包与装备'],
+['EQUIPPED','ĐANG TRANG BỊ','装備中','장착 중','已装备'],
+['PACK','TÚI ĐỒ','バッグ','가방','背包'],
+['Empty','Trống','空','비어 있음','空'],
+['WORLD MAP','BẢN ĐỒ THẾ GIỚI','ワールドマップ','월드 맵','世界地图'],
+['Discovered','Đã khám phá','発見済み','발견됨','已探索'],
+['Locked','Đang khóa','未解放','잠김','未解锁'],
+['Quest','Nhiệm vụ','クエスト','퀘스트','任务'],
+['CHAPTER','CHƯƠNG','チャプター','챕터','章节'],
+['THE LAST EMBER','TÀN LỬA CUỐI CÙNG','最後の残り火','마지막 잿불','最后的余烬'],
+['Explore · meet people · make choices · shape the world','Khám phá · gặp gỡ · lựa chọn · thay đổi thế giới','探索 · 出会い · 選択 · 世界を形作る','탐험 · 만남 · 선택 · 세계를 바꾸다','探索 · 相遇 · 抉择 · 塑造世界'],
+['Leave','Rời đi','退出','나가기','离开'],
+['JOURNEY PAUSED','TẠM DỪNG HÀNH TRÌNH','旅を一時停止','여정 일시 정지','旅程已暂停'],
+['Resume','Tiếp tục','再開','계속','继续'],
+['Return to Ashen Crown','Trở về Ashen Crown','Ashen Crownへ戻る','Ashen Crown으로 돌아가기','返回 Ashen Crown'],
+['STORY DEMO COMPLETE','HOÀN THÀNH BẢN DEMO','ストーリーデモ完了','스토리 데모 완료','剧情试玩完成'],
+['The road opens.','Con đường đã mở.','道が開かれる。','길이 열렸다.','道路已开启。'],
+['Begin again','Chơi lại','もう一度始める','다시 시작','重新开始'],
+['Back to the showcase','Quay lại trang giới thiệu','ショーケースへ戻る','소개 화면으로 돌아가기','返回展示页'],
+['SANCTUARY','THÁNH ĐỊA','聖域','성역','圣所'],
+['ROLE','VAI TRÒ','ロール','역할','职业'],
+['SETTINGS','CÀI ĐẶT','設定','설정','设置'],
+['LOCAL SAVE READY','ĐÃ SẴN SÀNG LƯU CỤC BỘ','ローカル保存準備完了','로컬 저장 준비 완료','本地存档就绪'],
+['CURRENT JOURNEY','HÀNH TRÌNH HIỆN TẠI','現在の旅','현재 여정','当前旅程'],
+['STORY','CỐT TRUYỆN','物語','스토리','剧情'],
+['PEOPLE','NHÂN VẬT','人物','인물','人物'],
+['WORLD','THẾ GIỚI','世界','세계','世界'],
+['CAMPAIGN','CHIẾN DỊCH','キャンペーン','캠페인','战役'],
+['ASHEN ARCHIVE','BIÊN NIÊN ASHEN','灰燼の記録','애shen 기록 보관소','灰烬档案'],
+['RANKINGS','XẾP HẠNG','ランキング','순위','排名'],
+['ACHIEVEMENTS','THÀNH TỰU','実績','업적','成就'],
+['CHALLENGES','THỬ THÁCH','チャレンジ','도전 과제','挑战'],
+['COLLECTION','BỘ SƯU TẬP','コレクション','수집','收藏'],
+['ITEMS','VẬT PHẨM','アイテム','아이템','物品'],
+['EXPLORING','ĐANG KHÁM PHÁ','探索中','탐험 중','探索中'],
+['SPRINTING','ĐANG CHẠY NHANH','ダッシュ中','질주 중','冲刺中'],
+['ENCOUNTER','GIAO TRANH','遭遇','전투 조우','遭遇战'],
+['Talk','Trò chuyện','話す','대화','交谈'],
+['Gather','Thu thập','採集','수집','采集'],
+['Enter','Đi vào','入る','입장','进入'],
+['Pulse','Phát xung','波動','파동','脉冲'],
+['SETTINGS','CÀI ĐẶT','設定','설정','设置'],
+['Tune sound, animation, controls and image quality. Changes apply immediately and save in this browser.','Điều chỉnh âm thanh, hoạt ảnh, điều khiển và chất lượng hình ảnh. Thay đổi được áp dụng ngay và lưu trên trình duyệt này.','音声、アニメーション、操作、画質を調整します。変更はすぐに反映され、このブラウザーに保存されます。','사운드, 애니메이션, 조작 및 그래픽 품질을 조정합니다. 변경 사항은 즉시 적용되고 이 브라우저에 저장됩니다.','调整声音、动画、控制和画质。更改立即生效，并保存在此浏览器中。'],
+['SOUND','ÂM THANH','サウンド','사운드','声音'],
+['Game sound effects','Hiệu ứng âm thanh trong game','ゲーム効果音','게임 효과음','游戏音效'],
+['Sound volume','Âm lượng','音量','음량','音量'],
+['WORLD & DISPLAY','THẾ GIỚI & HIỂN THỊ','世界と表示','세계 및 화면','世界与显示'],
+['World and character animations','Hoạt ảnh thế giới và nhân vật','世界とキャラクターのアニメーション','세계 및 캐릭터 애니메이션','世界与角色动画'],
+['Combat visual effects','Hiệu ứng chiến đấu','戦闘エフェクト','전투 시각 효과','战斗视觉效果'],
+['Graphics quality','Chất lượng đồ họa','グラフィック品質','그래픽 품질','画质'],
+['Adaptive','Tự động điều chỉnh','自動調整','자동 조절','自适应'],
+['Performance','Hiệu năng','パフォーマンス','성능','性能'],
+['High','Cao','高','높음','高'],
+['Reduce camera motion','Giảm chuyển động camera','カメラの動きを抑える','카메라 움직임 줄이기','减少镜头运动'],
+['CONTROLS & INTERFACE','ĐIỀU KHIỂN & GIAO DIỆN','操作とインターフェース','조작 및 인터페이스','控制与界面'],
+['Interface size','Kích thước giao diện','UIサイズ','인터페이스 크기','界面大小'],
+['Camera field of view','Góc nhìn camera','視野角','카메라 시야각','镜头视野'],
+['Camera sensitivity','Độ nhạy camera','カメラ感度','카메라 감도','镜头灵敏度'],
+['CHARACTER LOOK','GIAO DIỆN NHÂN VẬT','キャラクター外見','캐릭터 외형','角色外观'],
+['CHANGE ROLE & LOOK','ĐỔI VAI TRÒ & NGOẠI HÌNH','ロールと外見を変更','역할 및 외형 변경','更改职业与外观'],
+['OPTIONAL FULL RESOURCE PACK','GÓI TÀI NGUYÊN ĐẦY ĐỦ','フルリソースパック（任意）','전체 리소스 팩(선택)','可选完整资源包'],
+['Production models','Model production','本番モデル','프로덕션 모델','正式模型'],
+['Checking local storage…','Đang kiểm tra bộ nhớ cục bộ…','ローカルストレージを確認中…','로컬 저장소 확인 중…','正在检查本地存储…'],
+['DOWNLOAD FULL PACK','TẢI GÓI ĐẦY ĐỦ','フルパックをダウンロード','전체 팩 다운로드','下载完整资源包'],
+['REMOVE PACK','GỠ GÓI','パックを削除','팩 제거','移除资源包'],
+['Full pack is optional and saved in this browser for later visits. Sound effects are synthesized; this build has no music tracks.','Gói đầy đủ là tùy chọn và được lưu trên trình duyệt này. Hiệu ứng âm thanh được tạo bằng tổng hợp; bản này chưa có nhạc nền.','フルパックは任意で、このブラウザーに保存されます。効果音は合成音で、このビルドに音楽トラックはありません。','전체 팩은 선택 사항이며 이 브라우저에 저장됩니다. 효과음은 합성음이며 이 빌드에는 음악 트랙이 없습니다.','完整资源包为可选项，并保存在此浏览器中。音效由合成生成，本版本没有音乐曲目。'],
+['BUILD','XÂY DỰNG','建設','건설','建造'],
+['REINFORCE','CƯỜNG HÓA','強化','강화','强化'],
+['CLAIM','NHẬN','受け取る','받기','领取'],
+['ASHEN','TÀN TRO','灰燼','잿불','灰烬'],
+['LEVEL','CẤP','レベル','레벨','等级'],
+['CHAPTER','CHƯƠNG','チャプター','챕터','章节'],
+['COMPLETE','HOÀN THÀNH','完了','완료','完成'],
+['COMPLETE · Return to Sanctuary','HOÀN THÀNH · Trở về Thánh Địa','完了 · 聖域へ戻る','완료 · 성역으로 돌아가기','完成 · 返回圣所'],
+['Speak with Lyra','Nói chuyện với Lyra','Lyraと話す','Lyra와 대화','与 Lyra 交谈'],
+['Talk to Lyra','Nói chuyện với Lyra','Lyraに話しかける','Lyra와 대화하기','与 Lyra 对话'],
+['Meet Lyra','Gặp Lyra','Lyraに会う','Lyra 만나기','寻找 Lyra'],
+['Embers in the Grove','Tàn lửa trong lùm cây','木立の残り火','숲속의 잿불','林中的余烬'],
+['Gather chapter traces','Thu thập dấu tích chương','章の痕跡を集める','챕터 흔적 수집','收集章节痕迹'],
+['Find two living embers before the bell beneath Hollow can be heard.','Tìm hai tàn lửa còn sống trước khi nghe thấy tiếng chuông dưới Hollow.','Hollowの地下の鐘が聞こえる前に、生きた残り火を2つ見つけよう。','Hollow 아래 종소리가 들리기 전에 살아 있는 잿불 두 개를 찾으세요.','在听见 Hollow 地底的钟声前，找到两枚仍在燃烧的余烬。'],
+['Ask the gatekeeper why one road on his map has been cut away.','Hỏi người giữ cổng vì sao một con đường trên bản đồ bị xóa bỏ.','門番に、地図から道が消された理由を尋ねよう。','문지기에게 지도에서 길 하나가 지워진 이유를 물으세요.','询问守门人，为什么地图上的一条路被抹去了。'],
+['Recover the two memories the Crown tried to erase.','Tìm lại hai ký ức mà Vương Miện cố xóa bỏ.','王冠が消そうとした2つの記憶を取り戻そう。','왕관이 지우려 한 두 기억을 되찾으세요.','找回王冠试图抹去的两段记忆。'],
+['Defeat the chapter warden','Đánh bại hộ vệ chương','章の守護者を倒す','챕터 수호자 처치','击败章节守卫'],
+['Return to Lyra','Trở về gặp Lyra','Lyraのもとへ戻る','Lyra에게 돌아가기','返回 Lyra 身边'],
+['Gather chapter traces','Thu thập dấu tích chương','章の痕跡を集める','챕터 흔적 수집','收集章节痕迹'],
+['Find two living embers','Tìm hai tàn lửa còn sống','生きた残り火を2つ見つける','살아 있는 잿불 두 개 찾기','找到两枚活余烬'],
+['Collect Memory Echoes','Thu thập Vọng Ức','記憶の残響を集める','기억의 메아리 수집','收集记忆回响'],
+['Press E to interact','Nhấn E để tương tác','Eキーで調べる','E 키로 상호작용','按 E 互动'],
+['Press E near the glowing object to collect it.','Đến gần vật thể phát sáng rồi nhấn E để thu thập.','光る物の近くでEキーを押して収集します。','빛나는 물체 근처에서 E 키를 눌러 수집하세요.','靠近发光物体并按 E 收集。'],
+['Follow the marker and check the distance in the quest panel.','Đi theo dấu chỉ đường và xem khoảng cách trong bảng nhiệm vụ.','マーカーをたどり、クエスト欄で距離を確認してください。','표식을 따라가며 퀘스트 패널에서 거리를 확인하세요.','沿着标记前进，并查看任务面板中的距离。'],
+['Go to Lyra at Sanctuary','Đến gặp Lyra tại Thánh Địa','聖域にいるLyraのもとへ','성역에 있는 Lyra에게 가기','前往圣所寻找 Lyra'],
+['Go to Orren at Sanctuary','Đến gặp Orren tại Thánh Địa','聖域にいるOrrenのもとへ','성역에 있는 Orren에게 가기','前往圣所寻找 Orren'],
+['Collect 2 Emberleaf','Thu thập 2 Emberleaf','Emberleafを2個集める','Emberleaf 2개 수집','收集 2 个 Emberleaf'],
+['Collect 2 Memory Echoes','Thu thập 2 Vọng Ức','記憶の残響を2つ集める','기억의 메아리 2개 수집','收集 2 个记忆回响'],
+['Press E to talk to the character.','Nhấn E để trò chuyện với nhân vật.','Eキーでキャラクターと話します。','E 키를 눌러 캐릭터와 대화하세요.','按 E 与角色交谈。'],
+['Reach the marker, then press E to gather the item.','Đi tới dấu chỉ đường rồi nhấn E để nhặt vật phẩm.','マーカーまで移動し、Eキーでアイテムを採集します。','표식에 도착한 뒤 E 키로 아이템을 수집하세요.','到达标记处，再按 E 拾取物品。'],
+['Dodge when the Warden telegraphs, then attack during recovery.','Né khi Hộ Vệ báo đòn, rồi phản công lúc hắn hồi chiêu.','守護者の予兆を回避し、攻撃後の隙に反撃しよう。','수호자가 공격을 예고하면 회피하고 후딜레이에 공격하세요.','守卫出现攻击预兆时闪避，并在其恢复时反击。'],
+['Distance','Khoảng cách','距離','거리','距离'],
+['TARGET','MỤC TIÊU','目標','목표','目标'],
+['TRAVEL TO','DI CHUYỂN ĐẾN','移動先','이동 위치','前往'],
+['No active target','Không có mục tiêu hiện tại','現在の目標なし','활성 목표 없음','暂无目标'],
+['MORNING','BUỔI SÁNG','朝','아침','早晨'],
+['NOON','BUỔI TRƯA','昼','낮','中午'],
+['DUSK','HOÀNG HÔN','夕暮れ','해질녘','黄昏'],
+['NIGHT','BAN ĐÊM','夜','밤','夜晚'],
+['DAY ','NGÀY ','日目 ','일차 ','第 '],
+['Press E','Nhấn E','Eキーを押す','E 키 누르기','按 E'],
+['GATE','CỔNG','門','관문','大门'],
+['WAYFINDER','NGƯỜI DẪN ĐƯỜNG','道案内','길잡이','引路人'],
+['SANCTUARY KEEPER','NGƯỜI GIỮ THÁNH ĐỊA','聖域の番人','성역의 수호자','圣所守护者'],
+['KEEPER OF ECHOES','NGƯỜI GIỮ VỌNG ỨC','残響の守り手','메아리의 수호자','回响守护者'],
+['Accessible','Có thể đến','到達可能','이동 가능','可前往'],
+['Sealed by story','Bị khóa theo cốt truyện','物語で封印中','스토리 진행 필요','剧情锁定'],
+['Reputation','Danh tiếng','評判','평판','声望'],
+['Purchased','Đã mua','購入済み','구매 완료','已购买'],
+['added to your inventory','đã thêm vào túi đồ','をインベントリに追加','인벤토리에 추가됨','已加入背包'],
+['Travelled to','Đã di chuyển đến','移動先：','이동했습니다：','已前往'],
+['The world wakes — villages stir, wildlife roam, and the morning sun rises.','Thế giới thức giấc — dân làng bắt đầu hoạt động, động vật rong ruổi và mặt trời buổi sáng mọc lên.','世界が目覚める。村人が動き、野生動物が歩き、朝日が昇る。','세계가 깨어납니다. 주민들이 움직이고 야생동물이 돌아다니며 아침 해가 떠오릅니다.','世界苏醒了——村民开始活动，野生动物四处漫游，朝阳升起。'],
+['Loading production 3D models and embedded PBR textures in the background…','Đang tải model 3D production và texture PBR trong nền…','高品質3DモデルとPBRテクスチャをバックグラウンドで読み込み中…','프로덕션 3D 모델과 PBR 텍스처를 백그라운드에서 불러오는 중…','正在后台加载正式 3D 模型与嵌入式 PBR 纹理…'],
+['Production character and boss models loaded with aligned PBR textures.','Đã tải model nhân vật và boss production với texture PBR đồng bộ.','キャラクターとボスの本番モデルをPBRテクスチャ付きで読み込みました。','PBR 텍스처가 정렬된 프로덕션 캐릭터 및 보스 모델을 불러왔습니다.','已加载角色与 Boss 正式模型及匹配的 PBR 纹理。']
+['DAWN','BÌNH MINH','夜明け','새벽','黎明'],
+['AFTERNOON','BUỔI CHIỀU','午後','오후','下午'],
+['ARCHIVE','LƯU TRỮ','アーカイブ','기록 보관소','档案'],
+['MAP','BẢN ĐỒ','地図','지도','地图'],
+['CONTROLS','ĐIỀU KHIỂN','操作','조작','控制'],
+['PAUSE','TẠM DỪNG','一時停止','일시 정지','暂停'],
+['HUNT','SĂN','狩り','사냥','狩猎'],
+['ROLE','VAI TRÒ','ロール','역할','职业'],
+['WORLD','THẾ GIỚI','世界','세계','世界'],
+['STATS','CHỈ SỐ','ステータス','능력치','属性'],
+['CORE','LÕI','コア','코어','核心'],
+['CHARM','BÙA','チャーム','부적','护符'],
+['ARMOR','GIÁP','防具','방어구','护甲'],
+['RELIC','DI VẬT','遺物','유물','遗物'],
+['Inventory','Túi đồ','インベントリ','인벤토리','背包'],
+['Equip','Trang bị','装備','장착','装备'],
+['Unequip','Tháo trang bị','装備解除','장착 해제','卸下装备'],
+['Heavy blade','Đại kiếm','大剣','대검','巨剑'],
+['Longbow','Trường cung','長弓','장궁','长弓'],
+['Cinder Cleave','Chém Tàn Lửa','残り火の断撃','잿불 가르기','余烬裂斩'],
+['Rift Charge','Xung Kích Khe Nứt','裂け目突撃','균열 돌진','裂隙冲锋'],
+['Crownfall','Vương Miện Sụp Đổ','王冠崩落','왕관 낙하','王冠坠落'],
+['Cinder Lance','Thương Tàn Lửa','残り火の槍','잿불 창','余烬之枪'],
+['Starburst','Bùng Nổ Sao','星爆','별 폭발','星爆'],
+['Ashfall','Mưa Tro','灰降り','잿비','灰烬降临'],
+['Thornbolt','Tên Gai','茨の矢','가시 화살','荆棘箭'],
+['Briar Volley','Loạt Tên Gai','茨の斉射','가시 연사','荆棘齐射'],
+['Huntmark','Dấu Săn','狩りの印','사냥 표식','狩猎标记'],
+['SANCTUARY HAMLET','LÀNG THÁNH ĐỊA','聖域の集落','성역 마을','圣所村庄'],
+['Sanctuary Hamlet','Làng Thánh Địa','聖域の集落','성역 마을','圣所村庄'],
+['Hollow Reach','Miền Hollow','Hollowの地','Hollow 지역','Hollow 地带'],
+['Crownlands','Vùng Vương Miện','王冠領','왕관 영지','王冠之地'],
+['Choir of Ash','Dàn Hợp Xướng Tro Tàn','灰の聖歌隊','잿빛 합창단','灰烬圣歌团'],
+['Glass Expanse','Vùng Kính Vỡ','ガラスの広原','유리 평원','玻璃荒原'],
+['Ember Grove','Lùm Tàn Lửa','残り火の林','잿불 숲','余烬林地'],
+['Hollow Ruins','Tàn Tích Hollow','Hollowの遺跡','Hollow 폐허','Hollow 遗迹'],
+['Starless Path','Con Đường Không Sao','星なき道','별 없는 길','无星之路'],
+['Veil Lake','Hồ Màn Sương','ヴェール湖','베일 호수','帷幕湖'],
+['Crown Road','Đường Vương Miện','王冠の道','왕관 길','王冠之路'],
+['Moonlit Hamlet','Làng Trăng','月明かりの集落','달빛 마을','月照村庄'],
+['Riverlands','Vùng Sông Nước','川辺の地','강 유역','河原地带'],
+['Glass Observatory','Đài Quan Sát Kính','ガラスの天文台','유리 관측소','玻璃观测台'],
+['Outer Wilds','Vùng Hoang Dã','外縁の荒野','외곽 야생지','外围荒野'],
+['A village was erased from the Crown’s record. The last ember carries its names. Cross the hamlet, face the keeper beneath Hollow, and decide what the sanctuary will remember.','Một ngôi làng bị xóa khỏi sử sách của Vương Miện. Tàn lửa cuối cùng mang theo những cái tên ấy. Băng qua làng, đối mặt người canh giữ dưới Hollow và quyết định Thánh Địa sẽ ghi nhớ điều gì.','村は王冠の記録から消された。最後の残り火はその名を運ぶ。集落を越え、Hollowの地下の守護者と対峙し、聖域が何を記憶するか決めよう。','마을은 왕관의 기록에서 지워졌습니다. 마지막 잿불은 그 이름들을 품고 있습니다. 마을을 지나 Hollow 아래의 수호자를 만나고 성역이 무엇을 기억할지 결정하세요.','一个村庄被从王冠的记录中抹去。最后的余烬承载着那些名字。穿过村庄，面对 Hollow 地底的守护者，并决定圣所将铭记什么。'],
+['Meet Lyra. The ember carries the last unburned name of a village erased by the Crown.','Gặp Lyra. Tàn lửa mang theo cái tên cuối cùng chưa bị thiêu rụi của ngôi làng bị Vương Miện xóa bỏ.','Lyraに会おう。残り火は王冠に消された村の最後の名を運んでいる。','Lyra를 만나세요. 잿불은 왕관이 지운 마을의 마지막 이름을 품고 있습니다.','去见 Lyra。余烬承载着被王冠抹去的村庄最后一个未被焚毁的名字。'],
+['A new road opens from the Sanctuary.','Một con đường mới mở ra từ Thánh Địa.','聖域から新しい道が開く。','성역에서 새로운 길이 열립니다.','一条新道路从圣所开启。'],
+['Find two living embers before the bell beneath Hollow can be heard.','Tìm hai tàn lửa còn sống trước khi nghe thấy tiếng chuông dưới Hollow.','Hollowの地下の鐘が聞こえる前に、生きた残り火を2つ見つけよう。','Hollow 아래 종소리가 들리기 전에 살아 있는 잿불 두 개를 찾으세요.','在听见 Hollow 地底的钟声前，找到两枚仍在燃烧的余烬。'],
+['Return the stolen name to Lyra. Decide what the sanctuary is for.','Trả lại cái tên bị đánh cắp cho Lyra. Quyết định mục đích của Thánh Địa.','奪われた名をLyraに返し、聖域の役目を決めよう。','빼앗긴 이름을 Lyra에게 돌려주고 성역의 목적을 결정하세요.','把被夺走的名字交还给 Lyra，并决定圣所的意义。'],
+['The lost village has a name again. Its people can begin to return.','Ngôi làng thất lạc đã có lại tên. Người dân có thể bắt đầu trở về.','失われた村に再び名が戻った。人々は帰り始められる。','잃어버린 마을이 다시 이름을 찾았습니다. 주민들이 돌아올 수 있습니다.','失落的村庄重新拥有了名字。村民可以开始返回。'],
+['One name remains to guard the last refuge; the others are free.','Một cái tên ở lại để bảo vệ nơi trú ẩn cuối cùng; những cái tên khác được tự do.','最後の避難所を守る名が一つ残り、ほかの名は解放された。','마지막 피난처를 지킬 이름 하나만 남고 나머지는 자유로워졌습니다.','一个名字留下守护最后的避难所，其余名字重获自由。'],
+['Return to the Sanctuary and prepare for the next expedition.','Trở về Thánh Địa và chuẩn bị cho chuyến thám hiểm tiếp theo.','聖域へ戻り、次の遠征に備えよう。','성역으로 돌아가 다음 원정을 준비하세요.','返回圣所，为下一次远征做准备。'],
+['The name inside the bell has a guardian. Silence the Bell Warden.','Cái tên bên trong chuông có người bảo vệ. Hãy đánh bại Hộ Vệ Chuông.','鐘の中の名には守護者がいる。鐘の守護者を倒そう。','종 안의 이름에는 수호자가 있습니다. 종의 수호자를 처치하세요.','钟中的名字有守护者。击败钟之守卫。'],
+['The chapter warden is drawn to the traces. Read its tell, dodge its three skills, then strike.','Hộ vệ chương bị thu hút bởi các dấu tích. Quan sát báo hiệu, né ba kỹ năng rồi phản công.','章の守護者が痕跡に引き寄せられた。予兆を読み、3つの技を回避して反撃しよう。','챕터 수호자가 흔적에 이끌렸습니다. 전조를 읽고 세 기술을 회피한 다음 공격하세요.','章节守卫被痕迹吸引。观察预兆，闪避它的三种技能后反击。'],
+['The chapter warden is drawn to the traces. Recover two traces to draw out the chapter warden.','Hộ vệ chương bị thu hút bởi dấu tích. Thu thập hai dấu tích để dẫn dụ nó xuất hiện.','章の守護者は痕跡に引き寄せられる。2つの痕跡を集めておびき出そう。','챕터 수호자는 흔적에 이끌립니다. 흔적 두 개를 모아 유인하세요.','章节守卫会被痕迹吸引。收集两份痕迹将其引出。'],
+['The chapter warden is drawn to the traces. Recover two traces to draw out the chapter warden.','Hộ vệ chương bị thu hút bởi dấu tích. Thu thập hai dấu tích để dẫn dụ nó xuất hiện.','章の守護者は痕跡に引き寄せられる。2つの痕跡を集めておびき出そう。','챕터 수호자는 흔적에 이끌립니다. 흔적 두 개를 모아 유인하세요.','章节守卫会被痕迹吸引。收集两份痕迹将其引出。'],
+['The name inside the bell has a guardian. Silence the Bell Warden.','Cái tên bên trong chuông có người bảo vệ. Hãy đánh bại Hộ Vệ Chuông.','鐘の中の名には守護者がいる。鐘の守護者を倒そう。','종 안의 이름에는 수호자가 있습니다. 종의 수호자를 처치하세요.','钟中的名字有守护者。击败钟之守卫。'],
+['All ten roads lead home. Found your legacy at the Sanctuary.','Cả mười con đường đều dẫn về nhà. Hãy xây dựng di sản tại Thánh Địa.','十本の道はすべて故郷へ続く。聖域で遺産を築こう。','열 개의 길은 모두 집으로 이어집니다. 성역에서 유산을 세우세요.','十条道路都通向家。去圣所建立你的传承。']
+
+['Speak with Lyra at the sanctuary.','Nói chuyện với Lyra tại Thánh Địa.','聖域でLyraと話そう。','성역에서 Lyra와 대화하세요.','在圣所与 Lyra 交谈。'],
+['A Stranger at the Gate','Người lạ bên cổng','門の前の見知らぬ人','문 앞의 낯선 이','门前的陌生人'],
+['Veil of Tides','Màn thủy triều','潮の帳','물결의 장막','潮汐帷幕'],
+['The Crownless City','Thành phố không vương miện','王冠なき都市','왕관 없는 도시','无冠之城'],
+['Glassheart Accord','Hiệp ước Tâm Kính','硝子心の盟約','유리심장 협약','玻璃之心协约'],
+['The Unwritten Name','Cái tên chưa được viết','書かれなかった名','기록되지 않은 이름','未曾写下的名字'],
+['The Glass Expanse','Vùng Kính Vỡ','ガラスの広原','유리 평원','玻璃荒原'],
+['A Crown of Silence','Vương miện im lặng','沈黙の王冠','침묵의 왕관','沉默王冠'],
+['The Hearthbound Vow','Lời thề bên bếp lửa','炉に結ばれた誓い','화롯불에 맺은 맹세','炉火之誓'],
+['Sanctuary Keeper','Người giữ Thánh Địa','聖域の番人','성역의 수호자','圣所守护者'],
+['Wayfinder','Người dẫn đường','道案内','길잡이','引路人'],
+['Keeper of Echoes','Người giữ Vọng Ức','残響の守り手','메아리의 수호자','回响守护者'],
+['Farmer','Nông dân','農民','농부','农夫'],
+['Merchant','Thương nhân','商人','상인','商人'],
+['Guard','Lính gác','衛兵','경비병','守卫'],
+['Villager','Dân làng','村人','주민','村民'],
+['ASHEN ARCHIVE','BIÊN NIÊN ASHEN','灰燼の記録','잿불 기록 보관소','灰烬档案'],
+['LEGACY RANK','HẠNG DI SẢN','レガシーランク','유산 등급','传承等级'],
+['Permanent progression','Tiến trình vĩnh viễn','恒久的な成長','영구 진행도','永久成长'],
+['Mastery XP','XP tinh thông','熟練XP','숙련 경험치','精通经验'],
+['Renown','Danh vọng','名声','명성','声望'],
+['Growth Points','Điểm phát triển','成長ポイント','성장 포인트','成长点数'],
+['Discoveries','Khám phá','発見','발견','发现'],
+['No achievements yet','Chưa có thành tựu','実績はまだありません','아직 업적이 없습니다','暂无成就'],
+['COLLECTED','ĐÃ THU THẬP','収集済み','수집 완료','已收集'],
+['LOCKED','ĐANG KHÓA','未解放','잠김','未解锁'],
+['CLAIM HUNT CONTRACT','NHẬN HỢP ĐỒNG SĂN','狩猟契約を受け取る','사냥 계약 받기','领取狩猎契约'],
+['HUNT CONTRACT','HỢP ĐỒNG SĂN','狩猟契約','사냥 계약','狩猎契约'],
+['Permanent progression','Tiến trình vĩnh viễn','恒久的な成長','영구 진행도','永久成长'],
+['OPTIONS','TÙY CHỌN','オプション','옵션','选项'],
+['Select a role','Chọn vai trò','ロールを選ぶ','역할 선택','选择职业'],
+['Change role','Đổi vai trò','ロール変更','역할 변경','更换职业'],
+['Level up','Lên cấp','レベルアップ','레벨 업','升级'],
+['Level up — Lv ','Lên cấp — Cấp ','レベルアップ — Lv ','레벨 업 — 레벨 ','升级 — 等级 '],
+['skill point earned','điểm kỹ năng nhận được','スキルポイント獲得','기술 포인트 획득','获得技能点'],
+['You returned to the sanctuary','Bạn đã trở về Thánh Địa','聖域へ戻りました','성역으로 돌아왔습니다','你已返回圣所'],
+['A wandering shade has entered the wilds.','Một bóng ma lang thang đã xuất hiện ở vùng hoang dã.','さまよう影が荒野に現れた。','떠도는 그림자가 황야에 나타났습니다.','游荡幽影出现在荒野中。'],
+['The shade struck you — dodge when its glow flares.','Bóng Ma đã đánh trúng bạn — hãy né khi nó phát sáng mạnh.','影に攻撃された。光が強まったら回避しよう。','그림자에게 맞았습니다. 빛이 강해질 때 회피하세요.','幽影击中了你——在它发光增强时闪避。'],
+['Too far away — close the distance.','Quá xa — hãy tiến lại gần.','遠すぎます。距離を詰めましょう。','너무 멉니다. 거리를 좁히세요.','距离太远——请靠近。'],
+['Turn toward the shade before striking.','Hãy quay về phía bóng ma trước khi tấn công.','攻撃する前に影の方を向こう。','공격하기 전에 그림자 쪽을 바라보세요.','攻击前请转向幽影。'],
+['Out of range','Ngoài tầm đánh','射程外','사거리 밖','超出范围'],
+['Choose an option','Chọn một lựa chọn','選択肢を選ぶ','선택지를 고르세요','选择一个选项'],
+['That flame is the last unburned name of a village the Crown erased. The gate can keep it buried, or you can learn whose name it is. Wake the bell, and its keeper will wake too.','Ngọn lửa ấy giữ cái tên cuối cùng chưa bị thiêu rụi của ngôi làng Vương Miện xóa bỏ. Cánh cổng có thể chôn vùi nó, hoặc bạn có thể tìm ra cái tên ấy thuộc về ai. Đánh thức chuông, người canh giữ cũng sẽ thức dậy.','その炎は王冠が消した村の、最後に焼かれなかった名だ。門の下に埋めたままにもできるし、誰の名か調べることもできる。鐘を目覚めさせれば、その守護者も目覚める。','그 불꽃은 왕관이 지운 마을의 마지막으로 타지 않은 이름입니다. 문 아래 묻어둘 수도, 누구의 이름인지 알아낼 수도 있습니다. 종을 깨우면 수호자도 깨어납니다.','那团火焰保存着被王冠抹去的村庄最后一个未被焚毁的名字。你可以让它继续埋在门下，也可以查明它属于谁。唤醒钟，守护者也会苏醒。'],
+['Seal it until the hamlet is safe','Niêm phong nó cho đến khi ngôi làng an toàn','集落が安全になるまで封印する','마을이 안전해질 때까지 봉인한다','封印它，直到村庄安全'],
+['Tell me whose name they erased','Hãy nói cho tôi cái tên họ đã xóa','消された名前を教えて','지워진 이름을 알려줘','告诉我他们抹去了谁的名字'],
+['Follow Orren’s marked path','Đi theo con đường Orren đánh dấu','Orrenの示した道を進む','Orren이 표시한 길을 따른다','沿着 Orren 标记的路线前进'],
+['Take the map and choose my own way','Lấy bản đồ và tự chọn đường đi','地図を受け取り、自分の道を選ぶ','지도를 받고 내 길을 선택한다','拿走地图，自己选择道路'],
+['Return the names to the living','Trả những cái tên về với người sống','名前を生者のもとへ返す','이름들을 산 자들에게 돌려준다','把名字归还给活着的人'],
+['Keep one name to guard the last refuge','Giữ lại một cái tên để bảo vệ nơi trú ẩn cuối cùng','最後の避難所を守るため一つの名を残す','마지막 피난처를 지키기 위해 이름 하나를 남긴다','留下一个名字守护最后的避难所'],
+['Follow the people affected by this chapter','Theo dấu những người chịu ảnh hưởng bởi chương này','この章の影響を受けた人々を追う','이번 챕터의 영향을 받은 사람들을 따라간다','追踪本章中受到影响的人们'],
+['Search for the hidden record first','Tìm kiếm hồ sơ bí mật trước','先に隠された記録を探す','먼저 숨겨진 기록을 찾는다','先寻找隐藏记录'],
+['Choose another path','Chọn con đường khác','別の道を選ぶ','다른 길 선택','选择另一条路'],
+['Both paths cost something. Which answer will you carry home?','Cả hai con đường đều phải trả giá. Bạn sẽ mang câu trả lời nào trở về?','どちらの道にも代償がある。どの答えを持ち帰る？','두 길 모두 대가가 있습니다. 어떤 답을 가지고 돌아가겠습니까?','两条道路都要付出代价。你会带着哪种答案回家？'],
+['The sanctuary can grow stronger before the next road opens.','Thánh Địa có thể trở nên vững mạnh hơn trước khi con đường kế tiếp mở ra.','次の道が開く前に聖域を強化できます。','다음 길이 열리기 전에 성역을 강화할 수 있습니다.','下一条道路开启前，可以先强化圣所。'],
+['Choose whether to protect the Sanctuary or seek the truth.','Chọn bảo vệ Thánh Địa hay tìm kiếm sự thật.','聖域を守るか、真実を追うか選んでください。','성역을 지킬지 진실을 찾을지 선택하세요.','选择守护圣所，或追寻真相。'],
+['press','nhấn','押す','누르기','按'],
+['HIT','ĐÁNH','攻撃','공격','攻击'],
+['ROLL','LĂN NÉ','回避','구르기','翻滚'],
+['USE','DÙNG','使用','사용','使用'],
+['BAG','TÚI','バッグ','가방','背包'],
+
+['3D STORY RPG','3D RPG CỐT TRUYỆN','3DストーリーRPG','3D 스토리 RPG','3D 剧情 RPG'],
+['DAY','NGÀY','日','일차','日'],
+['PAUSE','TẠM DỪNG','一時停止','일시 정지','暂停'],
+['LOCAL SAVE READY','ĐÃ SẴN SÀNG LƯU CỤC BỘ','ローカル保存準備完了','로컬 저장 준비 완료','本地存档就绪'],
+['Current target','Mục tiêu hiện tại','現在の目標','현재 목표','当前目标'],
+['Gather chapter traces','Thu thập dấu tích chương','章の痕跡を集める','챕터 흔적 수집','收集章节痕迹'],
+['HUNT CONTRACT','HỢP ĐỒNG SĂN','狩猟契約','사냥 계약','狩猎契约'],
+
+['SPACE','PHÍM CÁCH','スペース','스페이스','空格'],
+['SHIFT','SHIFT','SHIFT','SHIFT','SHIFT'],
+['sprint','chạy nhanh','ダッシュ','질주','冲刺'],
+['interact','tương tác','調べる','상호작용','互动'],
+['EMBERBOUND','NGƯỜI GIỮ TÀN LỬA','残り火の守り手','잿불의 수호자','余烬守望者'],
+['LEGENDARY','HUYỀN THOẠI','伝説','전설','传说'],
+['RARE','HIẾM','レア','희귀','稀有'],
+['EPIC','SỬ THI','エピック','영웅','史诗'],
+['COMMON','PHỔ THÔNG','コモン','일반','普通'],
+['Garden of Sleeping Stars','Khu vườn Sao Ngủ','眠れる星々の庭','잠든 별의 정원','沉睡群星花园'],
+['The Nameless Choir','Dàn Hợp Xướng Vô Danh','名なき聖歌隊','이름 없는 합창단','无名合唱团'],
+['Ashfall Winter','Mùa Đông Tro Rơi','灰降りの冬','잿비의 겨울','灰烬之冬'],
+['The Glass Observatory','Đài Quan Sát Pha Lê','硝子の天文台','유리 천문대','玻璃天文台'],
+['The Starless Depths','Vực Sâu Không Sao','星なき深淵','별 없는 심연','无星深渊'],
+['The New Dawn','Bình Minh Mới','新たな夜明け','새로운 새벽','新黎明'],
+['Names erased','Những cái tên bị xóa','消された名前','지워진 이름들','被抹去的名字'],
+['Memory','Ký ức','記憶','기억','记忆'],
+['Discovery','Khám phá','発見','발견','发现'],
+['Politics','Chính trị','政治','정치','政治'],
+['Wonder','Kỳ quan','驚異','경이','奇迹'],
+['Identity','Bản sắc','自己同一性','정체성','身份'],
+['Survival','Sinh tồn','生存','생존','生存'],
+['Truth','Sự thật','真実','진실','真相'],
+['Reckoning','Đối diện hậu quả','清算','결산','清算'],
+['Legacy','Di sản','遺産','유산','传承'],
+['Echo investigation','Điều tra Vọng Ức','残響の調査','메아리 조사','回响调查'],
+['Memory fragments','Mảnh ký ức','記憶の断片','기억 조각','记忆碎片'],
+['Ruins puzzle','Câu đố phế tích','遺跡の謎解き','폐허 퍼즐','遗迹谜题'],
+['NPC trust','Lòng tin nhân vật','NPCとの信頼','NPC 신뢰','NPC 信任'],
+['Tide timing','Canh thời điểm thủy triều','潮のタイミング','조수 시간','潮汐时机'],
+['Archive search','Tìm kiếm kho lưu trữ','記録庫の探索','기록 보관소 탐색','档案搜寻'],
+['Map fragments','Mảnh bản đồ','地図の断片','지도 조각','地图碎片'],
+['Hidden rooms','Phòng bí mật','隠し部屋','숨겨진 방','隐藏房间'],
+['Faction reputation','Danh tiếng phe phái','派閥の評判','세력 평판','派系声望'],
+['District errands','Nhiệm vụ khu phố','地区の用事','구역 심부름','城区任务'],
+['Public choice','Lựa chọn công khai','公の選択','공개 선택','公开抉择'],
+['City exploration','Khám phá thành phố','都市探索','도시 탐험','城市探索'],
+['Night exploration','Khám phá ban đêm','夜の探索','야간 탐험','夜间探索'],
+['Memory collection','Thu thập ký ức','記憶収集','기억 수집','记忆收集'],
+['Constellation puzzle','Câu đố chòm sao','星座パズル','별자리 퍼즐','星座谜题'],
+['Companion quest','Nhiệm vụ đồng hành','仲間クエスト','동료 퀘스트','同伴任务'],
+['Audio clues','Manh mối âm thanh','音の手がかり','오디오 단서','声音线索'],
+['Name restoration','Khôi phục tên','名前の復元','이름 복원','恢复名字'],
+['Lore investigation','Điều tra truyền thuyết','伝承の調査','설정 조사','传说调查'],
+['Optional companion scene','Cảnh đồng hành tùy chọn','任意の仲間シーン','선택 동료 장면','可选同伴场景'],
+['Resource routes','Tuyến tài nguyên','資源ルート','자원 경로','资源路线'],
+['Settlement support','Hỗ trợ khu dân cư','集落支援','정착지 지원','聚落支援'],
+['Timed world event','Sự kiện thế giới có thời hạn','期間限定ワールドイベント','기간 한정 월드 이벤트','限时世界事件'],
+['Community reputation','Danh tiếng cộng đồng','共同体の評判','공동체 평판','社区声望'],
+['Future visions','Tầm nhìn tương lai','未来の幻視','미래의 환영','未来幻象'],
+['Branching dialogue','Hội thoại phân nhánh','分岐する会話','분기 대화','分支对话'],
+['Secret room hunt','Tìm phòng bí mật','隠し部屋探し','비밀 방 찾기','寻找密室'],
+['Choice callbacks','Hồi đáp theo lựa chọn','選択の反映','선택 반영','抉择回响'],
+['Elite encounters','Đối đầu tinh anh','エリートとの遭遇','정예 전투','精英遭遇'],
+['Rare collection','Sưu tầm vật phẩm hiếm','レア収集','희귀 수집','稀有收集'],
+['Reputation checks','Kiểm tra danh tiếng','評判チェック','평판 확인','声望检定'],
+['World-state finale','Kết màn trạng thái thế giới','世界状態の最終章','세계 상태 결말','世界状态终章'],
+['Allied NPC callbacks','Nhân vật đồng minh trở lại','仲間NPCの再登場','동맹 NPC 재등장','盟友 NPC 回归'],
+['Legacy challenge','Thử thách di sản','レガシーチャレンジ','유산 도전','传承挑战'],
+['Season record','Kỷ lục mùa','シーズン記録','시즌 기록','赛季记录'],
+];
+const PLAY_LOCALES = ['en','vi','ja','ko','zh'];
+const PLAY_TRANSLATION_MAP = new Map(PLAY_LOCALE_ROWS.map(row=>[row[0],row]));
+let playLanguage = PLAY_LOCALES.includes(localStorage.getItem('ashen.language'))
+  ? localStorage.getItem('ashen.language')
+  : (PLAY_LOCALES.includes((navigator.language||'en').slice(0,2).toLowerCase())?(navigator.language||'en').slice(0,2).toLowerCase():'en');
+const translatedTextNodes = new WeakMap();
+const PLAY_TRANSLATION_ROWS_SORTED=[...PLAY_LOCALE_ROWS].sort((a,b)=>b[0].length-a[0].length);
+function isAsciiWordChar(char){return !!char&&/[A-Za-z0-9_]/.test(char)}
+function replaceIgnoreCase(source,search,replacement){
+  const lower=source.toLowerCase(),needle=search.toLowerCase();
+  let from=0,index,out='';
+  while((index=lower.indexOf(needle,from))!==-1){
+    const left=source[index-1],right=source[index+search.length];
+    const leftBoundary=!isAsciiWordChar(search[0])||!isAsciiWordChar(left);
+    const rightBoundary=!isAsciiWordChar(search[search.length-1])||!isAsciiWordChar(right);
+    if(leftBoundary&&rightBoundary){
+      out+=source.slice(from,index)+replacement;
+      from=index+search.length;
+    }else{
+      // Skip only this occurrence while preserving the original text.
+      out+=source.slice(from,index+1);
+      from=index+1;
+    }
+  }
+  return out+source.slice(from);
+}
+function playTranslateText(source, locale=playLanguage) {
+  if(locale==='en')return source;
+  const trimmed=source.trim();
+  if(!trimmed)return source;
+  const exact=PLAY_TRANSLATION_MAP.get(trimmed);
+  let value=exact?exact[PLAY_LOCALES.indexOf(locale)+1]:trimmed;
+  if(!exact){
+    for(const row of PLAY_TRANSLATION_ROWS_SORTED){
+      const [english,...translations]=row;
+      if(!english||english.length<3)continue;
+      value=replaceIgnoreCase(value,english,translations[PLAY_LOCALES.indexOf(locale)]);
+    }
+  }
+  const leading=source.match(/^\s*/)?.[0]||'';
+  const trailing=source.match(/\s*$/)?.[0]||'';
+  return leading+value+trailing;
+}
+function translateTextNode(node){
+  if(!node||node.nodeType!==Node.TEXT_NODE||!node.nodeValue.trim())return;
+  let record=translatedTextNodes.get(node);
+  const current=node.nodeValue;
+  if(!record)record={source:current,rendered:current};
+  else if(current!==record.rendered){
+    const previous=record.source.trim();
+    const row=PLAY_TRANSLATION_MAP.get(previous);
+    const known=row&&row.slice(1).includes(current.trim());
+    if(!known)record.source=current;
+  }
+  const next=playTranslateText(record.source);
+  record.rendered=next;
+  translatedTextNodes.set(node,record);
+  if(current!==next)node.nodeValue=next;
+}
+const translatedAttributes=new WeakMap();
+function translatePlayAttributes(root=document.body){
+  if(!root)return;
+  const selector='[title],[aria-label],[placeholder],[alt]';
+  const elements=[];
+  if(root.nodeType===Node.ELEMENT_NODE){
+    if(root.matches(selector))elements.push(root);
+    elements.push(...root.querySelectorAll(selector));
+  }else if(root.querySelectorAll)elements.push(...root.querySelectorAll(selector));
+  for(const element of elements){
+    let record=translatedAttributes.get(element);
+    if(!record){record=new Map();translatedAttributes.set(element,record)}
+    for(const attr of ['title','aria-label','placeholder','alt']){
+      if(!element.hasAttribute(attr))continue;
+      const current=element.getAttribute(attr);
+      let entry=record.get(attr);
+      if(!entry)entry={source:current,rendered:current};
+      else if(current!==entry.rendered){
+        const row=PLAY_TRANSLATION_MAP.get(entry.source.trim());
+        if(!(row&&row.slice(1).includes(current.trim())))entry.source=current;
+      }
+      const next=playTranslateText(entry.source);
+      entry.rendered=next;record.set(attr,entry);
+      if(current!==next)element.setAttribute(attr,next);
+    }
+  }
+}
+function translatePlayTree(root=document.body){
+  if(!root)return;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  let node;
+  while((node=walker.nextNode()))translateTextNode(node);
+  translatePlayAttributes(root);
+}
+function changePlayLanguage(locale){
+  if(!PLAY_LOCALES.includes(locale))return;
+  playLanguage=locale;
+  try{localStorage.setItem('ashen.language',locale)}catch{}
+  document.documentElement.lang=locale;
+  const selector=document.getElementById('playLanguageSelect');
+  const languageNames={en:'Language',vi:'Ngôn ngữ',ja:'言語',ko:'언어',zh:'语言'};
+  if(selector){selector.value=locale;selector.title=languageNames[locale]||'Language';}
+  selector?.closest('label')?.setAttribute('aria-label',languageNames[locale]||'Language');
+  const dayLabel=document.getElementById('dayLabel');
+  if(dayLabel)delete dayLabel.dataset.rawDayLabel;
+  translatePlayTree();
+  if(typeof setQuest==='function')setQuest();
+  if(typeof renderJournal==='function'&&document.getElementById('journal')?.classList.contains('open'))renderJournal('story');
+  const menu=document.getElementById('systemMenu');
+  if(menu?.classList.contains('show')&&typeof openSystemMenu==='function')openSystemMenu(menu.dataset.page||'settings');
+}
+const playLanguageSelector=document.getElementById('playLanguageSelect');
+if(playLanguageSelector){
+  playLanguageSelector.value=playLanguage;
+  playLanguageSelector.addEventListener('change',()=>changePlayLanguage(playLanguageSelector.value));
+}
+translatePlayTree();
+new MutationObserver(records=>{
+  for(const record of records)for(const node of record.addedNodes){
+    if(node.nodeType===Node.TEXT_NODE)translateTextNode(node);
+    else if(node.nodeType===Node.ELEMENT_NODE)translatePlayTree(node);
+  }
+}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['title','aria-label','placeholder','alt']});
+window.addEventListener('storage',event=>{
+  if(event.key==='ashen.language'&&PLAY_LOCALES.includes(event.newValue))changePlayLanguage(event.newValue);
+});
+
 const $=id=>document.getElementById(id);
+function setUiNodeText(element,value){
+  if(!element)return;
+  const text=String(value);
+  if(element.dataset.rawUiText===text)return;
+  element.dataset.rawUiText=text;
+  element.textContent=text;
+}
+function setUiText(id,value){setUiNodeText($(id),value)}
+
 const canvas=$('game'), scene=new THREE.Scene();
 scene.background=new THREE.Color(0x0a0b0e); scene.fog=new THREE.Fog(0x151311,58,245);
 const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
@@ -9,7 +470,7 @@ renderer.setPixelRatio(maxDpr); renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
 renderer.shadowMap.enabled=false; renderer.shadowMap.autoUpdate=false; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const camera=new THREE.PerspectiveCamera(55,1,.1,260); camera.position.set(0,4,8);
-scene.add(new THREE.HemisphereLight(0xcbd3d8,0x24201c,1.2));
+scene.add(new THREE.HemisphereLight(0xcbd3d8,0x24201c,1.05));
 const fillLight=new THREE.DirectionalLight(0xffd6b0,.38);
 fillLight.position.set(16,9,12);scene.add(fillLight);
 const rimLight=new THREE.DirectionalLight(0x789dcc,.42);
@@ -17,8 +478,8 @@ rimLight.position.set(-12,7,-18);scene.add(rimLight);
 
 const sun=new THREE.DirectionalLight(0xffd0a4,1.05);
 sun.position.set(-18,22,12);sun.castShadow=true;
-sun.shadow.mapSize.set(1024,1024);
-sun.shadow.camera.left=-42;sun.shadow.camera.right=42;sun.shadow.camera.top=42;sun.shadow.camera.bottom=-42;sun.shadow.camera.near=.5;sun.shadow.camera.far=180;
+sun.shadow.mapSize.set(768,768);
+sun.shadow.camera.left=-30;sun.shadow.camera.right=30;sun.shadow.camera.top=30;sun.shadow.camera.bottom=-30;sun.shadow.camera.near=.5;sun.shadow.camera.far=110;
 sun.shadow.bias=-.0002;sun.shadow.normalBias=.025;sun.shadow.radius=2.5;
 scene.add(sun,sun.target);
 
@@ -51,7 +512,7 @@ environmentTexture.colorSpace=THREE.SRGBColorSpace;
 environmentTexture.mapping=THREE.EquirectangularReflectionMapping;
 environmentTexture.needsUpdate=true;
 scene.environment=environmentTexture;
-scene.environmentIntensity=.32;
+scene.environmentIntensity=.22;
 const world=new THREE.Group(), characters=new THREE.Group(), props=new THREE.Group(), effects=new THREE.Group(); scene.add(world);
 const sanctuaryBuild=new THREE.Group();world.add(sanctuaryBuild);
 world.add(characters,props,effects);
@@ -329,21 +790,25 @@ function actor(c,a){
   const scarf=box(.54,.08,.44,a);
   scarf.position.y=1.43; scarf.castShadow=true; g.add(scarf);
 
-  const core=orb(.115,0xff8245,true);
-  core.position.set(0,1.1,.34); g.add(core);
-  return g;
+   return g;
 }
 const playerVisual=actor(0x29221d,0x613724);player.add(playerVisual);
-let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null;
+let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null,productionGltfLoader=null,productionBossBuffer=null,productionBossLoadPromise=null;
 const bossTelegraphs=[];
 
-const armorMat=new THREE.MeshStandardMaterial({color:0x302a29,roughness:.84,metalness:.18});
-const brassMat=new THREE.MeshStandardMaterial({color:0x9d6b42,roughness:.78,metalness:.28});
-const chestplate=new THREE.Mesh(new THREE.OctahedronGeometry(.43,0),armorMat);chestplate.scale.set(.88,1.18,.52);chestplate.position.set(0,1.08,.27);chestplate.castShadow=true;playerVisual.add(chestplate);
-const crest=orb(.12,0xff8245,true);crest.position.set(0,1.12,.51);playerVisual.add(crest);
+const armorMat=new THREE.MeshStandardMaterial({color:0x302a29,roughness:.38,metalness:.72});
+const brassMat=new THREE.MeshStandardMaterial({color:0x9d6b42,roughness:.31,metalness:.76});
+const chestplate=new THREE.Mesh(new THREE.OctahedronGeometry(.43,0),armorMat);chestplate.scale.set(.88,1.18,.52);chestplate.position.set(0,1.32,.27);chestplate.castShadow=true;playerVisual.add(chestplate);
+const crest=orb(.12,0xff8245,true);crest.position.set(0,1.48,.51);playerVisual.add(crest);
+const crestBezel=new THREE.Mesh(new THREE.TorusGeometry(.185,.027,8,28),brassMat);
+crestBezel.position.set(0,1.48,.49);
+playerVisual.add(crestBezel);
+const crestInset=new THREE.Mesh(new THREE.TorusGeometry(.135,.012,6,24),new THREE.MeshStandardMaterial({color:0x4a2920,roughness:.34,metalness:.48}));
+crestInset.position.set(0,1.48,.505);
+playerVisual.add(crestInset);
 for(const side of [-1,1]){
-  const pauldron=new THREE.Mesh(new THREE.DodecahedronGeometry(.27,0),armorMat);pauldron.scale.set(1.15,.72,1);pauldron.position.set(side*.43,1.37,.02);pauldron.castShadow=true;playerVisual.add(pauldron);
-  const trim=new THREE.Mesh(new THREE.TorusGeometry(.19,.025,6,10),brassMat);trim.position.set(side*.43,1.37,.12);trim.scale.set(1.15,.7,1);playerVisual.add(trim);
+  const pauldron=new THREE.Mesh(new THREE.DodecahedronGeometry(.24,0),armorMat);pauldron.scale.set(1.08,.72,1);pauldron.position.set(side*.39,1.47,.02);pauldron.castShadow=true;playerVisual.add(pauldron);
+  const trim=new THREE.Mesh(new THREE.TorusGeometry(.17,.022,6,10),brassMat);trim.position.set(side*.39,1.47,.12);trim.scale.set(1.15,.7,1);playerVisual.add(trim);
 }
 const crownMat=brassMat;
 for(let i=-1;i<=1;i++){
@@ -520,41 +985,53 @@ function wbox(x,y,z,color,key,emission=0){
   mesh.receiveShadow=true;
   return mesh;
 }
+// Batch the repeated forest geometry into a handful of instanced draw calls.
+// The old per-tree hierarchy generated hundreds of independent renderer submissions.
+const TREE_BATCH_MAX=48;
+const treeDummy=new THREE.Object3D();
+const treeTrunkBatch=new THREE.InstancedMesh(
+  new THREE.BoxGeometry(.32,2.4,.32),wmat('trunk',0x3b2920,.94),TREE_BATCH_MAX
+);
+const treeBranchGeometry=new THREE.BoxGeometry(.13,1,.13);
+const treeBranchMaterial=wmat('branch',0x4a3225,.94);
+const treeBranchLeftBatch=new THREE.InstancedMesh(treeBranchGeometry,treeBranchMaterial,TREE_BATCH_MAX);
+const treeBranchRightBatch=new THREE.InstancedMesh(treeBranchGeometry,treeBranchMaterial,TREE_BATCH_MAX);
+const treeLeafColors=[0x26392c,0x30452f,0x1f352c];
+const treeLeafBatches=treeLeafColors.map((color,index)=>new THREE.InstancedMesh(
+  new THREE.SphereGeometry(1,9,7),wmat('leaf'+index,color,.96),TREE_BATCH_MAX*4
+));
+const treeBatchMeshes=[treeTrunkBatch,treeBranchLeftBatch,treeBranchRightBatch,...treeLeafBatches];
+treeBatchMeshes.forEach(mesh=>{mesh.castShadow=false;mesh.receiveShadow=true;mesh.frustumCulled=true;props.add(mesh)});
+let treeCount=0;
+const leafCounts=[0,0,0];
+function setTreeInstance(mesh,index,x,y,z,scale,rotationZ=0){
+  treeDummy.position.set(x,y,z);
+  treeDummy.rotation.set(0,0,rotationZ);
+  treeDummy.scale.setScalar(scale);
+  treeDummy.updateMatrix();
+  mesh.setMatrixAt(index,treeDummy.matrix);
+}
 function tree(x,z,s=1,variant=0){
-  const g=new THREE.Group();g.name='AshenTree';g.userData.shadowCaster=true;
-  g.position.set(x,0,z);
-  g.scale.setScalar(s);
-
-  const trunk=wbox(.32,2.4,.32,0x3b2920,'trunk');
-  trunk.position.y=1.2; g.add(trunk);
-
-  const branchMat=wmat('branch',0x4a3225,.94);
-  for(const side of [-1,1]){
-    const branch=wbox(.13,1.0,.13,0x4a3225,'branch');
-    branch.position.set(side*.27,1.62,0);
-    branch.rotation.z=side*.68;
-    branch.material=branchMat;
-    g.add(branch);
-  }
-
-  const c1=variant%3===0?0x26392c:variant%3===1?0x30452f:0x1f352c;
+  if(treeCount>=TREE_BATCH_MAX)return null;
+  const index=treeCount++,leafVariant=((variant%3)+3)%3;
+  setTreeInstance(treeTrunkBatch,index,x,1.2*s,z,s);
+  setTreeInstance(treeBranchLeftBatch,index,x-.27*s,1.62*s,z,s,-.68);
+  setTreeInstance(treeBranchRightBatch,index,x+.27*s,1.62*s,z,s,.68);
   const clumps=[
     [0,2.20,0,.88],[-.42,2.42,.05,.62],[.42,2.42,-.06,.64],[0,2.92,-.12,.56]
   ];
-  clumps.forEach((p,i)=>{
-    const crown=orb(p[3],c1);
-    crown.material=wmat('leaf'+(variant%3),c1,.92);
-    crown.position.set(p[0],p[1],p[2]);
-    crown.castShadow=true;
-    g.add(crown);
-  });
-
-  props.add(g);
-  return g;
+  for(const p of clumps){
+    const mesh=treeLeafBatches[leafVariant],leafIndex=leafCounts[leafVariant]++;
+    treeDummy.position.set(x+p[0]*s,p[1]*s,z+p[2]*s);
+    treeDummy.rotation.set(0,(variant%5)*.13,0);
+    treeDummy.scale.setScalar(p[3]*s);
+    treeDummy.updateMatrix();
+    mesh.setMatrixAt(leafIndex,treeDummy.matrix);
+  }
+  return {x,z,scale:s,variant};
 }
 
-const treeSpots=[];
-for(let i=0;i<48;i++){
+for(let i=0;i<TREE_BATCH_MAX;i++){
   const a=i*2.399;
   const rx=28+(i%11)*6.3;
   const rz=24+(i%9)*6.8;
@@ -562,9 +1039,14 @@ for(let i=0;i<48;i++){
   const z=Math.cos(a*.93)*rz+(i%4-1.5)*7;
   if(Math.abs(x)<12&&Math.abs(z)<15)continue;
   const ts=.72+(i%5)*.09;
-  treeSpots.push(tree(x,z,ts,i));
+  tree(x,z,ts,i);
   addTreeCollider(x,z,ts);
 }
+treeTrunkBatch.count=treeCount;
+treeBranchLeftBatch.count=treeCount;
+treeBranchRightBatch.count=treeCount;
+treeLeafBatches.forEach((mesh,index)=>{mesh.count=leafCounts[index];mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere()});
+treeBatchMeshes.slice(0,3).forEach(mesh=>{mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere()});
 
 function rock(x,z,s=1){
   const g=new THREE.Group();g.name='RockCluster';g.userData.shadowCaster=true;
@@ -1052,8 +1534,8 @@ props.add(grassMesh);
 
 function terrainMound(x,z,s=1,color=0x25261f){
   const g=new THREE.Mesh(new THREE.ConeGeometry(5,2.3,12),wmat('mound'+color.toString(16),color,.98));
-  g.position.set(x,1.05,z);
-  g.scale.set(1.5*s,.55*s,1.05*s);
+  g.position.set(x,.25+(.9*s),z);
+  g.scale.set(1.05*s,1.05*s,.82*s);
   g.rotation.y=(x+z)*.03;
   g.receiveShadow=true;
   props.add(g);
@@ -1062,6 +1544,18 @@ function terrainMound(x,z,s=1,color=0x25261f){
   [-82,-68,1.8],[-60,70,1.5],[-5,84,1.9],[74,74,1.7],
   [86,-62,1.8],[-90,8,1.4],[83,4,1.4]
 ].forEach(p=>terrainMound(...p));
+
+// A distant broken ridgeline closes the otherwise empty playable horizon.
+// It stays outside the walkable bounds and uses low-poly silhouettes only.
+for(let i=0;i<22;i++){
+  const angle=(i/22)*Math.PI*2;
+  const radius=112+(i%4)*2.2;
+  const x=Math.cos(angle)*radius;
+  const z=Math.sin(angle)*radius;
+  const scale=2.0+(i%5)*.42;
+  const color=i%3===0?0x302821:i%3===1?0x292824:0x35302a;
+  terrainMound(x,z,scale,color);
+}
 
 function addFlower(x,z,c){
   const g=new THREE.Group();g.position.set(x,0,z);
@@ -1146,6 +1640,7 @@ function setActiveMap(id,teleport=true){
   const def=MAPS[activeMapId];scene.fog.color.setHex(def.fog);scene.fog.near=activeMapId==='sanctuary'?58:30;scene.fog.far=activeMapId==='sanctuary'?245:105;
   $('locationName').textContent=def.name.toUpperCase();$('locationHint').textContent=def.hint;
   nearbyTarget=null;nearbyRefresh=0;
+  if(typeof updateQuestGuide==='function')updateQuestGuide(true);
 }
 function canFastTravel(){return state.chapter>=10&&state.quest>=5&&(state.meta.chaptersComplete>=10||state.flags.legacyHome)}
 function fastTravel(id){if(!canFastTravel()||!MAPS[id])return;encounter?.root.removeFromParent();encounter=null;enemies=[];setEncounterHud(null);setActiveMap(id,true);player.position.set(0,0,id==='sanctuary'?7:14);state.hp=state.maxHp;state.stamina=100;saveState();$('systemMenu').classList.remove('show');toastMsg('Travelled to '+MAPS[id].name)}
@@ -1342,7 +1837,10 @@ function spawnEnemy(){
   const baseAttackDamage=(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2);
   encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,baseAttackDamage,attackDamage:baseAttackDamage,attackSkill:0,attackCycle:0,body:b,fallbackVisuals:g.children.slice(),isBoss};
   enemies=[encounter];
-  if(isBoss)attachProductionBoss(encounter);
+  if(isBoss){
+    if(productionBossScene)attachProductionBoss(encounter);
+    else void ensureProductionBossLoaded().then(()=>{if(encounter?.isBoss)attachProductionBoss(encounter)}).catch(error=>console.warn('[Ashen Crown] Boss model stays on fallback:',error));
+  }
   setEncounterHud(encounter);
   toastMsg(isBoss?'The bell answers. The Warden has found you.':'A wandering shade has entered the wilds.');
 }
@@ -1376,7 +1874,7 @@ function advanceChapter(){if(state.quest<5||state.chapter>=10)return;state.meta.
 function syncRenderQuality(){
   const quality=state.settings.quality||'auto';
   const shadowsAllowed=state.settings.visualEffects!==false&&(
-    quality==='high'||(quality==='auto'&&currentFps>=55&&adaptiveDpr>=.98)
+    quality==='high'||(quality==='auto'&&currentFps>=59&&adaptiveDpr<=1.02)
   );
   if(renderer.shadowMap.enabled!==shadowsAllowed){
     renderer.shadowMap.enabled=shadowsAllowed;
@@ -1387,9 +1885,9 @@ function syncRenderQuality(){
 }
 function applySettings(){
   const settings=state.settings,native=window.devicePixelRatio||1,r=canvas.getBoundingClientRect();
-  const pixelBudget=Math.sqrt(3600000/Math.max(1,r.width*r.height));
-  const qualityCap=settings.quality==='performance'?1:settings.quality==='high'?2:1.6;
-  maxDpr=Math.max(.85,Math.min(native,qualityCap,pixelBudget));
+  const pixelBudget=Math.sqrt(2400000/Math.max(1,r.width*r.height));
+  const qualityCap=settings.quality==='performance' ? 0.85 : settings.quality==='high' ? 1.65 : 1.25;
+  maxDpr=Math.max(.75,Math.min(native,qualityCap,pixelBudget));
   adaptiveDpr=settings.quality==='high'?maxDpr:Math.min(maxDpr,Math.max(.95,adaptiveDpr));
   renderer.setPixelRatio(adaptiveDpr);
   document.documentElement.classList.toggle('animations-off',settings.animations===false);
@@ -1404,13 +1902,75 @@ function toastMsg(t){$('toast').textContent=t;$('toast').classList.add('show');t
 let gameAudio=null;
 function playGameSound(kind='ui'){if(!state.settings.sound)return;const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)return;try{gameAudio??=new AudioCtor();if(gameAudio.state==='suspended')gameAudio.resume().catch(()=>{});const presets={ui:[360,.055,'sine'],attack:[145,.075,'triangle'],skill:[520,.13,'sawtooth'],collect:[740,.16,'sine'],hurt:[92,.18,'triangle'],success:[620,.22,'sine']},[frequency,duration,wave]=presets[kind]||presets.ui,osc=gameAudio.createOscillator(),gain=gameAudio.createGain(),now=gameAudio.currentTime,volume=Math.max(0,Math.min(1,Number(state.settings.volume)||0));if(!volume)return;osc.type=wave;osc.frequency.setValueAtTime(frequency,now);if(kind==='skill'||kind==='success')osc.frequency.exponentialRampToValueAtTime(frequency*1.5,now+duration);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(volume*.12,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);osc.connect(gain);gain.connect(gameAudio.destination);osc.start(now);osc.stop(now+duration+.015)}catch{}}
 const RESOURCE_CACHE_PREFIX='ashen-resource-pack-';
+const MODEL_PIPELINE_VERSION='ashen-model-pipeline-2026-10-10-v2';
 let resourcePackLoading=false;
 function resourceBytes(bytes){return bytes>=1048576?(bytes/1048576).toFixed(1)+' MB':Math.ceil(bytes/1024)+' KB'}
 function packProgress(percent,label){const bar=$('resourcePackProgress'),status=$('resourcePackStatus');if(bar)bar.value=percent;if(status)status.textContent=label}
 async function readResourceManifest(){const response=await fetch('./resource-pack.json',{cache:'no-store'});if(!response.ok)throw new Error('Resource pack manifest is unavailable.');return response.json()}
 async function refreshResourcePackUi(){const status=$('resourcePackStatus'),download=$('downloadResourcePack'),remove=$('removeResourcePack');if(!status||!download||!remove)return;try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0),installed=await Promise.all(manifest.files.map(file=>cache.match(new URL(file.url,location.origin))));const complete=installed.every(Boolean);status.textContent=complete?'Installed · the production models are ready from local storage.':'Production model pack · '+resourceBytes(total)+' one-time download, saved in this browser.';download.disabled=complete||resourcePackLoading;download.textContent=complete?'FULL PACK INSTALLED':resourcePackLoading?'DOWNLOADING…':'DOWNLOAD FULL PACK';remove.disabled=!complete||resourcePackLoading;remove.hidden=!complete;if($('resourcePackProgress'))$('resourcePackProgress').value=complete?100:0}catch{status.textContent='Resource pack status is unavailable while offline.';download.disabled=true}}
-async function installResourcePack(){if(resourcePackLoading)return;state.settings.resourcePackDisabled=false;resourcePackLoading=true;const button=$('downloadResourcePack'),remove=$('removeResourcePack');if(button)button.disabled=true;if(remove)remove.disabled=true;if(!button)toastMsg('Loading production 3D models and embedded PBR textures in the background…');try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0);let finished=0;for(let index=0;index<manifest.files.length;index++){const file=manifest.files[index],url=new URL(file.url,location.origin),cached=await cache.match(url);if(cached){finished+=file.size;packProgress(Math.round(finished/total*100),'Already saved · '+(index+1)+' / '+manifest.files.length);continue}packProgress(Math.round(finished/total*100),'Downloading model '+(index+1)+' / '+manifest.files.length+'…');const response=await fetch(url,{cache:'force-cache'});if(!response.ok)throw new Error('Could not download '+url.pathname);const bytes=await response.arrayBuffer();if(file.size&&bytes.byteLength!==file.size)throw new Error('The downloaded model was incomplete. Please retry.');await cache.put(url,new Response(bytes,{headers:response.headers}));finished+=bytes.byteLength;packProgress(Math.round(finished/total*100),'Saved '+(index+1)+' / '+manifest.files.length+' models')};try{await navigator.storage?.persist?.()}catch{};await loadFullResourceModels(manifest,cache);await pruneOldResourcePackCaches(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion=manifest.version;saveState();packProgress(100,'Full pack installed · production models and textures are ready.');if(!button)toastMsg('Production character and boss models loaded with aligned PBR textures.')}catch(error){packProgress(0,(error&&error.message)||'Download failed. You can retry when online.');if(!button)toastMsg('Production model download failed; the aligned fallback remains active.')}finally{resourcePackLoading=false;await refreshResourcePackUi()}}
-async function removeResourcePack(){const manifest=await readResourceManifest();await caches.delete(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion='';state.settings.resourcePackDisabled=true;saveState();location.reload()}
+async function installResourcePack(){
+  if(resourcePackLoading)return;
+  state.settings.resourcePackDisabled=false;
+  state.settings.resourcePackDisabledVersion=MODEL_PIPELINE_VERSION;
+  resourcePackLoading=true;
+
+  const button=$('downloadResourcePack'),remove=$('removeResourcePack');
+  if(button)button.disabled=true;
+  if(remove)remove.disabled=true;
+  if(!button)toastMsg('Loading production 3D models and embedded PBR textures in the background…');
+
+  try{
+    const manifest=await readResourceManifest();
+    const cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version);
+    const total=manifest.files.reduce((sum,file)=>sum+file.size,0);
+    const completed=new Set();
+    let finished=0;
+
+    const markCompleted=(file,bytes)=>{
+      if(completed.has(file.url))return;
+      completed.add(file.url);
+      finished+=bytes;
+      const percent=total>0?Math.round(finished/total*100):100;
+      packProgress(percent,'Downloaded '+completed.size+' / '+manifest.files.length+' production models…');
+    };
+
+    // Fetch both GLBs concurrently. The previous serial download doubled the
+    // wait before the player model could replace its fallback mesh.
+    await Promise.all(manifest.files.map(async(file,index)=>{
+      const url=new URL(file.url,location.origin);
+      const cached=await cache.match(url);
+      if(cached){
+        markCompleted(file,file.size||0);
+        return;
+      }
+
+      packProgress(Math.round(finished/Math.max(1,total)*100),'Downloading production model '+(index+1)+' / '+manifest.files.length+'…');
+      const response=await fetch(url,{cache:'force-cache'});
+      if(!response.ok)throw new Error('Could not download '+url.pathname);
+      const bytes=await response.arrayBuffer();
+      if(file.size&&bytes.byteLength!==file.size)throw new Error('The downloaded model was incomplete. Please retry.');
+      await cache.put(url,new Response(bytes,{headers:response.headers}));
+      markCompleted(file,bytes.byteLength);
+    }));
+
+    try{await navigator.storage?.persist?.()}catch{}
+    await loadFullResourceModels(manifest,cache);
+    await pruneOldResourcePackCaches(RESOURCE_CACHE_PREFIX+manifest.version);
+    state.settings.resourcePackVersion=manifest.version;
+    state.settings.resourcePackDisabled=false;
+    state.settings.resourcePackDisabledVersion=MODEL_PIPELINE_VERSION;
+    saveState();
+    packProgress(100,'Full pack installed · the player model is ready; boss art loads when its encounter begins.');
+    if(!button)toastMsg('Production character model loaded with aligned PBR textures.');
+  }catch(error){
+    packProgress(0,(error&&error.message)||'Download failed. You can retry when online.');
+    if(!button)toastMsg('Production model download failed; the aligned fallback remains active.');
+  }finally{
+    resourcePackLoading=false;
+    await refreshResourcePackUi();
+  }
+}
+async function removeResourcePack(){const manifest=await readResourceManifest();await caches.delete(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion='';state.settings.resourcePackDisabled=true;state.settings.resourcePackDisabledVersion=MODEL_PIPELINE_VERSION;saveState();location.reload()}
 function playPlayerAnimation(name,hold=0){const action=productionPlayerActions[name];if(!action||!productionPlayerMixer||state.settings.animations===false)return;if(activePlayerAction!==name){const previous=productionPlayerActions[activePlayerAction];if(previous)previous.fadeOut(.08);action.reset().fadeIn(.08).play();activePlayerAction=name}if(hold>0)playerActionUntil=performance.now()+hold}
 function updatePlayerAnimation(dt,moving,sprinting){if(!productionPlayerMixer||state.settings.animations===false)return;if(performance.now()>=playerActionUntil)playPlayerAnimation(moving?(sprinting?'Run':'Walk'):'Idle');productionPlayerMixer.update(dt)}
 function fitModelToHeight(model,targetHeight){
@@ -1516,22 +2076,30 @@ function triggerBossPhase(enemy,phase){
     :'Warden Phase I · read the attack tells.');
 }
 
+function parseProductionGlb(loader,buffer){
+  return new Promise((resolve,reject)=>loader.parse(buffer,'',resolve,reject));
+}
+
 async function loadFullResourceModels(manifest,cache){
   if(fullPackLoaderPromise)return fullPackLoaderPromise;
   fullPackLoaderPromise=(async()=>{
     try{
       const loaderModule=await import('https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/loaders/GLTFLoader.js');
-      const loader=new loaderModule.GLTFLoader();
-      const files=await Promise.all(manifest.files.map(async file=>{
+      productionGltfLoader=new loaderModule.GLTFLoader();
+
+      // Fetch cached buffers together, then parse only the player on startup.
+      // The boss GLB is parsed lazily when an encounter needs it to reduce first-load hitching.
+      const assets=await Promise.all(manifest.files.map(async file=>{
         const response=await cache.match(new URL(file.url,location.origin));
         if(!response)throw new Error('Full pack is incomplete.');
-        const buffer=await response.arrayBuffer();
-        return new Promise((resolve,reject)=>loader.parse(buffer,'',resolve,reject));
+        return {url:file.url,buffer:await response.arrayBuffer()};
       }));
-      const sentinel=files.find((_,i)=>manifest.files[i].url.includes('AshenSentinel'));
-      const regent=files.find((_,i)=>manifest.files[i].url.includes('AshenRegent'));
-      if(!sentinel||!regent)throw new Error('The production models are missing from the pack.');
+      const sentinelAsset=assets.find(asset=>asset.url.includes('AshenSentinel'));
+      const regentAsset=assets.find(asset=>asset.url.includes('AshenRegent'));
+      if(!sentinelAsset||!regentAsset)throw new Error('The production models are missing from the pack.');
 
+      const sentinel=await parseProductionGlb(productionGltfLoader,sentinelAsset.buffer);
+      productionBossBuffer=regentAsset.buffer;
       productionPlayerScene=sentinel.scene;
       productionPlayerScene.name='production-player-model';
       prepareProductionModel(productionPlayerScene,2.42,'player');
@@ -1543,35 +2111,40 @@ async function loadFullResourceModels(manifest,cache){
       activePlayerAction='';
       playPlayerAnimation('Idle');
 
-      productionBossScene=regent.scene;
-      productionBossScene.name='production-boss-model';
-      prepareProductionModel(productionBossScene,3.15,'boss');
-      productionBossAnimations=regent.animations;
-      productionBossMixer=new THREE.AnimationMixer(productionBossScene);
-      productionBossActions=Object.fromEntries(regent.animations.map(clip=>[clip.name,productionBossMixer.clipAction(clip)]));
-      activeBossAction='';
-      if(encounter?.isBoss)attachProductionBoss(encounter);
-
+      if(encounter?.isBoss)await ensureProductionBossLoaded();
       return true;
     }catch(error){
       fullPackLoaderPromise=null;
+      productionGltfLoader=null;
+      productionBossBuffer=null;
       throw error;
     }
   })();
   return fullPackLoaderPromise;
 }
 
-function attachProductionBoss(enemy){
-  if(!productionBossScene||!enemy?.isBoss)return;
-  productionBossScene.removeFromParent();
-  enemy.root.add(productionBossScene);
-  // Preserve the normalized foot-pivot offset computed from the GLB bounds.
-  if(Array.isArray(enemy.fallbackVisuals))enemy.fallbackVisuals.forEach(object=>{if(object)object.visible=false});
-  else if(enemy.body)enemy.body.visible=false;
-  for(const action of Object.values(productionBossActions))action.stop();
-  activeBossAction='';
-  bossActionUntil=0;
-  playBossAnimation('Idle');
+async function ensureProductionBossLoaded(){
+  if(productionBossScene)return true;
+  if(productionBossLoadPromise)return productionBossLoadPromise;
+  if(!productionGltfLoader||!productionBossBuffer)return false;
+
+  productionBossLoadPromise=(async()=>{
+    const regent=await parseProductionGlb(productionGltfLoader,productionBossBuffer);
+    productionBossScene=regent.scene;
+    productionBossScene.name='production-boss-model';
+    prepareProductionModel(productionBossScene,3.15,'boss');
+    productionBossAnimations=regent.animations;
+    productionBossMixer=new THREE.AnimationMixer(productionBossScene);
+    productionBossActions=Object.fromEntries(regent.animations.map(clip=>[clip.name,productionBossMixer.clipAction(clip)]));
+    activeBossAction='';
+    if(encounter?.isBoss)attachProductionBoss(encounter);
+    return true;
+  })();
+  try{return await productionBossLoadPromise}
+  catch(error){
+    productionBossLoadPromise=null;
+    throw error;
+  }
 }
 
 async function pruneOldResourcePackCaches(activeCacheName){
@@ -1584,6 +2157,7 @@ async function pruneOldResourcePackCaches(activeCacheName){
 
 async function loadCachedResourcePack(){
   if(!('caches'in window))return;
+  if(state.settings.resourcePackDisabled===true&&state.settings.resourcePackDisabledVersion===MODEL_PIPELINE_VERSION)return;
   try{
     const manifest=await readResourceManifest();
     const cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version);
@@ -1593,7 +2167,7 @@ async function loadCachedResourcePack(){
       return;
     }
     const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
-    if(state.settings.resourcePackDisabled===true||connection?.saveData===true||state.settings.quality==='performance')return;
+    if(state.settings.resourcePackDisabled===true||connection?.saveData===true)return;
     // Download production meshes and their embedded PBR textures once in the background.
     await installResourcePack();
   }catch(error){
@@ -1606,6 +2180,136 @@ let shopMenu=null;
 function ensureShopMenu(){if(shopMenu)return shopMenu;shopMenu=document.createElement('section');shopMenu.id='shopMenu';shopMenu.innerHTML='<div class="shop-panel"><button class="shop-close">×</button><div class="shop-kicker">SANCTUARY HAMLET · MERCHANT</div><h2 id="shopTitle">Merchant</h2><p>Trade Ashen for equipment that changes your build.</p><div class="shop-wallet">ASHEN <b id="shopCoins">0</b></div><div id="shopGrid" class="shop-grid"></div></div>';document.body.appendChild(shopMenu);const style=document.createElement('style');style.textContent='#shopMenu{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(5,4,4,.78);backdrop-filter:blur(7px)}#shopMenu.show{display:flex}.shop-panel{position:relative;width:min(920px,92vw);max-height:82vh;overflow:auto;padding:30px;background:linear-gradient(145deg,#17120f,#0c0a09);border:1px solid #5b3c2d;box-shadow:0 25px 80px rgba(0,0,0,.55);color:#eadfd4}.shop-close{position:absolute;right:18px;top:14px;background:none;border:0;color:#b99a86;font-size:28px;cursor:pointer}.shop-kicker{font-size:10px;letter-spacing:3px;color:#a87555}.shop-panel h2{margin:8px 0 4px;font:32px Georgia,serif}.shop-panel p{margin:0 0 18px;color:#9c8c80}.shop-wallet{display:inline-block;padding:8px 12px;border:1px solid #3f3027;font-size:11px;letter-spacing:1px}.shop-wallet b{color:#e49a61}.shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:12px;margin-top:18px}.shop-card{padding:16px;border:1px solid #30241e;background:#100d0b}.shop-card h3{margin:0 0 5px;font:20px Georgia,serif}.shop-card small{display:block;color:#9c806d;margin-bottom:8px}.shop-card p{font-size:12px;line-height:1.5;min-height:38px}.shop-card .stats{color:#d9a77f;font-size:12px;margin-bottom:12px}.shop-buy{width:100%;padding:10px;border:1px solid #6b4732;background:#24160f;color:#eed7c4;cursor:pointer}.shop-buy:disabled{opacity:.38;cursor:not-allowed}';document.head.appendChild(style);shopMenu.querySelector('.shop-close').onclick=()=>shopMenu.classList.remove('show');return shopMenu}
 function openShop(n){const menu=ensureShopMenu(),stock=SHOP_STOCK[n.id]||SHOP_STOCK.merchant_01;menu.querySelector('#shopTitle').textContent=n.name+' · '+n.role;menu.querySelector('#shopCoins').textContent=state.coins;const grid=menu.querySelector('#shopGrid');grid.innerHTML=stock.map((g,i)=>{const locked=state.level<g.level,poor=state.coins<g.price,statText=Object.entries(g.stats).map(([k,v])=>'+'+v+' '+k[0].toUpperCase()+k.slice(1)).join(' · ');return '<article class="shop-card"><h3>'+g.name+'</h3><small>'+g.rarity+' · '+g.type+' · Lv '+g.level+'</small><p>'+g.desc+'</p><div class="stats">'+statText+'</div><button class="shop-buy" data-buy="'+i+'" '+((locked||poor)?'disabled':'')+'>'+ (locked?'Requires Lv '+g.level:poor?'Need '+g.price+' Ashen':'Buy · '+g.price+' Ashen')+'</button></article>'}).join('');grid.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>buyShopItem(n.id,Number(b.dataset.buy)));menu.classList.add('show')}
 function buyShopItem(merchantId,index){const stock=SHOP_STOCK[merchantId]||SHOP_STOCK.merchant_01,g=stock[index];if(!g||state.level<g.level||state.coins<g.price)return;state.coins-=g.price;state.meta.renown+=g.rarity==='Legendary'?5:g.rarity==='Epic'?3:2;state.inventory.push({name:g.name,type:g.type,rarity:g.rarity,attrs:[...g.attrs],stats:{...g.stats},source:'merchant',price:g.price});state.log.unshift('Purchased '+g.name+'.');saveState();openShop(npcs.find(x=>x.id===merchantId)||{id:merchantId,name:'Merchant',role:'merchant'});toastMsg(g.name+' added to your inventory')}
+const questWaypoint=new THREE.Group();
+const questWaypointRing=new THREE.Mesh(
+  new THREE.TorusGeometry(.62,.07,8,28),
+  new THREE.MeshBasicMaterial({color:0xffb86b,transparent:true,opacity:.92,depthWrite:false,toneMapped:false})
+);
+questWaypointRing.rotation.x=-Math.PI/2;
+questWaypoint.add(questWaypointRing);
+const questWaypointBeam=new THREE.Mesh(
+  new THREE.CylinderGeometry(.035,.12,2.6,7,1,true),
+  new THREE.MeshBasicMaterial({color:0xff9853,transparent:true,opacity:.20,depthWrite:false,side:THREE.DoubleSide,toneMapped:false})
+);
+questWaypointBeam.position.y=1.42;
+questWaypoint.add(questWaypointBeam);
+const questWaypointGem=new THREE.Mesh(
+  new THREE.OctahedronGeometry(.19,0),
+  new THREE.MeshBasicMaterial({color:0xffc47b,toneMapped:false})
+);
+questWaypointGem.position.y=2.8;
+questWaypoint.add(questWaypointGem);
+questWaypoint.visible=false;
+world.add(questWaypoint);
+let questTargetRefresh=0,questUiRefresh=0,lightRefreshAccumulator=0;
+let currentQuestTarget=null;
+
+function getQuestTarget(){
+  const activeNpc=id=>npcs.find(n=>n.id===id&&n.root.visible)||npcs.find(n=>n.id===id);
+  const nextNode=type=>nodes.find(n=>n.type===type&&!n.collected&&n.mapId===activeMapId)
+    ||nodes.find(n=>n.type===type&&!n.collected);
+  if(state.quest===0)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
+  if(state.quest===1){
+    const target=nextNode('ember');
+    if(target)return {kind:'node',label:'Emberleaf',entity:target};
+    return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
+  }
+  if(state.quest===2)return {kind:'npc',label:'Orren',entity:activeNpc('orren')};
+  if(state.quest===3&&state.echoes<2){
+    const target=nextNode('echo');
+    if(target)return {kind:'node',label:'Memory Echo',entity:target};
+    return {kind:'gate',label:'Hollow Gate',entity:gates?.find(g=>g.name==='Hollow Ruins')};
+  }
+  if(state.quest===3&&encounter)return {kind:'enemy',label:encounter.isBoss?'Bell Warden':'Wandering Shade',entity:encounter};
+  if(state.quest===4)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
+  if(state.quest>=5){
+    if(activeMapId!=='sanctuary')return {kind:'home',label:'Sanctuary',position:new THREE.Vector3(0,0,7)};
+    return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
+  }
+  return null;
+}
+function getQuestSteps(){
+  const q=state.quest;
+  if(q===0)return [
+    ['Go to Lyra at Sanctuary (-5, -3).',false],
+    ['Press E to talk to the character.',false],
+    ['Choose whether to protect the Sanctuary or seek the truth.',false]
+  ];
+  if(q===1)return [
+    ['Collect 2 Emberleaf',state.chapterGathered>=2],
+    ['Reach the glowing orange orb, then press E to gather the item.',false],
+    ['Progress: '+state.chapterGathered+' / 2',state.chapterGathered>=2]
+  ];
+  if(q===2)return [
+    ['Go to Orren at Sanctuary (7, -1).',false],
+    ['Press E to talk to the character.',false],
+    ['Choose a route in the dialogue to continue.',false]
+  ];
+  if(q===3&&state.echoes<2)return [
+    ['Collect 2 Memory Echoes',state.echoes>=2],
+    ['Look for purple glowing objects and their ground rings.',false],
+    ['Press E near each Echo to collect it.',false],
+    ['Progress: '+state.echoes+' / 2',state.echoes>=2]
+  ];
+  if(q===3)return [
+    ['Dodge when the Warden telegraphs, then attack during recovery.',false],
+    ['Use LMB for Ember Pulse or keys 1 / 2 / 3 for role skills.',false],
+    ['Watch the colored ring: a larger ring signals a wider attack.',false]
+  ];
+  if(q===4)return [
+    ['Return to Lyra at Sanctuary.',false],
+    ['Press E to speak and choose one of the story options.',false],
+    ['Your choice changes the Sanctuary ending.',false]
+  ];
+  if(activeMapId!=='sanctuary')return [
+    ['Return to the Sanctuary.',false],
+    ['Travel back, then speak with Lyra.',false]
+  ];
+  return [
+    ['Speak with Lyra at the Sanctuary.',false],
+    [state.chapter<10?'Prepare to begin the next chapter.':'Found your legacy at the Sanctuary.',false]
+  ];
+}
+function updateQuestGuide(force=false){
+  const list=$('questSteps'),targetLine=$('questTarget');
+  if(!list||!targetLine)return;
+  const rows=getQuestSteps();
+  const signature=state.chapter+'|'+state.quest+'|'+state.chapterGathered+'|'+state.echoes+'|'+rows.map(r=>r[0]+r[1]).join('|');
+  if(force||list.dataset.signature!==signature){
+    list.dataset.signature=signature;
+    list.replaceChildren();
+    for(const [label,done] of rows){
+      const item=document.createElement('li');
+      item.className=done?'done':'';
+      item.textContent=label;
+      list.appendChild(item);
+    }
+  }
+  currentQuestTarget=getQuestTarget();
+  if(!currentQuestTarget){
+    targetLine.textContent='TARGET · No active target';
+    questWaypoint.visible=false;
+    return;
+  }
+  let targetPosition=null;
+  if(currentQuestTarget.position)targetPosition=currentQuestTarget.position.clone();
+  else if(currentQuestTarget.entity?.root){
+    targetPosition=currentQuestTarget.entity.root.getWorldPosition(new THREE.Vector3());
+  }
+  const targetMap=currentQuestTarget.kind==='npc'?activeMapId:(currentQuestTarget.entity?.mapId||'sanctuary');
+  if(!targetPosition||targetMap!==activeMapId){
+    targetLine.textContent='TRAVEL TO · '+(currentQuestTarget.kind==='home'?'Sanctuary':MAPS[targetMap]?.name||currentQuestTarget.label);
+    questWaypoint.visible=false;
+    return;
+  }
+  const distance=Math.hypot(targetPosition.x-player.position.x,targetPosition.z-player.position.z);
+  targetLine.textContent='TARGET · '+currentQuestTarget.label+' · '+distance.toFixed(1)+' m';
+  questWaypoint.position.set(targetPosition.x,0,targetPosition.z);
+  questWaypoint.visible=distance>3.2;
+  questWaypointRing.rotation.z=time*.7;
+  questWaypointGem.rotation.y=time*.8;
+  questWaypointGem.position.y=2.75+Math.sin(time*2.5)*.12;
+}
 function setQuest(){
   const q=state.quest,title=$('questTitle'),desc=$('questDesc'),obj=$('objective'),count=$('questCount'),chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
   $('chapterNumber').textContent='CHAPTER '+String(state.chapter).padStart(2,'0');$('chapterTitle').textContent=(chapter?.title||'THE LAST EMBER').toUpperCase();
@@ -1617,6 +2321,7 @@ function setQuest(){
   else if(q===4){title.textContent=state.chapter===1?'A Choice in the Ash':chapter.title;desc.textContent=state.chapter===1?'Return the stolen name to Lyra. Decide what the sanctuary is for.':chapter.summary+' Return to Lyra and make the chapter choice.';obj.textContent='◈ Return to Lyra';count.textContent='03'}
   else{title.textContent=chapter?.title||'The Hearthbound Vow';desc.textContent=state.chapter===10?'All ten roads lead home. Found your legacy at the Sanctuary.':state.chapter>1?'The choice in '+chapter.title+' is remembered. Return to the Sanctuary and prepare for the next expedition.':state.flags.sanctuaryOpen?'The lost village has a name again. Its people can begin to return.':'One name remains to guard the last refuge; the others are free.';obj.textContent=state.chapter===10?'◈ Return to Lyra · Found your home':'◈ Chapter '+String(state.chapter).padStart(2,'0')+' complete · Return to Sanctuary';count.textContent='COMPLETE'}
   $('regionLabel').textContent=region().toUpperCase();
+  updateQuestGuide(true);
 }
 function region(){
   if(activeMapId!=='sanctuary')return MAPS[activeMapId]?.name||'Sanctuary';
@@ -1685,6 +2390,7 @@ function pulse(){
   if(state.settings.visualEffects!==false){const g=new THREE.Group();g.position.copy(player.position);for(let i=0;i<8;i++){const o=orb(.05,0xff8a4d,true),a=i*Math.PI/4;o.position.set(Math.cos(a),.8,Math.sin(a));g.add(o)}effects.add(g);setTimeout(()=>g.removeFromParent(),280)}
   if(encounter.hp<=0)finishEncounter();else{setEncounterHud(encounter);encounter.cooldown=Math.max(encounter.cooldown,.55)}
 }
+const moveForward=new THREE.Vector3(),moveBack=new THREE.Vector3();
 function move(dt){
   if(dodgeCooldown>0)dodgeCooldown-=dt;
   let x=(keys.KeyD?1:0)-(keys.KeyA?1:0),z=(keys.KeyS?1:0)-(keys.KeyW?1:0);
@@ -1703,13 +2409,15 @@ function move(dt){
   state.stamina=Math.max(0,state.stamina+(run?-9:16)*dt);
 }
 
-function updateCamera(dt){const target=player.position.clone().add(new THREE.Vector3(0,1.15,0)),back=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));const pos=target.clone().addScaledVector(back,7.2).add(new THREE.Vector3(0,3.2+pitch*2,0)),damping=state.settings.reducedMotion ? .02 : .001;camera.position.lerp(pos,1-Math.pow(damping,dt));camera.lookAt(target)}
+function updateCamera(dt){const target=moveForward.copy(player.position);target.y+=1.15;const back=moveBack.set(Math.sin(yaw),0,Math.cos(yaw));const pos=back.multiplyScalar(7.2).add(target);pos.y+=3.2+pitch*2;const damping=state.settings.reducedMotion ? .02 : .001;camera.position.lerp(pos,1-Math.pow(damping,dt));camera.lookAt(target)}
 function tick(dt){
   time+=dt;
   if(Math.floor(time/12)!==Math.floor((time-dt)/12))saveState();
   move(dt);
   updateCamera(dt);
   updateSky();
+  questUiRefresh-=dt;
+  if(questUiRefresh<=0){questUiRefresh=.24;updateQuestGuide(false)}
   nameplateAccumulator+=dt;if(nameplateAccumulator>=.08){nameplateAccumulator=0;updateNpcNameplates()}
   worldSimAccumulator+=dt;
   if(state.settings.animations!==false&&worldSimAccumulator>=.05){
@@ -1820,12 +2528,17 @@ function tick(dt){
 
   // Warm lantern/fire flicker is kept subtle so the scene still reads naturally in daylight.
   const nightFactor=Math.max(0,(0.28-skyUniforms.uDay.value)/0.28);
-  for(let i=0;i<lightSources.length;i++){
+  lightRefreshAccumulator+=dt;
+  const updateLights=lightRefreshAccumulator>=.1;
+  if(updateLights){
+    lightRefreshAccumulator=0;
+    for(let i=0;i<lightSources.length;i++){
     const light=lightSources[i];
     if(!light)continue;
     light.visible=nightFactor>.12;
     const base=light.userData.baseIntensity||1;
     light.intensity=base*(.25+.75*nightFactor)*(state.settings.animations===false?1:(0.9+Math.sin(time*7+i)*.045));
+    }
   }
 
   if(state.hp<=0){
@@ -1835,13 +2548,13 @@ function tick(dt){
   }
 
   $('playerHp').style.width=Math.max(0,Math.min(100,state.hp/state.maxHp*100))+'%';
-  const xpNeed=100+state.level*55;$('playerXp').style.width=Math.min(100,state.xp/xpNeed*100)+'%';$('xpLabel').textContent=state.xp+' / '+xpNeed+' XP';$('huntLabel').textContent='HUNT · '+((state.hunt?.kills||0)%5)+' / 5';
+  const xpNeed=100+state.level*55;$('playerXp').style.width=Math.min(100,state.xp/xpNeed*100)+'%';setUiText('xpLabel',state.xp+' / '+xpNeed+' XP');setUiText('huntLabel','HUNT · '+((state.hunt?.kills||0)%5)+' / 5');
   $('stamina').style.width=state.stamina+'%';
-  $('level').textContent='LV '+state.level;
-  $('coins').textContent=state.coins+' ASHEN';
-  $('status').textContent=enemies.length?'ENCOUNTER':(keys.ShiftLeft||keys.ShiftRight?'SPRINTING':'EXPLORING');
-  $('locationName').textContent=region().toUpperCase();
-  $('locationHint').textContent=activeMapId!=='sanctuary'?MAPS[activeMapId].hint:
+  setUiText('level','LV '+state.level);
+  setUiText('coins',state.coins+' ASHEN');
+  setUiText('status',enemies.length?'ENCOUNTER':(keys.ShiftLeft||keys.ShiftRight?'SPRINTING':'EXPLORING'));
+  setUiText('locationName',region().toUpperCase());
+  setUiText('locationHint',activeMapId!=='sanctuary'?MAPS[activeMapId].hint:
     region()==='Sanctuary'?'A safe place beneath the last light.':
     region()==='Sanctuary Hamlet'?'Warm windows and small homes surround the sanctuary road.':
     region()==='Ember Grove'?'Living embers grow beneath an old forest canopy.':
@@ -1849,16 +2562,20 @@ function tick(dt){
     region()==='Veil Lake'?'Still water, old bridges and mist between the trees.':
     region()==='Crown Road'?'A wider road toward the old crownlands.':
     region()==='Starless Path'?'A colder road where the trees grow sparse.':
-    'Untamed land beyond the mapped roads.';
+    'Untamed land beyond the mapped roads.');
 
   const a=nearby();
   $('interaction').classList.toggle('show',!!a);
-  if(a)$('interaction').querySelector('span').textContent=
-    a.k==='npc'?(a.n.role==='merchant'?'Shop':'Talk'):a.k==='node'?'Gather':a.k==='gate'?'Enter':'Pulse';
+  if(a)setUiNodeText($('interaction').querySelector('span'),
+    a.k==='npc'?(a.n.role==='merchant'?'Shop':'Talk'):a.k==='node'?'Gather':a.k==='gate'?'Enter':'Pulse');
 
   const phase=((time+ATMOSPHERE_OFFSET)%DAY_LENGTH)/DAY_LENGTH;
   const period=phase<.26?'NIGHT':phase<.40?'MORNING':phase<.68?'NOON':phase<.84?'DUSK':'NIGHT';
-  $('dayLabel').textContent='DAY '+state.day+' · '+period;
+  const dayText='DAY '+state.day+' · '+period;
+  if($('dayLabel').dataset.rawDayLabel!==dayText){
+    $('dayLabel').dataset.rawDayLabel=dayText;
+    $('dayLabel').textContent=dayText;
+  }
 }
 function renderJournal(tab='story'){if(tab==='story')$('journalBody').innerHTML=state.log.slice(0,12).map(x=>'<div class="journal-line">◈ '+x+'</div>').join('');if(tab==='people')$('journalBody').innerHTML=npcs.map(n=>'<div class="journal-line"><b>'+n.name+' · '+n.role+'</b>Reputation: '+state.rep[n.id]+'</div>').join('');if(tab==='world')$('journalBody').innerHTML=gates.map(g=>'<div class="journal-line"><b>'+g.name+'</b> '+(state.quest>=g.unlock?'Accessible':'Sealed by story')+'</div>').join('');if(tab==='campaign')$('journalBody').innerHTML='<div class="campaign-grid">'+(window.ASHEN_CAMPAIGN||[]).map(ch=>'<article class="chapter-card '+(ch.id===state.chapter?'active':'')+'"><div class="num">CHAPTER '+String(ch.id).padStart(2,'0')+' · '+ch.theme.toUpperCase()+'</div><h3>'+ch.title+'</h3><p>'+ch.summary+'</p><div class="chapter-meta"><span>'+ch.region+'</span><span>'+ch.activities.length+' activities</span><span>'+ch.items.length+' unique items</span></div><div class="story-items">'+ch.items.map(i=>'<span>'+i+'</span>').join('')+'</div></article>').join('')+'</div>'}
 function archive(){const m=$('metaMenu');m.classList.add('show');const next=100+state.level*40,rank=state.meta.renown>=40?'CROWNBOUND':state.meta.renown>=20?'PATHFINDER':state.meta.renown>=8?'WAYFARER':'EMBERBOUND';$('metaContent').innerHTML='<div class="meta-dashboard"><div class="meta-hero"><span>LEGACY RANK</span><strong>'+rank+'</strong><small>Permanent progression · '+state.meta.legacy+' Legacy</small></div><div class="meta-stats"><div><b>'+state.meta.mastery+'</b><span>Mastery XP</span></div><div><b>'+state.meta.renown+'</b><span>Renown</span></div><div><b>'+state.meta.points+'</b><span>Growth Points</span></div><div><b>'+state.inventory.length+'</b><span>Discoveries</span></div></div><div class="meta-progress"><div><span>LEVEL '+state.level+'</span><b>'+state.xp+' / '+next+' XP</b></div><i style="width:'+Math.min(100,state.xp/next*100)+'%"></i></div><div class="meta-goals"><article><span>WEEKLY PATH</span><b>Discover 5 locations</b><small>'+Math.min(5,state.inventory.length)+' / 5 · Reward: +3 Renown</small></article><article><span>MASTER STUDY</span><b>Collect 3 story items</b><small>'+Math.min(3,state.inventory.length)+' / 3 · Reward: +2 Growth Points</small></article><article><span>LEGACY</span><b>Complete Chapter 01</b><small>'+(state.quest>=5?'Complete · Legacy unlocked':'In progress · finish the current story')+'</small></article></div><div class="meta-list"><div class="journal-line"><b>REPUTATION</b> Lyra '+state.rep.lyra+' · Orren '+state.rep.orren+' · Seer '+state.rep.seer+'</div><div class="journal-line"><b>EQUIPMENT</b> '+Object.values(state.equipment).filter(Boolean).length+' / 4 slots equipped · Ward '+state.stats.ward+' · Focus '+state.stats.focus+'</div><div class="journal-line"><b>WORLD</b> '+gates.filter(g=>state.quest>=g.unlock).length+' / '+gates.length+' routes available</div></div></div>'}
@@ -1871,7 +2588,7 @@ function loadState(){
         const numeric=['xp','level','hp','stamina','coins','shards','echoes','quest','chapter','day','chapterGathered','weaponRank'];
         for(const key of numeric)if(Number.isFinite(Number(saved[key])))state[key]=Number(saved[key]);
         state.xp=Math.max(0,state.xp);state.level=Math.max(1,state.level);state.quest=THREE.MathUtils.clamp(state.quest,0,5);state.hp=Math.max(0,state.hp);state.stamina=THREE.MathUtils.clamp(state.stamina,0,100);state.coins=Math.max(0,state.coins);state.shards=Math.max(0,state.shards);state.echoes=Math.max(0,state.echoes);
-        state.role=ROLE_DEFS[saved.role]?saved.role:'ashbreaker';state.appearance=['default','moon','moss'].includes(saved.appearance)?saved.appearance:'default';state.skillPoints=Math.max(0,Number(saved.skillPoints)||0);state.skillRanks=Array.isArray(saved.skillRanks)?saved.skillRanks.slice(0,3).map(v=>THREE.MathUtils.clamp(Math.floor(Number(v)||0),0,3)):[0,0,0];state.skillPoints=Math.max(state.skillPoints,Math.max(0,state.level-1-state.skillRanks.reduce((sum,v)=>sum+v,0)));state.settings=Object.assign(state.settings,saved.settings&&typeof saved.settings==='object'?saved.settings:{});if(!['auto','performance','high'].includes(state.settings.quality))state.settings.quality='auto';state.settings.sensitivity=THREE.MathUtils.clamp(Number(state.settings.sensitivity)||1,.5,2);state.settings.volume=THREE.MathUtils.clamp(Number(state.settings.volume??.35),0,1);state.settings.uiScale=THREE.MathUtils.clamp(Number(state.settings.uiScale)||1,.8,1.2);state.settings.cameraFov=THREE.MathUtils.clamp(Number(state.settings.cameraFov)||55,42,68);for(const key of ['sound','animations','visualEffects','reducedMotion'])if(typeof state.settings[key]!=='boolean')state.settings[key]=true;state.rep=Object.assign(state.rep,saved.rep&&typeof saved.rep==='object'?saved.rep:{});
+        state.role=ROLE_DEFS[saved.role]?saved.role:'ashbreaker';state.appearance=['default','moon','moss'].includes(saved.appearance)?saved.appearance:'default';state.skillPoints=Math.max(0,Number(saved.skillPoints)||0);state.skillRanks=Array.isArray(saved.skillRanks)?saved.skillRanks.slice(0,3).map(v=>THREE.MathUtils.clamp(Math.floor(Number(v)||0),0,3)):[0,0,0];state.skillPoints=Math.max(state.skillPoints,Math.max(0,state.level-1-state.skillRanks.reduce((sum,v)=>sum+v,0)));state.settings=Object.assign(state.settings,saved.settings&&typeof saved.settings==='object'?saved.settings:{});if(state.settings.resourcePackDisabled===true&&state.settings.resourcePackDisabledVersion!==MODEL_PIPELINE_VERSION)state.settings.resourcePackDisabled=false;if(!['auto','performance','high'].includes(state.settings.quality))state.settings.quality='auto';state.settings.sensitivity=THREE.MathUtils.clamp(Number(state.settings.sensitivity)||1,.5,2);state.settings.volume=THREE.MathUtils.clamp(Number(state.settings.volume??.35),0,1);state.settings.uiScale=THREE.MathUtils.clamp(Number(state.settings.uiScale)||1,.8,1.2);state.settings.cameraFov=THREE.MathUtils.clamp(Number(state.settings.cameraFov)||55,42,68);for(const key of ['sound','animations','visualEffects','reducedMotion'])if(typeof state.settings[key]!=='boolean')state.settings[key]=true;state.rep=Object.assign(state.rep,saved.rep&&typeof saved.rep==='object'?saved.rep:{});
         state.flags=Object.assign(state.flags,saved.flags&&typeof saved.flags==='object'?saved.flags:{});state.currentMap=MAPS[saved.currentMap]?saved.currentMap:'sanctuary';
         if(state.flags.bellWardenDefeated&&state.quest===3)state.quest=4;
         state.meta=Object.assign(state.meta,saved.meta&&typeof saved.meta==='object'?saved.meta:{});state.chapter=THREE.MathUtils.clamp(state.chapter,1,10);
@@ -1945,7 +2662,7 @@ props.traverse(object=>{
   object.receiveShadow=true;
   object.castShadow=hasShadowCasterAncestor(object);
 });
-treeSpots.forEach(g=>g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}));
+treeBatchMeshes.forEach(mesh=>{mesh.castShadow=false;mesh.receiveShadow=true;});
 characters.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
 function setupTouchControls(){
   const controls=document.createElement('div');controls.className='touch-controls';controls.innerHTML='<div class="touch-stick" aria-label="Movement joystick"><i></i></div><div class="touch-actions"><button data-action="interact">USE</button><button data-action="attack">HIT</button><button data-action="dodge">ROLL</button><button data-action="inventory">BAG</button><button data-action="skill" data-skill="0">1</button><button data-action="skill" data-skill="1">2</button><button data-action="skill" data-skill="2">3</button></div>';document.querySelector('.stage').appendChild(controls);
@@ -1979,7 +2696,7 @@ function frame(t){
     const avgFrame=fpsAccumulator/Math.max(1,fpsFrames);
     const previousDpr=adaptiveDpr;
     currentFps=fpsFrames/Math.max(.001,fpsAccumulator);
-    if(state.settings.quality==='auto'&&avgFrame>.024)adaptiveDpr=Math.max(.85,adaptiveDpr-.05);
+    if(state.settings.quality==='auto'&&avgFrame>.024)adaptiveDpr=Math.max(.75,adaptiveDpr-.06);
     else if((state.settings.quality==='auto'||state.settings.quality==='high')&&avgFrame<.017)adaptiveDpr=Math.min(maxDpr,adaptiveDpr+.04);
     if(Math.abs(adaptiveDpr-previousDpr)>.04){renderer.setPixelRatio(adaptiveDpr);lastWidth=0;resize()}
     syncRenderQuality();
