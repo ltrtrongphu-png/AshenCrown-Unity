@@ -6,6 +6,7 @@ let authInitError = '';
 let modal = null;
 let accountButton = null;
 let mode = 'signin';
+let recoveryMode = false;
 let queuedSave = null;
 let cloudTimer = null;
 let lastCloudWrite = 0;
@@ -33,6 +34,7 @@ const authReady = (async () => {
     if (error) throw error;
     currentSession = data.session || null;
     supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') { recoveryMode = true; mode = 'recover'; }
       currentSession = session || null;
       updateAccountButton();
       renderAuthModal();
@@ -77,7 +79,7 @@ function ensureAuthUi() {
   modal.className = 'ashen-auth-overlay';
   modal.id = 'ashenAuthModal';
   modal.hidden = true;
-  modal.innerHTML = '<section class="ashen-auth-card" role="dialog" aria-modal="true" aria-labelledby="ashenAuthTitle"><header class="ashen-auth-head"><div><p class="ashen-auth-eyebrow">ASHEN CROWN · PLAYER ACCOUNT</p><h2 id="ashenAuthTitle">Your journey</h2></div><button type="button" class="ashen-auth-close" id="ashenAuthClose" aria-label="Close">×</button></header><div id="ashenAuthFormView"><div class="ashen-auth-tabs" role="tablist" aria-label="Account access"><button type="button" id="ashenSignInTab" aria-selected="true">SIGN IN</button><button type="button" id="ashenSignUpTab" aria-selected="false">CREATE ACCOUNT</button></div><form id="ashenAuthForm"><label class="ashen-auth-field">Email<input id="ashenAuthEmail" name="email" type="email" autocomplete="email" required maxlength="254"></label><label class="ashen-auth-field">Password<input id="ashenAuthPassword" name="password" type="password" autocomplete="current-password" minlength="8" required maxlength="128"></label><button class="ashen-auth-submit" id="ashenAuthSubmit" type="submit">SIGN IN</button><button class="ashen-auth-reset" id="ashenAuthReset" type="button">Forgot password?</button></form></div><div id="ashenAuthAccountView" hidden><div class="ashen-auth-account" id="ashenAuthAccountText"></div><button class="ashen-auth-signout" id="ashenAuthSignOut" type="button">SIGN OUT</button></div><p class="ashen-auth-notice" id="ashenAuthNotice" role="status" aria-live="polite"></p><p class="ashen-auth-note">Your cloud save is private to your account. Never share your password. Supabase row-level security restricts save access by authenticated user.</p></section>';
+  modal.innerHTML = '<section class="ashen-auth-card" role="dialog" aria-modal="true" aria-labelledby="ashenAuthTitle"><header class="ashen-auth-head"><div><p class="ashen-auth-eyebrow">ASHEN CROWN · PLAYER ACCOUNT</p><h2 id="ashenAuthTitle">Your journey</h2></div><button type="button" class="ashen-auth-close" id="ashenAuthClose" aria-label="Close">×</button></header><div id="ashenAuthFormView"><div class="ashen-auth-tabs" id="ashenAuthTabs" role="tablist" aria-label="Account access"><button type="button" id="ashenSignInTab" aria-selected="true">SIGN IN</button><button type="button" id="ashenSignUpTab" aria-selected="false">CREATE ACCOUNT</button></div><form id="ashenAuthForm"><label class="ashen-auth-field">Email<input id="ashenAuthEmail" name="email" type="email" autocomplete="email" required maxlength="254"></label><label class="ashen-auth-field">Password<input id="ashenAuthPassword" name="password" type="password" autocomplete="current-password" minlength="8" required maxlength="128"></label><button class="ashen-auth-submit" id="ashenAuthSubmit" type="submit">SIGN IN</button><button class="ashen-auth-reset" id="ashenAuthReset" type="button">Forgot password?</button></form></div><div id="ashenAuthAccountView" hidden><div class="ashen-auth-account" id="ashenAuthAccountText"></div><button class="ashen-auth-signout" id="ashenAuthSignOut" type="button">SIGN OUT</button></div><p class="ashen-auth-notice" id="ashenAuthNotice" role="status" aria-live="polite"></p><p class="ashen-auth-note">Your cloud save is private to your account. Never share your password. Supabase row-level security restricts save access by authenticated user.</p></section>';
   document.body.appendChild(modal);
   accountButton.addEventListener('click', () => {
     modal.hidden = false;
@@ -103,6 +105,7 @@ function setAuthNotice(message, kind = '') {
   notice.dataset.kind = kind;
 }
 function setAuthMode(nextMode) {
+  if (recoveryMode) return;
   mode = nextMode === 'signup' ? 'signup' : 'signin';
   const signup = mode === 'signup';
   document.getElementById('ashenSignInTab').setAttribute('aria-selected', String(!signup));
@@ -123,11 +126,22 @@ function updateAccountButton() {
 function renderAuthModal() {
   if (!modal) return;
   const isSignedIn = Boolean(currentSession?.user);
-  document.getElementById('ashenAuthFormView').hidden = isSignedIn;
-  document.getElementById('ashenAuthAccountView').hidden = !isSignedIn;
+  const showForm = !isSignedIn || recoveryMode;
+  document.getElementById('ashenAuthFormView').hidden = !showForm;
+  document.getElementById('ashenAuthAccountView').hidden = showForm;
   document.getElementById('ashenAuthAccountText').textContent = isSignedIn ? 'Signed in as ' + (currentSession.user.email || 'player') + '. Your browser save will sync to your private cloud slot.' : '';
-  if (isSignedIn) setAuthNotice('Account connected.', '');
-  else setAuthMode(mode);
+  document.getElementById('ashenAuthTabs').hidden = recoveryMode;
+  if (recoveryMode) {
+    document.getElementById('ashenAuthTitle').textContent = 'Set a new password';
+    document.getElementById('ashenAuthSubmit').textContent = 'UPDATE PASSWORD';
+    document.getElementById('ashenAuthPassword').autocomplete = 'new-password';
+    document.getElementById('ashenAuthReset').hidden = true;
+    setAuthNotice('Choose a new password with at least 8 characters.');
+  } else if (isSignedIn) {
+    setAuthNotice('Account connected.', '');
+  } else {
+    setAuthMode(mode);
+  }
 }
 async function submitAuthForm(event) {
   event.preventDefault();
@@ -142,7 +156,13 @@ async function submitAuthForm(event) {
   submit.disabled = true;
   submit.textContent = 'PLEASE WAIT…';
   try {
-    if (mode === 'signup') {
+    if (recoveryMode) {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      recoveryMode = false; mode = 'signin';
+      setAuthNotice('Password updated. You can sign in with the new password.');
+      renderAuthModal();
+    } else if (mode === 'signup') {
       const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
       if (error) throw error;
       if (!data.session) setAuthNotice('Account created. Check your email to confirm it, then sign in here.');
