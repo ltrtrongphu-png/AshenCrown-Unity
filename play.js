@@ -210,7 +210,9 @@ function changePlayLanguage(locale){
   try{localStorage.setItem('ashen.language',locale)}catch{}
   document.documentElement.lang=locale;
   const selector=document.getElementById('playLanguageSelect');
-  if(selector)selector.value=locale;
+  const languageNames={en:'Language',vi:'Ngôn ngữ',ja:'言語',ko:'언어',zh:'语言'};
+  if(selector){selector.value=locale;selector.title=languageNames[locale]||'Language';}
+  selector?.closest('label')?.setAttribute('aria-label',languageNames[locale]||'Language');
   const dayLabel=document.getElementById('dayLabel');
   if(dayLabel)delete dayLabel.dataset.rawDayLabel;
   translatePlayTree();
@@ -1327,6 +1329,18 @@ function terrainMound(x,z,s=1,color=0x25261f){
   [-82,-68,1.8],[-60,70,1.5],[-5,84,1.9],[74,74,1.7],
   [86,-62,1.8],[-90,8,1.4],[83,4,1.4]
 ].forEach(p=>terrainMound(...p));
+
+// A distant broken ridgeline closes the otherwise empty playable horizon.
+// It stays outside the walkable bounds and uses low-poly silhouettes only.
+for(let i=0;i<22;i++){
+  const angle=(i/22)*Math.PI*2;
+  const radius=112+(i%4)*2.2;
+  const x=Math.cos(angle)*radius;
+  const z=Math.sin(angle)*radius;
+  const scale=2.0+(i%5)*.42;
+  const color=i%3===0?0x302821:i%3===1?0x292824:0x35302a;
+  terrainMound(x,z,scale,color);
+}
 
 function addFlower(x,z,c){
   const g=new THREE.Group();g.position.set(x,0,z);
