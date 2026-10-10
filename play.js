@@ -236,6 +236,15 @@ window.addEventListener('storage',event=>{
 });
 
 const $=id=>document.getElementById(id);
+function setUiText(id,value){
+  const element=$(id);
+  if(!element)return;
+  const text=String(value);
+  if(element.dataset.rawUiText===text)return;
+  element.dataset.rawUiText=text;
+  element.textContent=text;
+}
+
 const canvas=$('game'), scene=new THREE.Scene();
 scene.background=new THREE.Color(0x0a0b0e); scene.fog=new THREE.Fog(0x151311,58,245);
 const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
@@ -564,18 +573,22 @@ function actor(c,a){
   const scarf=box(.54,.08,.44,a);
   scarf.position.y=1.43; scarf.castShadow=true; g.add(scarf);
 
-  const core=orb(.115,0xff8245,true);
-  core.position.set(0,1.47,.34); g.add(core);
-  return g;
+   return g;
 }
 const playerVisual=actor(0x29221d,0x613724);player.add(playerVisual);
 let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null;
 const bossTelegraphs=[];
 
-const armorMat=new THREE.MeshStandardMaterial({color:0x302a29,roughness:.84,metalness:.18});
-const brassMat=new THREE.MeshStandardMaterial({color:0x9d6b42,roughness:.78,metalness:.28});
+const armorMat=new THREE.MeshStandardMaterial({color:0x302a29,roughness:.38,metalness:.72});
+const brassMat=new THREE.MeshStandardMaterial({color:0x9d6b42,roughness:.31,metalness:.76});
 const chestplate=new THREE.Mesh(new THREE.OctahedronGeometry(.43,0),armorMat);chestplate.scale.set(.88,1.18,.52);chestplate.position.set(0,1.32,.27);chestplate.castShadow=true;playerVisual.add(chestplate);
 const crest=orb(.12,0xff8245,true);crest.position.set(0,1.48,.51);playerVisual.add(crest);
+const crestBezel=new THREE.Mesh(new THREE.TorusGeometry(.185,.027,8,28),brassMat);
+crestBezel.position.set(0,1.48,.49);
+playerVisual.add(crestBezel);
+const crestInset=new THREE.Mesh(new THREE.TorusGeometry(.135,.012,6,24),new THREE.MeshStandardMaterial({color:0x4a2920,roughness:.34,metalness:.48}));
+crestInset.position.set(0,1.48,.505);
+playerVisual.add(crestInset);
 for(const side of [-1,1]){
   const pauldron=new THREE.Mesh(new THREE.DodecahedronGeometry(.24,0),armorMat);pauldron.scale.set(1.08,.72,1);pauldron.position.set(side*.39,1.47,.02);pauldron.castShadow=true;playerVisual.add(pauldron);
   const trim=new THREE.Mesh(new THREE.TorusGeometry(.17,.022,6,10),brassMat);trim.position.set(side*.39,1.47,.12);trim.scale.set(1.15,.7,1);playerVisual.add(trim);
@@ -1880,7 +1893,7 @@ questWaypointGem.position.y=2.8;
 questWaypoint.add(questWaypointGem);
 questWaypoint.visible=false;
 world.add(questWaypoint);
-let questTargetRefresh=0,questUiRefresh=0;
+let questTargetRefresh=0,questUiRefresh=0,lightRefreshAccumulator=0;
 let currentQuestTarget=null;
 
 function getQuestTarget(){
@@ -1975,7 +1988,7 @@ function updateQuestGuide(force=false){
   else if(currentQuestTarget.entity?.root){
     targetPosition=currentQuestTarget.entity.root.getWorldPosition(new THREE.Vector3());
   }
-  const targetMap=currentQuestTarget.entity?.mapId||'sanctuary';
+  const targetMap=currentQuestTarget.kind==='npc'?activeMapId:(currentQuestTarget.entity?.mapId||'sanctuary');
   if(!targetPosition||targetMap!==activeMapId){
     targetLine.textContent='TRAVEL TO · '+(currentQuestTarget.kind==='home'?'Sanctuary':MAPS[targetMap]?.name||currentQuestTarget.label);
     questWaypoint.visible=false;
@@ -2206,13 +2219,17 @@ function tick(dt){
 
   // Warm lantern/fire flicker is kept subtle so the scene still reads naturally in daylight.
   const nightFactor=Math.max(0,(0.28-skyUniforms.uDay.value)/0.28);
-  const updateLights=(Math.floor(time*8)%2)===0;
-  if(updateLights)for(let i=0;i<lightSources.length;i++){
+  lightRefreshAccumulator+=dt;
+  const updateLights=lightRefreshAccumulator>=.1;
+  if(updateLights){
+    lightRefreshAccumulator=0;
+    for(let i=0;i<lightSources.length;i++){
     const light=lightSources[i];
     if(!light)continue;
     light.visible=nightFactor>.12;
     const base=light.userData.baseIntensity||1;
     light.intensity=base*(.25+.75*nightFactor)*(state.settings.animations===false?1:(0.9+Math.sin(time*7+i)*.045));
+    }
   }
 
   if(state.hp<=0){
@@ -2222,13 +2239,13 @@ function tick(dt){
   }
 
   $('playerHp').style.width=Math.max(0,Math.min(100,state.hp/state.maxHp*100))+'%';
-  const xpNeed=100+state.level*55;$('playerXp').style.width=Math.min(100,state.xp/xpNeed*100)+'%';$('xpLabel').textContent=state.xp+' / '+xpNeed+' XP';$('huntLabel').textContent='HUNT · '+((state.hunt?.kills||0)%5)+' / 5';
+  const xpNeed=100+state.level*55;$('playerXp').style.width=Math.min(100,state.xp/xpNeed*100)+'%';setUiText('xpLabel',state.xp+' / '+xpNeed+' XP');setUiText('huntLabel','HUNT · '+((state.hunt?.kills||0)%5)+' / 5');
   $('stamina').style.width=state.stamina+'%';
-  $('level').textContent='LV '+state.level;
-  $('coins').textContent=state.coins+' ASHEN';
-  $('status').textContent=enemies.length?'ENCOUNTER':(keys.ShiftLeft||keys.ShiftRight?'SPRINTING':'EXPLORING');
-  $('locationName').textContent=region().toUpperCase();
-  $('locationHint').textContent=activeMapId!=='sanctuary'?MAPS[activeMapId].hint:
+  setUiText('level','LV '+state.level);
+  setUiText('coins',state.coins+' ASHEN');
+  setUiText('status',enemies.length?'ENCOUNTER':(keys.ShiftLeft||keys.ShiftRight?'SPRINTING':'EXPLORING'));
+  setUiText('locationName',region().toUpperCase());
+  setUiText('locationHint',activeMapId!=='sanctuary'?MAPS[activeMapId].hint:
     region()==='Sanctuary'?'A safe place beneath the last light.':
     region()==='Sanctuary Hamlet'?'Warm windows and small homes surround the sanctuary road.':
     region()==='Ember Grove'?'Living embers grow beneath an old forest canopy.':
@@ -2236,7 +2253,7 @@ function tick(dt){
     region()==='Veil Lake'?'Still water, old bridges and mist between the trees.':
     region()==='Crown Road'?'A wider road toward the old crownlands.':
     region()==='Starless Path'?'A colder road where the trees grow sparse.':
-    'Untamed land beyond the mapped roads.';
+    'Untamed land beyond the mapped roads.');
 
   const a=nearby();
   $('interaction').classList.toggle('show',!!a);
@@ -2336,7 +2353,7 @@ props.traverse(object=>{
   object.receiveShadow=true;
   object.castShadow=hasShadowCasterAncestor(object);
 });
-treeSpots.forEach(g=>g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}));
+treeBatchMeshes.forEach(mesh=>{mesh.castShadow=false;mesh.receiveShadow=true;});
 characters.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
 function setupTouchControls(){
   const controls=document.createElement('div');controls.className='touch-controls';controls.innerHTML='<div class="touch-stick" aria-label="Movement joystick"><i></i></div><div class="touch-actions"><button data-action="interact">USE</button><button data-action="attack">HIT</button><button data-action="dodge">ROLL</button><button data-action="inventory">BAG</button><button data-action="skill" data-skill="0">1</button><button data-action="skill" data-skill="1">2</button><button data-action="skill" data-skill="2">3</button></div>';document.querySelector('.stage').appendChild(controls);
