@@ -1,5 +1,224 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js';
 
+// One locale setting is shared with the landing page; the DOM translation layer
+// also handles UI/GUI fragments created later by menus, dialogue, shop and journal.
+const PLAY_LOCALE_ROWS = [
+['CURRENT JOURNEY','NHIỆM VỤ HIỆN TẠI','現在の旅','현재 여정','当前旅程'],
+['JOURNAL','NHẬT KÝ','ジャーナル','일지','日志'],
+['FIRST JOURNEY','HÀNH TRÌNH ĐẦU TIÊN','最初の旅','첫 여정','初次旅程'],
+['Welcome to Ashen Crown','Chào mừng đến Ashen Crown','Ashen Crownへようこそ','Ashen Crown에 오신 것을 환영합니다','欢迎来到 Ashen Crown'],
+['Learn the basics before stepping into the wider world. You can reopen this guide with','Hãy học các thao tác cơ bản trước khi bước ra thế giới rộng lớn. Bạn có thể mở lại hướng dẫn này bằng phím','広い世界へ進む前に基本操作を学びましょう。このガイドは次のキーで再表示できます：','더 넓은 세계로 나가기 전에 기본 조작을 익히세요. 이 안내서는 다음 키로 다시 열 수 있습니다:','进入广阔世界前先学习基本操作。可使用以下按键重新打开指南：'],
+['Begin the journey','Bắt đầu hành trình','旅を始める','여정 시작','开始旅程'],
+['Move','Di chuyển','移動','이동','移动'],
+['Look around','Quan sát xung quanh','周囲を見る','주변 보기','环顾四周'],
+['Interact','Tương tác','調べる','상호작용','互动'],
+['Role skills','Kỹ năng vai trò','ロールスキル','역할 기술','职业技能'],
+['Ember Pulse','Xung Hỏa Tàn','残り火の波動','잿불 파동','余烬脉冲'],
+['Sprint','Chạy nhanh','ダッシュ','질주','冲刺'],
+['Dodge','Né tránh','回避','회피','闪避'],
+['Inventory','Túi đồ','インベントリ','인벤토리','背包'],
+['World Map','Bản đồ thế giới','ワールドマップ','월드 맵','世界地图'],
+['INVENTORY & EQUIPMENT','TÚI ĐỒ & TRANG BỊ','インベントリと装備','인벤토리 및 장비','背包与装备'],
+['EQUIPPED','ĐANG TRANG BỊ','装備中','장착 중','已装备'],
+['PACK','TÚI ĐỒ','バッグ','가방','背包'],
+['Empty','Trống','空','비어 있음','空'],
+['WORLD MAP','BẢN ĐỒ THẾ GIỚI','ワールドマップ','월드 맵','世界地图'],
+['Discovered','Đã khám phá','発見済み','발견됨','已探索'],
+['Locked','Đang khóa','未解放','잠김','未解锁'],
+['Quest','Nhiệm vụ','クエスト','퀘스트','任务'],
+['CHAPTER','CHƯƠNG','チャプター','챕터','章节'],
+['THE LAST EMBER','TÀN LỬA CUỐI CÙNG','最後の残り火','마지막 잿불','最后的余烬'],
+['Explore · meet people · make choices · shape the world','Khám phá · gặp gỡ · lựa chọn · thay đổi thế giới','探索 · 出会い · 選択 · 世界を形作る','탐험 · 만남 · 선택 · 세계를 바꾸다','探索 · 相遇 · 抉择 · 塑造世界'],
+['Leave','Rời đi','退出','나가기','离开'],
+['JOURNEY PAUSED','TẠM DỪNG HÀNH TRÌNH','旅を一時停止','여정 일시 정지','旅程已暂停'],
+['Resume','Tiếp tục','再開','계속','继续'],
+['Return to Ashen Crown','Trở về Ashen Crown','Ashen Crownへ戻る','Ashen Crown으로 돌아가기','返回 Ashen Crown'],
+['STORY DEMO COMPLETE','HOÀN THÀNH BẢN DEMO','ストーリーデモ完了','스토리 데모 완료','剧情试玩完成'],
+['The road opens.','Con đường đã mở.','道が開かれる。','길이 열렸다.','道路已开启。'],
+['Begin again','Chơi lại','もう一度始める','다시 시작','重新开始'],
+['Back to the showcase','Quay lại trang giới thiệu','ショーケースへ戻る','소개 화면으로 돌아가기','返回展示页'],
+['SANCTUARY','THÁNH ĐỊA','聖域','성역','圣所'],
+['ROLE','VAI TRÒ','ロール','역할','职业'],
+['SETTINGS','CÀI ĐẶT','設定','설정','设置'],
+['LOCAL SAVE READY','ĐÃ SẴN SÀNG LƯU CỤC BỘ','ローカル保存準備完了','로컬 저장 준비 완료','本地存档就绪'],
+['CURRENT JOURNEY','HÀNH TRÌNH HIỆN TẠI','現在の旅','현재 여정','当前旅程'],
+['STORY','CỐT TRUYỆN','物語','스토리','剧情'],
+['PEOPLE','NHÂN VẬT','人物','인물','人物'],
+['WORLD','THẾ GIỚI','世界','세계','世界'],
+['CAMPAIGN','CHIẾN DỊCH','キャンペーン','캠페인','战役'],
+['ASHEN ARCHIVE','BIÊN NIÊN ASHEN','灰燼の記録','애shen 기록 보관소','灰烬档案'],
+['RANKINGS','XẾP HẠNG','ランキング','순위','排名'],
+['ACHIEVEMENTS','THÀNH TỰU','実績','업적','成就'],
+['CHALLENGES','THỬ THÁCH','チャレンジ','도전 과제','挑战'],
+['COLLECTION','BỘ SƯU TẬP','コレクション','수집','收藏'],
+['ITEMS','VẬT PHẨM','アイテム','아이템','物品'],
+['EXPLORING','ĐANG KHÁM PHÁ','探索中','탐험 중','探索中'],
+['SPRINTING','ĐANG CHẠY NHANH','ダッシュ中','질주 중','冲刺中'],
+['ENCOUNTER','GIAO TRANH','遭遇','전투 조우','遭遇战'],
+['Talk','Trò chuyện','話す','대화','交谈'],
+['Gather','Thu thập','採集','수집','采集'],
+['Enter','Đi vào','入る','입장','进入'],
+['Pulse','Phát xung','波動','파동','脉冲'],
+['SETTINGS','CÀI ĐẶT','設定','설정','设置'],
+['Tune sound, animation, controls and image quality. Changes apply immediately and save in this browser.','Điều chỉnh âm thanh, hoạt ảnh, điều khiển và chất lượng hình ảnh. Thay đổi được áp dụng ngay và lưu trên trình duyệt này.','音声、アニメーション、操作、画質を調整します。変更はすぐに反映され、このブラウザーに保存されます。','사운드, 애니메이션, 조작 및 그래픽 품질을 조정합니다. 변경 사항은 즉시 적용되고 이 브라우저에 저장됩니다.','调整声音、动画、控制和画质。更改立即生效，并保存在此浏览器中。'],
+['SOUND','ÂM THANH','サウンド','사운드','声音'],
+['Game sound effects','Hiệu ứng âm thanh trong game','ゲーム効果音','게임 효과음','游戏音效'],
+['Sound volume','Âm lượng','音量','음량','音量'],
+['WORLD & DISPLAY','THẾ GIỚI & HIỂN THỊ','世界と表示','세계 및 화면','世界与显示'],
+['World and character animations','Hoạt ảnh thế giới và nhân vật','世界とキャラクターのアニメーション','세계 및 캐릭터 애니메이션','世界与角色动画'],
+['Combat visual effects','Hiệu ứng chiến đấu','戦闘エフェクト','전투 시각 효과','战斗视觉效果'],
+['Graphics quality','Chất lượng đồ họa','グラフィック品質','그래픽 품질','画质'],
+['Adaptive','Tự động điều chỉnh','自動調整','자동 조절','自适应'],
+['Performance','Hiệu năng','パフォーマンス','성능','性能'],
+['High','Cao','高','높음','高'],
+['Reduce camera motion','Giảm chuyển động camera','カメラの動きを抑える','카메라 움직임 줄이기','减少镜头运动'],
+['CONTROLS & INTERFACE','ĐIỀU KHIỂN & GIAO DIỆN','操作とインターフェース','조작 및 인터페이스','控制与界面'],
+['Interface size','Kích thước giao diện','UIサイズ','인터페이스 크기','界面大小'],
+['Camera field of view','Góc nhìn camera','視野角','카메라 시야각','镜头视野'],
+['Camera sensitivity','Độ nhạy camera','カメラ感度','카메라 감도','镜头灵敏度'],
+['CHARACTER LOOK','GIAO DIỆN NHÂN VẬT','キャラクター外見','캐릭터 외형','角色外观'],
+['CHANGE ROLE & LOOK','ĐỔI VAI TRÒ & NGOẠI HÌNH','ロールと外見を変更','역할 및 외형 변경','更改职业与外观'],
+['OPTIONAL FULL RESOURCE PACK','GÓI TÀI NGUYÊN ĐẦY ĐỦ','フルリソースパック（任意）','전체 리소스 팩(선택)','可选完整资源包'],
+['Production models','Model production','本番モデル','프로덕션 모델','正式模型'],
+['Checking local storage…','Đang kiểm tra bộ nhớ cục bộ…','ローカルストレージを確認中…','로컬 저장소 확인 중…','正在检查本地存储…'],
+['DOWNLOAD FULL PACK','TẢI GÓI ĐẦY ĐỦ','フルパックをダウンロード','전체 팩 다운로드','下载完整资源包'],
+['REMOVE PACK','GỠ GÓI','パックを削除','팩 제거','移除资源包'],
+['Full pack is optional and saved in this browser for later visits. Sound effects are synthesized; this build has no music tracks.','Gói đầy đủ là tùy chọn và được lưu trên trình duyệt này. Hiệu ứng âm thanh được tạo bằng tổng hợp; bản này chưa có nhạc nền.','フルパックは任意で、このブラウザーに保存されます。効果音は合成音で、このビルドに音楽トラックはありません。','전체 팩은 선택 사항이며 이 브라우저에 저장됩니다. 효과음은 합성음이며 이 빌드에는 음악 트랙이 없습니다.','完整资源包为可选项，并保存在此浏览器中。音效由合成生成，本版本没有音乐曲目。'],
+['BUILD','XÂY DỰNG','建設','건설','建造'],
+['REINFORCE','CƯỜNG HÓA','強化','강화','强化'],
+['CLAIM','NHẬN','受け取る','받기','领取'],
+['ASHEN','TÀN TRO','灰燼','잿불','灰烬'],
+['LEVEL','CẤP','レベル','레벨','等级'],
+['CHAPTER','CHƯƠNG','チャプター','챕터','章节'],
+['COMPLETE','HOÀN THÀNH','完了','완료','完成'],
+['COMPLETE · Return to Sanctuary','HOÀN THÀNH · Trở về Thánh Địa','完了 · 聖域へ戻る','완료 · 성역으로 돌아가기','完成 · 返回圣所'],
+['Speak with Lyra','Nói chuyện với Lyra','Lyraと話す','Lyra와 대화','与 Lyra 交谈'],
+['Talk to Lyra','Nói chuyện với Lyra','Lyraに話しかける','Lyra와 대화하기','与 Lyra 对话'],
+['Meet Lyra','Gặp Lyra','Lyraに会う','Lyra 만나기','寻找 Lyra'],
+['Embers in the Grove','Tàn lửa trong lùm cây','木立の残り火','숲속의 잿불','林中的余烬'],
+['Gather chapter traces','Thu thập dấu tích chương','章の痕跡を集める','챕터 흔적 수집','收集章节痕迹'],
+['Find two living embers before the bell beneath Hollow can be heard.','Tìm hai tàn lửa còn sống trước khi nghe thấy tiếng chuông dưới Hollow.','Hollowの地下の鐘が聞こえる前に、生きた残り火を2つ見つけよう。','Hollow 아래 종소리가 들리기 전에 살아 있는 잿불 두 개를 찾으세요.','在听见 Hollow 地底的钟声前，找到两枚仍在燃烧的余烬。'],
+['Ask the gatekeeper why one road on his map has been cut away.','Hỏi người giữ cổng vì sao một con đường trên bản đồ bị xóa bỏ.','門番に、地図から道が消された理由を尋ねよう。','문지기에게 지도에서 길 하나가 지워진 이유를 물으세요.','询问守门人，为什么地图上的一条路被抹去了。'],
+['Recover the two memories the Crown tried to erase.','Tìm lại hai ký ức mà Vương Miện cố xóa bỏ.','王冠が消そうとした2つの記憶を取り戻そう。','왕관이 지우려 한 두 기억을 되찾으세요.','找回王冠试图抹去的两段记忆。'],
+['Defeat the chapter warden','Đánh bại hộ vệ chương','章の守護者を倒す','챕터 수호자 처치','击败章节守卫'],
+['Return to Lyra','Trở về gặp Lyra','Lyraのもとへ戻る','Lyra에게 돌아가기','返回 Lyra 身边'],
+['Gather chapter traces','Thu thập dấu tích chương','章の痕跡を集める','챕터 흔적 수집','收集章节痕迹'],
+['Find two living embers','Tìm hai tàn lửa còn sống','生きた残り火を2つ見つける','살아 있는 잿불 두 개 찾기','找到两枚活余烬'],
+['Collect Memory Echoes','Thu thập Vọng Ức','記憶の残響を集める','기억의 메아리 수집','收集记忆回响'],
+['Press E to interact','Nhấn E để tương tác','Eキーで調べる','E 키로 상호작용','按 E 互动'],
+['Press E near the glowing object to collect it.','Đến gần vật thể phát sáng rồi nhấn E để thu thập.','光る物の近くでEキーを押して収集します。','빛나는 물체 근처에서 E 키를 눌러 수집하세요.','靠近发光物体并按 E 收集。'],
+['Follow the marker and check the distance in the quest panel.','Đi theo dấu chỉ đường và xem khoảng cách trong bảng nhiệm vụ.','マーカーをたどり、クエスト欄で距離を確認してください。','표식을 따라가며 퀘스트 패널에서 거리를 확인하세요.','沿着标记前进，并查看任务面板中的距离。'],
+['Go to Lyra at Sanctuary','Đến gặp Lyra tại Thánh Địa','聖域にいるLyraのもとへ','성역에 있는 Lyra에게 가기','前往圣所寻找 Lyra'],
+['Go to Orren at Sanctuary','Đến gặp Orren tại Thánh Địa','聖域にいるOrrenのもとへ','성역에 있는 Orren에게 가기','前往圣所寻找 Orren'],
+['Collect 2 Emberleaf','Thu thập 2 Emberleaf','Emberleafを2個集める','Emberleaf 2개 수집','收集 2 个 Emberleaf'],
+['Collect 2 Memory Echoes','Thu thập 2 Vọng Ức','記憶の残響を2つ集める','기억의 메아리 2개 수집','收集 2 个记忆回响'],
+['Press E to talk to the character.','Nhấn E để trò chuyện với nhân vật.','Eキーでキャラクターと話します。','E 키를 눌러 캐릭터와 대화하세요.','按 E 与角色交谈。'],
+['Reach the marker, then press E to gather the item.','Đi tới dấu chỉ đường rồi nhấn E để nhặt vật phẩm.','マーカーまで移動し、Eキーでアイテムを採集します。','표식에 도착한 뒤 E 키로 아이템을 수집하세요.','到达标记处，再按 E 拾取物品。'],
+['Dodge when the Warden telegraphs, then attack during recovery.','Né khi Hộ Vệ báo đòn, rồi phản công lúc hắn hồi chiêu.','守護者の予兆を回避し、攻撃後の隙に反撃しよう。','수호자가 공격을 예고하면 회피하고 후딜레이에 공격하세요.','守卫出现攻击预兆时闪避，并在其恢复时反击。'],
+['Distance','Khoảng cách','距離','거리','距离'],
+['TARGET','MỤC TIÊU','目標','목표','目标'],
+['TRAVEL TO','DI CHUYỂN ĐẾN','移動先','이동 위치','前往'],
+['No active target','Không có mục tiêu hiện tại','現在の目標なし','활성 목표 없음','暂无目标'],
+['MORNING','BUỔI SÁNG','朝','아침','早晨'],
+['NOON','BUỔI TRƯA','昼','낮','中午'],
+['DUSK','HOÀNG HÔN','夕暮れ','해질녘','黄昏'],
+['NIGHT','BAN ĐÊM','夜','밤','夜晚'],
+['DAY ','NGÀY ','日目 ','일차 ','第 '],
+['Press E','Nhấn E','Eキーを押す','E 키 누르기','按 E'],
+['GATE','CỔNG','門','관문','大门'],
+['WAYFINDER','NGƯỜI DẪN ĐƯỜNG','道案内','길잡이','引路人'],
+['SANCTUARY KEEPER','NGƯỜI GIỮ THÁNH ĐỊA','聖域の番人','성역의 수호자','圣所守护者'],
+['KEEPER OF ECHOES','NGƯỜI GIỮ VỌNG ỨC','残響の守り手','메아리의 수호자','回响守护者'],
+['Accessible','Có thể đến','到達可能','이동 가능','可前往'],
+['Sealed by story','Bị khóa theo cốt truyện','物語で封印中','스토리 진행 필요','剧情锁定'],
+['Reputation','Danh tiếng','評判','평판','声望'],
+['Purchased','Đã mua','購入済み','구매 완료','已购买'],
+['added to your inventory','đã thêm vào túi đồ','をインベントリに追加','인벤토리에 추가됨','已加入背包'],
+['Travelled to','Đã di chuyển đến','移動先：','이동했습니다：','已前往'],
+['The world wakes — villages stir, wildlife roam, and the morning sun rises.','Thế giới thức giấc — dân làng bắt đầu hoạt động, động vật rong ruổi và mặt trời buổi sáng mọc lên.','世界が目覚める。村人が動き、野生動物が歩き、朝日が昇る。','세계가 깨어납니다. 주민들이 움직이고 야생동물이 돌아다니며 아침 해가 떠오릅니다.','世界苏醒了——村民开始活动，野生动物四处漫游，朝阳升起。'],
+['Loading production 3D models and embedded PBR textures in the background…','Đang tải model 3D production và texture PBR trong nền…','高品質3DモデルとPBRテクスチャをバックグラウンドで読み込み中…','프로덕션 3D 모델과 PBR 텍스처를 백그라운드에서 불러오는 중…','正在后台加载正式 3D 模型与嵌入式 PBR 纹理…'],
+['Production character and boss models loaded with aligned PBR textures.','Đã tải model nhân vật và boss production với texture PBR đồng bộ.','キャラクターとボスの本番モデルをPBRテクスチャ付きで読み込みました。','PBR 텍스처가 정렬된 프로덕션 캐릭터 및 보스 모델을 불러왔습니다.','已加载角色与 Boss 正式模型及匹配的 PBR 纹理。']
+];
+const PLAY_LOCALES = ['en','vi','ja','ko','zh'];
+const PLAY_TRANSLATION_MAP = new Map(PLAY_LOCALE_ROWS.map(row=>[row[0],row]));
+let playLanguage = PLAY_LOCALES.includes(localStorage.getItem('ashen.language'))
+  ? localStorage.getItem('ashen.language')
+  : (PLAY_LOCALES.includes((navigator.language||'en').slice(0,2).toLowerCase())?(navigator.language||'en').slice(0,2).toLowerCase():'en');
+const translatedTextNodes = new WeakMap();
+function playTranslateText(source, locale=playLanguage) {
+  if(locale==='en')return source;
+  const trimmed=source.trim();
+  if(!trimmed)return source;
+  const exact=PLAY_TRANSLATION_MAP.get(trimmed);
+  let value=exact?exact[PLAY_LOCALES.indexOf(locale)+1]:trimmed;
+  if(!exact){
+    const rows=[...PLAY_LOCALE_ROWS].sort((a,b)=>b[0].length-a[0].length);
+    for(const row of rows){
+      const [english,...translations]=row;
+      if(!english||english.length<3)continue;
+      const translated=translations[PLAY_LOCALES.indexOf(locale)];
+      const escaped=english.replace(/[.*+?^${}()|[\]\\]/g,'\\import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js';
+');
+      value=value.replace(new RegExp(escaped,'gi'),translated);
+    }
+  }
+  const leading=source.match(/^\\s*/)?.[0]||'';
+  const trailing=source.match(/\\s*$/)?.[0]||'';
+  return leading+value+trailing;
+}
+function translateTextNode(node){
+  if(!node||node.nodeType!==Node.TEXT_NODE||!node.nodeValue.trim())return;
+  let record=translatedTextNodes.get(node);
+  const current=node.nodeValue;
+  if(!record)record={source:current,rendered:current};
+  else if(current!==record.rendered){
+    const previous=record.source.trim();
+    const row=PLAY_TRANSLATION_MAP.get(previous);
+    const known=row&&row.slice(1).includes(current.trim());
+    if(!known)record.source=current;
+  }
+  const next=playTranslateText(record.source);
+  record.rendered=next;
+  translatedTextNodes.set(node,record);
+  if(current!==next)node.nodeValue=next;
+}
+function translatePlayTree(root=document.body){
+  if(!root)return;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  let node;
+  while((node=walker.nextNode()))translateTextNode(node);
+}
+function changePlayLanguage(locale){
+  if(!PLAY_LOCALES.includes(locale))return;
+  playLanguage=locale;
+  try{localStorage.setItem('ashen.language',locale)}catch{}
+  document.documentElement.lang=locale;
+  const selector=document.getElementById('playLanguageSelect');
+  if(selector)selector.value=locale;
+  const dayLabel=document.getElementById('dayLabel');
+  if(dayLabel)delete dayLabel.dataset.rawDayLabel;
+  translatePlayTree();
+  if(typeof setQuest==='function')setQuest();
+  if(typeof renderJournal==='function'&&document.getElementById('journal')?.classList.contains('open'))renderJournal('story');
+  const menu=document.getElementById('systemMenu');
+  if(menu?.classList.contains('show')&&typeof openSystemMenu==='function')openSystemMenu(menu.dataset.page||'settings');
+}
+const playLanguageSelector=document.getElementById('playLanguageSelect');
+if(playLanguageSelector){
+  playLanguageSelector.value=playLanguage;
+  playLanguageSelector.addEventListener('change',()=>changePlayLanguage(playLanguageSelector.value));
+}
+translatePlayTree();
+new MutationObserver(records=>{
+  for(const record of records)for(const node of record.addedNodes){
+    if(node.nodeType===Node.TEXT_NODE)translateTextNode(node);
+    else if(node.nodeType===Node.ELEMENT_NODE)translatePlayTree(node);
+  }
+}).observe(document.body,{subtree:true,childList:true});
+window.addEventListener('storage',event=>{
+  if(event.key==='ashen.language'&&PLAY_LOCALES.includes(event.newValue))changePlayLanguage(event.newValue);
+});
+
 const $=id=>document.getElementById(id);
 const canvas=$('game'), scene=new THREE.Scene();
 scene.background=new THREE.Color(0x0a0b0e); scene.fog=new THREE.Fog(0x151311,58,245);
@@ -330,7 +549,7 @@ function actor(c,a){
   scarf.position.y=1.43; scarf.castShadow=true; g.add(scarf);
 
   const core=orb(.115,0xff8245,true);
-  core.position.set(0,1.1,.34); g.add(core);
+  core.position.set(0,1.47,.34); g.add(core);
   return g;
 }
 const playerVisual=actor(0x29221d,0x613724);player.add(playerVisual);
@@ -339,11 +558,11 @@ const bossTelegraphs=[];
 
 const armorMat=new THREE.MeshStandardMaterial({color:0x302a29,roughness:.84,metalness:.18});
 const brassMat=new THREE.MeshStandardMaterial({color:0x9d6b42,roughness:.78,metalness:.28});
-const chestplate=new THREE.Mesh(new THREE.OctahedronGeometry(.43,0),armorMat);chestplate.scale.set(.88,1.18,.52);chestplate.position.set(0,1.08,.27);chestplate.castShadow=true;playerVisual.add(chestplate);
-const crest=orb(.12,0xff8245,true);crest.position.set(0,1.12,.51);playerVisual.add(crest);
+const chestplate=new THREE.Mesh(new THREE.OctahedronGeometry(.43,0),armorMat);chestplate.scale.set(.88,1.18,.52);chestplate.position.set(0,1.32,.27);chestplate.castShadow=true;playerVisual.add(chestplate);
+const crest=orb(.12,0xff8245,true);crest.position.set(0,1.48,.51);playerVisual.add(crest);
 for(const side of [-1,1]){
-  const pauldron=new THREE.Mesh(new THREE.DodecahedronGeometry(.27,0),armorMat);pauldron.scale.set(1.15,.72,1);pauldron.position.set(side*.43,1.37,.02);pauldron.castShadow=true;playerVisual.add(pauldron);
-  const trim=new THREE.Mesh(new THREE.TorusGeometry(.19,.025,6,10),brassMat);trim.position.set(side*.43,1.37,.12);trim.scale.set(1.15,.7,1);playerVisual.add(trim);
+  const pauldron=new THREE.Mesh(new THREE.DodecahedronGeometry(.24,0),armorMat);pauldron.scale.set(1.08,.72,1);pauldron.position.set(side*.39,1.47,.02);pauldron.castShadow=true;playerVisual.add(pauldron);
+  const trim=new THREE.Mesh(new THREE.TorusGeometry(.17,.022,6,10),brassMat);trim.position.set(side*.39,1.47,.12);trim.scale.set(1.15,.7,1);playerVisual.add(trim);
 }
 const crownMat=brassMat;
 for(let i=-1;i<=1;i++){
