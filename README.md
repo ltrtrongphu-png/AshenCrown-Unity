@@ -294,3 +294,8 @@ The browser site uses Supabase Auth for email/password sign-up, sign-in, passwor
 ### Security boundary
 
 This is still a single-player browser demo: localStorage and client-submitted JSON can be modified by the player. Row Level Security isolates one account's save row from other accounts, but it does not prove that a level, inventory or reward is legitimate. Do not use client-submitted save fields for competitive rankings, paid items, PvP, or other trust-sensitive rewards without a server-authoritative validation layer.
+
+
+## Browser game CDN fallback and runtime diagnostics
+
+The story demo loads the pinned Three.js version 0.186.1 using jsDelivr, then esm.sh and unpkg if a provider fails. CSP permits only these explicitly listed providers. The play boot watchdog reports the browser's actual JavaScript / WebGL error and source location when available. A successful Vercel build is not a substitute for a real browser/WebGL smoke test.

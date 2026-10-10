@@ -1,4 +1,29 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js';
+// Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
+// prevent the entire game from starting.
+async function loadThreeEngine() {
+  const sources = [
+    ['jsDelivr', 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js'],
+    ['esm.sh', 'https://esm.sh/three@0.186.1'],
+    ['unpkg', 'https://unpkg.com/three@0.186.1/build/three.module.js']
+  ];
+  const failures = [];
+  for (const [provider, url] of sources) {
+    try {
+      const module = await import(url);
+      console.info('[Ashen Crown] Three.js loaded via ' + provider + '.');
+      return module;
+    } catch (error) {
+      failures.push(provider + ': ' + String(error?.message || error || 'unknown error'));
+      console.warn('[Ashen Crown] Three.js CDN failed (' + provider + '):', error);
+    }
+  }
+  const detail = failures.join(' | ');
+  window.dispatchEvent(new CustomEvent('ashen:game-init-error', {
+    detail: { message: 'Could not download Three.js from any configured CDN.', diagnostic: detail }
+  }));
+  throw new Error('Three.js could not be loaded from jsDelivr, esm.sh or unpkg. ' + detail);
+}
+const THREE = await loadThreeEngine();
 
 // One locale setting is shared with the landing page; the DOM translation layer
 // also handles UI/GUI fragments created later by menus, dialogue, shop and journal.
@@ -362,7 +387,7 @@ function playTranslateText(source, locale=playLanguage) {
     for(const row of PLAY_TRANSLATION_ROWS_SORTED){
       const [english,...translations]=row;
       if(!english||english.length<3)continue;
-      value=replaceIgnoreCase(value,english,translations[PLAY_LOCALES.indexOf(locale)]);
+      value=replaceIgnoreCase(value,english,translations[PLAY_LOCALES.indexOf(locale)-1]);
     }
   }
   const leading=source.match(/^\s*/)?.[0]||'';
