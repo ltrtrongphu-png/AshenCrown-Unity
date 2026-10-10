@@ -24,7 +24,7 @@
       ]
     },
     {
-      "source": "/(.*)\\.(js|css|svg|ico|png|jpg|jpeg|webp|woff2|json)",
+      "source": "/(.*)\\.(js|css|svg|ico|png|jpg|jpeg|webp|woff2|json|glb)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" },
         { "key": "Vercel-CDN-Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" }
