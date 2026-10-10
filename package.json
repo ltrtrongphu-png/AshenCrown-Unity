@@ -1,0 +1,9 @@
+{
+  "name": "ashen-crown-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static browser demo for Ashen Crown: The Last Ember",
+  "dependencies": {
+    "three": "0.186.1"
+  }
+}
