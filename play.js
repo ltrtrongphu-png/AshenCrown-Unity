@@ -256,6 +256,14 @@ const PLAY_LOCALE_ROWS = [
 ['ROLL','LĂN NÉ','回避','구르기','翻滚'],
 ['USE','DÙNG','使用','사용','使用'],
 ['BAG','TÚI','バッグ','가방','背包'],
+
+['3D STORY RPG','3D RPG CỐT TRUYỆN','3DストーリーRPG','3D 스토리 RPG','3D 剧情 RPG'],
+['DAY','NGÀY','日','일차','日'],
+['PAUSE','TẠM DỪNG','一時停止','일시 정지','暂停'],
+['LOCAL SAVE READY','ĐÃ SẴN SÀNG LƯU CỤC BỘ','ローカル保存準備完了','로컬 저장 준비 완료','本地存档就绪'],
+['Current target','Mục tiêu hiện tại','現在の目標','현재 목표','当前目标'],
+['Gather chapter traces','Thu thập dấu tích chương','章の痕跡を集める','챕터 흔적 수집','收集章节痕迹'],
+['HUNT CONTRACT','HỢP ĐỒNG SĂN','狩猟契約','사냥 계약','狩猎契约'],
 ];
 const PLAY_LOCALES = ['en','vi','ja','ko','zh'];
 const PLAY_TRANSLATION_MAP = new Map(PLAY_LOCALE_ROWS.map(row=>[row[0],row]));
@@ -724,7 +732,7 @@ function actor(c,a){
    return g;
 }
 const playerVisual=actor(0x29221d,0x613724);player.add(playerVisual);
-let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null;
+let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null,productionGltfLoader=null,productionBossBuffer=null,productionBossLoadPromise=null;
 const bossTelegraphs=[];
 
 const armorMat=new THREE.MeshStandardMaterial({color:0x302a29,roughness:.38,metalness:.72});
@@ -1768,7 +1776,10 @@ function spawnEnemy(){
   const baseAttackDamage=(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2);
   encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,baseAttackDamage,attackDamage:baseAttackDamage,attackSkill:0,attackCycle:0,body:b,fallbackVisuals:g.children.slice(),isBoss};
   enemies=[encounter];
-  if(isBoss)attachProductionBoss(encounter);
+  if(isBoss){
+    if(productionBossScene)attachProductionBoss(encounter);
+    else void ensureProductionBossLoaded().then(()=>{if(encounter?.isBoss)attachProductionBoss(encounter)}).catch(error=>console.warn('[Ashen Crown] Boss model stays on fallback:',error));
+  }
   setEncounterHud(encounter);
   toastMsg(isBoss?'The bell answers. The Warden has found you.':'A wandering shade has entered the wilds.');
 }
@@ -1943,22 +1954,30 @@ function triggerBossPhase(enemy,phase){
     :'Warden Phase I · read the attack tells.');
 }
 
+function parseProductionGlb(loader,buffer){
+  return new Promise((resolve,reject)=>loader.parse(buffer,'',resolve,reject));
+}
+
 async function loadFullResourceModels(manifest,cache){
   if(fullPackLoaderPromise)return fullPackLoaderPromise;
   fullPackLoaderPromise=(async()=>{
     try{
       const loaderModule=await import('https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/loaders/GLTFLoader.js');
-      const loader=new loaderModule.GLTFLoader();
-      const files=await Promise.all(manifest.files.map(async file=>{
+      productionGltfLoader=new loaderModule.GLTFLoader();
+
+      // Fetch cached buffers together, then parse only the player on startup.
+      // The boss GLB is parsed lazily when an encounter needs it to reduce first-load hitching.
+      const assets=await Promise.all(manifest.files.map(async file=>{
         const response=await cache.match(new URL(file.url,location.origin));
         if(!response)throw new Error('Full pack is incomplete.');
-        const buffer=await response.arrayBuffer();
-        return new Promise((resolve,reject)=>loader.parse(buffer,'',resolve,reject));
+        return {url:file.url,buffer:await response.arrayBuffer()};
       }));
-      const sentinel=files.find((_,i)=>manifest.files[i].url.includes('AshenSentinel'));
-      const regent=files.find((_,i)=>manifest.files[i].url.includes('AshenRegent'));
-      if(!sentinel||!regent)throw new Error('The production models are missing from the pack.');
+      const sentinelAsset=assets.find(asset=>asset.url.includes('AshenSentinel'));
+      const regentAsset=assets.find(asset=>asset.url.includes('AshenRegent'));
+      if(!sentinelAsset||!regentAsset)throw new Error('The production models are missing from the pack.');
 
+      const sentinel=await parseProductionGlb(productionGltfLoader,sentinelAsset.buffer);
+      productionBossBuffer=regentAsset.buffer;
       productionPlayerScene=sentinel.scene;
       productionPlayerScene.name='production-player-model';
       prepareProductionModel(productionPlayerScene,2.42,'player');
@@ -1970,35 +1989,40 @@ async function loadFullResourceModels(manifest,cache){
       activePlayerAction='';
       playPlayerAnimation('Idle');
 
-      productionBossScene=regent.scene;
-      productionBossScene.name='production-boss-model';
-      prepareProductionModel(productionBossScene,3.15,'boss');
-      productionBossAnimations=regent.animations;
-      productionBossMixer=new THREE.AnimationMixer(productionBossScene);
-      productionBossActions=Object.fromEntries(regent.animations.map(clip=>[clip.name,productionBossMixer.clipAction(clip)]));
-      activeBossAction='';
-      if(encounter?.isBoss)attachProductionBoss(encounter);
-
+      if(encounter?.isBoss)await ensureProductionBossLoaded();
       return true;
     }catch(error){
       fullPackLoaderPromise=null;
+      productionGltfLoader=null;
+      productionBossBuffer=null;
       throw error;
     }
   })();
   return fullPackLoaderPromise;
 }
 
-function attachProductionBoss(enemy){
-  if(!productionBossScene||!enemy?.isBoss)return;
-  productionBossScene.removeFromParent();
-  enemy.root.add(productionBossScene);
-  // Preserve the normalized foot-pivot offset computed from the GLB bounds.
-  if(Array.isArray(enemy.fallbackVisuals))enemy.fallbackVisuals.forEach(object=>{if(object)object.visible=false});
-  else if(enemy.body)enemy.body.visible=false;
-  for(const action of Object.values(productionBossActions))action.stop();
-  activeBossAction='';
-  bossActionUntil=0;
-  playBossAnimation('Idle');
+async function ensureProductionBossLoaded(){
+  if(productionBossScene)return true;
+  if(productionBossLoadPromise)return productionBossLoadPromise;
+  if(!productionGltfLoader||!productionBossBuffer)return false;
+
+  productionBossLoadPromise=(async()=>{
+    const regent=await parseProductionGlb(productionGltfLoader,productionBossBuffer);
+    productionBossScene=regent.scene;
+    productionBossScene.name='production-boss-model';
+    prepareProductionModel(productionBossScene,3.15,'boss');
+    productionBossAnimations=regent.animations;
+    productionBossMixer=new THREE.AnimationMixer(productionBossScene);
+    productionBossActions=Object.fromEntries(regent.animations.map(clip=>[clip.name,productionBossMixer.clipAction(clip)]));
+    activeBossAction='';
+    if(encounter?.isBoss)attachProductionBoss(encounter);
+    return true;
+  })();
+  try{return await productionBossLoadPromise}
+  catch(error){
+    productionBossLoadPromise=null;
+    throw error;
+  }
 }
 
 async function pruneOldResourcePackCaches(activeCacheName){
@@ -2011,6 +2035,7 @@ async function pruneOldResourcePackCaches(activeCacheName){
 
 async function loadCachedResourcePack(){
   if(!('caches'in window))return;
+  if(state.settings.resourcePackDisabled===true&&state.settings.resourcePackDisabledVersion===MODEL_PIPELINE_VERSION)return;
   try{
     const manifest=await readResourceManifest();
     const cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version);
