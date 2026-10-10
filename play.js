@@ -2825,7 +2825,9 @@ function frame(t){
     fpsAccumulator=0;fpsFrames=0;
   }
   const dt=Math.min(.033,rawDt);
-  if(!anyOverlayOpen()){tick(dt);renderer.render(scene,camera)}
+  if(!anyOverlayOpen())tick(dt);
+  // Keep rendering the world while menus/tutorials are open; only the simulation pauses.
+  renderer.render(scene,camera)
   if(toastTimer>0&&(toastTimer-=dt)<=0)$('toast').classList.remove('show');
   if(!document.hidden)requestAnimationFrame(frame);
 }
@@ -2834,3 +2836,4 @@ document.addEventListener('visibilitychange',()=>{
   else{last=performance.now();requestAnimationFrame(frame)}
 });
 requestAnimationFrame(frame);
+window.dispatchEvent(new Event('ashen:game-ready'));
