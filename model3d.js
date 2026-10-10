@@ -179,7 +179,7 @@ if (host) {
       }
       normalizeModelToHeight(gltf.scene, 2.42);
       prepareModelMaterials(gltf.scene);
-      gltf.scene.position.y = .14;
+      gltf.scene.position.y += .14;
       gltf.scene.name = 'AshenSentinel_Showcase';
       root.add(gltf.scene);
     }, undefined, err => console.warn("Ashen Crown production model fallback active:", err));
