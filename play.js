@@ -364,6 +364,7 @@ const bellLandmarks=[];
 const groundMat=wmat('groundSurface',0x17140f,.98);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240,48,48),groundMat);
 ground.rotation.x=-Math.PI/2;
+ground.receiveShadow=true;
 world.add(ground);
 
 const grid=new THREE.GridHelper(120,60,0x332a24,0x1b1714);
@@ -380,6 +381,7 @@ function path(x,z,w,d,rot=0,color=0x2a201a){
   p.rotation.x=-Math.PI/2;
   p.rotation.z=rot;
   p.position.set(x,.018,z);
+  p.receiveShadow=true;
   paths.add(p);
 }
 
@@ -519,7 +521,7 @@ function wbox(x,y,z,color,key,emission=0){
   return mesh;
 }
 function tree(x,z,s=1,variant=0){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='AshenTree';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.scale.setScalar(s);
 
@@ -565,7 +567,7 @@ for(let i=0;i<48;i++){
 }
 
 function rock(x,z,s=1){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='RockCluster';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.rotation.y=(x*0.17+z*0.09);
   const r=new THREE.Mesh(new THREE.DodecahedronGeometry(.75,1),wmat('rock',0x45413b,.94));
@@ -623,7 +625,7 @@ function lantern(x,z,tall=1){
 [[-7,-4,1],[7,-4,1],[-8,7,.8],[8,7,.8],[0,-13,1],[-17,-20,.8],[18,-22,.8],[36,-7,.9],[-36,8,.9]].forEach(p=>lantern(...p));
 
 function house(x,z,s=1,rot=0,variant=0,name='House'){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.userData.shadowCaster=true;
   g.name=name;
   g.position.set(x,0,z);
   g.rotation.y=rot;
@@ -682,7 +684,7 @@ function house(x,z,s=1,rot=0,variant=0,name='House'){
 }
 
 function well(x,z,s=1){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='VillageWell';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   const base=new THREE.Mesh(new THREE.CylinderGeometry(1.55*s,1.75*s,.75*s,14),wmat('wellStone',0x59514a,.94));
   base.position.y=.38*s;
@@ -706,7 +708,7 @@ function well(x,z,s=1){
 }
 
 function fence(x,z,len=8,rot=0){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='WoodFence';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.rotation.y=rot;
   for(let i=0;i<=len;i++){
@@ -728,7 +730,7 @@ function fence(x,z,len=8,rot=0){
 }
 
 function bridge(x,z,len=14,rot=0){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='WoodBridge';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.rotation.y=rot;
   for(let i=0;i<len;i++){
@@ -774,7 +776,7 @@ function pond(x,z,rx,rz){
 }
 
 function ruin(x,z,s=1){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='HollowRuin';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.rotation.y=(x+z)*.03;
   for(const p of [[-2,1,0],[2,1,.2],[-1.2,1,1.8],[1.4,1,1.7]]){
@@ -833,7 +835,7 @@ function hollowBell(x,z){
 hollowBell(56,-12);
 
 function campfire(x,z){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='Campfire';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   for(let i=0;i<6;i++){
     const log=wbox(.22,1.2,.22,0x503226,'fireLog');
@@ -856,7 +858,7 @@ function campfire(x,z){
 [[-1,-1],[17,12],[-17,-30],[37,-6],[49,39],[-49,-14]].forEach(p=>campfire(...p));
 
 function stall(x,z,rot=0,variant=0){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='MarketStall';g.userData.shadowCaster=true;
   g.position.set(x,0,z); g.rotation.y=rot;
   const wood=wmat('stallWood',0x4b3428,.92);
   const roof=wmat('stallRoof'+variant,variant%2?0x6c3b31:0x45525f,.94);
@@ -884,7 +886,7 @@ function crate(x,z,s=1){
   const c=wbox(.72*s,.72*s,.72*s,0x715137,'crate'); c.position.set(x,.36*s,z); props.add(c); addBoxCollider(x,z,.40*s,.40*s,0,'crate'); return c;
 }
 function cart(x,z,rot=0){
-  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;
+  const g=new THREE.Group();g.name='MarketCart';g.userData.shadowCaster=true;g.position.set(x,0,z);g.rotation.y=rot;
   const bed=wbox(2.1,.35,1.15,0x5b3f2d,'cartBed');bed.position.y=.72;g.add(bed);
   for(const sx of [-.75,.75]){
     const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.48,.48,.16,18),wmat('wheel',0x33251e,.98));
@@ -902,7 +904,7 @@ crate(-7,14,.9); crate(9,14,.8); crate(-16,-22,.9); crate(-2,-27,1);
 cart(1,13,.04); cart(-15,-25,.22);
 
 function forge(x,z){
-  const g=new THREE.Group();g.position.set(x,0,z);
+  const g=new THREE.Group();g.name='VillageForge';g.userData.shadowCaster=true;g.position.set(x,0,z);
   const base=wbox(2.5,.55,2.0,0x49423d,'forgeBase');base.position.y=.28;g.add(base);
   const roof=new THREE.Mesh(new THREE.ConeGeometry(1.9,1.35,4),wmat('forgeRoof',0x313136,.92));
   roof.position.y=2.35;roof.rotation.y=Math.PI/4;roof.castShadow=true;g.add(roof);
@@ -1336,7 +1338,8 @@ function spawnEnemy(){
   g.add(e1,e2);
   characters.add(g);
   const maxHp=Math.round((isBoss?150:state.quest>=3?90:45)*(1+(state.chapter-1)*.18)+Math.max(0,state.level-1)*4);
-  encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,attackDamage:(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2),attackSkill:0,body:b,isBoss};
+  const baseAttackDamage=(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2);
+  encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,baseAttackDamage,attackDamage:baseAttackDamage,attackSkill:0,attackCycle:0,body:b,isBoss};
   enemies=[encounter];
   if(isBoss)attachProductionBoss(encounter);
   setEncounterHud(encounter);
@@ -1369,7 +1372,33 @@ function upgradeSkill(index){if(!state.skillPoints||!Number.isInteger(index)||in
 function recordHuntKill(boss){state.hunt=state.hunt||{kills:0};state.hunt.kills++;state.shards+=boss?3:1;if(state.hunt.kills%5===0)toastMsg('Hunt contract ready · claim it at the Sanctuary');}
 function finishEncounter(){const defeated=encounter;if(!defeated)return;const bellWaiting=!defeated.isBoss&&state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated;defeated.root.removeFromParent();enemies=[];recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);if(defeated.isBoss){const ch=window.ASHEN_CAMPAIGN[state.chapter-1]||window.ASHEN_CAMPAIGN[0];state.flags.bellWardenDefeated=true;state.quest=4;if(state.chapter===1){item('Eda Vey’s Name','Quest Relic','Legendary',['Memory','Identity'],{focus:2});state.log.unshift('The Bell Warden was Eda Vey, the keeper who refused to let the Crown erase her village.');toastMsg('The Bell Warden falls — Eda Vey is remembered.')}else{item(ch.items[ch.items.length-1]||ch.title,'Chapter Relic','Legendary',['Chapter '+state.chapter,'Boss Drop'],{focus:2});state.log.unshift('The chapter warden fell. '+ch.title+' can no longer keep its record hidden.');toastMsg(ch.title+' warden defeated · chapter relic recovered')}setQuest()}else{item('Ashen Wisp Fragment','Relic','Rare',['Encounter Drop'],{focus:1});if(!bellWaiting)toastMsg('Encounter cleared · +1 forge shard')}encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy()}saveState()}
 function advanceChapter(){if(state.quest<5||state.chapter>=10)return;state.meta.chaptersComplete=Math.max(state.meta.chaptersComplete,state.chapter);updateSanctuaryBuild();state.chapter++;state.quest=0;state.chapterGathered=0;state.echoes=0;state.flags.bellAwakened=false;state.flags.bellWardenDefeated=false;state.flags.gate=false;state.flags.truth=false;state.flags.sanctuaryOpen=false;state.flags.protectedSanctuary=false;state.collectedNodes=[];restoreCollectedNodes();state.hp=state.maxHp;state.stamina=100;setActiveMap(mapIdForChapter(state.chapter));const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];state.log.unshift('Expedition '+state.chapter+' begins: '+(chapter?.title||'The next road')+'.');saveState();$('systemMenu').classList.remove('show');setQuest();showChapterTitle(chapter?.title||'NEW EXPEDITION','Explore '+MAPS[activeMapId].name+' · gather · hunt · shape this chapter');toastMsg('Chapter '+String(state.chapter).padStart(2,'0')+' · '+MAPS[activeMapId].name)}
-function applySettings(){const settings=state.settings,native=window.devicePixelRatio||1,r=canvas.getBoundingClientRect(),pixelBudget=Math.sqrt(3600000/Math.max(1,r.width*r.height)),qualityCap=settings.quality==='performance'?1:settings.quality==='high'?2:1.6;maxDpr=Math.max(.85,Math.min(native,qualityCap,pixelBudget));adaptiveDpr=settings.quality==='high'?maxDpr:Math.min(maxDpr,Math.max(.95,adaptiveDpr));renderer.setPixelRatio(adaptiveDpr);document.documentElement.classList.toggle('animations-off',settings.animations===false);document.documentElement.style.setProperty('--game-ui-scale',String(settings.uiScale||1));camera.fov=THREE.MathUtils.clamp(Number(settings.cameraFov)||55,42,68);camera.updateProjectionMatrix();effects.visible=settings.visualEffects!==false;lastWidth=0;resize();saveState()}function item(name,type,rarity,attrs,stats={}){state.meta.renown+=rarity==='Legendary'?4:rarity==='Epic'?3:2;state.meta.points+=1;const inferred={...stats};if(attrs.includes('Ward')&&!inferred.ward)inferred.ward=1;if(attrs.includes('Vitality')&&!inferred.vitality)inferred.vitality=1;if(attrs.includes('Focus')&&!inferred.focus)inferred.focus=1;state.inventory.push({name,type,rarity,attrs,stats:inferred});state.log.unshift('Collected '+name+'.');scheduleSave()}
+function syncRenderQuality(){
+  const quality=state.settings.quality||'auto';
+  const shadowsAllowed=state.settings.visualEffects!==false&&(
+    quality==='high'||(quality==='auto'&&currentFps>=48&&adaptiveDpr>=.98)
+  );
+  if(renderer.shadowMap.enabled!==shadowsAllowed){
+    renderer.shadowMap.enabled=shadowsAllowed;
+    renderer.shadowMap.needsUpdate=shadowsAllowed;
+  }
+  sun.castShadow=shadowsAllowed;
+  renderer.shadowMap.autoUpdate=false;
+}
+function applySettings(){
+  const settings=state.settings,native=window.devicePixelRatio||1,r=canvas.getBoundingClientRect();
+  const pixelBudget=Math.sqrt(3600000/Math.max(1,r.width*r.height));
+  const qualityCap=settings.quality==='performance'?1:settings.quality==='high'?2:1.6;
+  maxDpr=Math.max(.85,Math.min(native,qualityCap,pixelBudget));
+  adaptiveDpr=settings.quality==='high'?maxDpr:Math.min(maxDpr,Math.max(.95,adaptiveDpr));
+  renderer.setPixelRatio(adaptiveDpr);
+  document.documentElement.classList.toggle('animations-off',settings.animations===false);
+  document.documentElement.style.setProperty('--game-ui-scale',String(settings.uiScale||1));
+  camera.fov=THREE.MathUtils.clamp(Number(settings.cameraFov)||55,42,68);
+  camera.updateProjectionMatrix();
+  effects.visible=settings.visualEffects!==false;
+  syncRenderQuality();
+  lastWidth=0;resize();saveState();
+}function item(name,type,rarity,attrs,stats={}){state.meta.renown+=rarity==='Legendary'?4:rarity==='Epic'?3:2;state.meta.points+=1;const inferred={...stats};if(attrs.includes('Ward')&&!inferred.ward)inferred.ward=1;if(attrs.includes('Vitality')&&!inferred.vitality)inferred.vitality=1;if(attrs.includes('Focus')&&!inferred.focus)inferred.focus=1;state.inventory.push({name,type,rarity,attrs,stats:inferred});state.log.unshift('Collected '+name+'.');scheduleSave()}
 function toastMsg(t){$('toast').textContent=t;$('toast').classList.add('show');toastTimer=3}
 let gameAudio=null;
 function playGameSound(kind='ui'){if(!state.settings.sound)return;const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)return;try{gameAudio??=new AudioCtor();if(gameAudio.state==='suspended')gameAudio.resume().catch(()=>{});const presets={ui:[360,.055,'sine'],attack:[145,.075,'triangle'],skill:[520,.13,'sawtooth'],collect:[740,.16,'sine'],hurt:[92,.18,'triangle'],success:[620,.22,'sine']},[frequency,duration,wave]=presets[kind]||presets.ui,osc=gameAudio.createOscillator(),gain=gameAudio.createGain(),now=gameAudio.currentTime,volume=Math.max(0,Math.min(1,Number(state.settings.volume)||0));if(!volume)return;osc.type=wave;osc.frequency.setValueAtTime(frequency,now);if(kind==='skill'||kind==='success')osc.frequency.exponentialRampToValueAtTime(frequency*1.5,now+duration);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(volume*.12,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);osc.connect(gain);gain.connect(gameAudio.destination);osc.start(now);osc.stop(now+duration+.015)}catch{}}
@@ -1460,6 +1489,7 @@ function updateBossAnimation(dt,enemy,distance){
 }
 
 function createBossTelegraph(enemy,radius,color,duration){
+  if(state.settings.visualEffects===false)return;
   const ring=new THREE.Mesh(
     new THREE.RingGeometry(radius*.91,radius,48),
     new THREE.MeshBasicMaterial({color,transparent:true,opacity:.88,side:THREE.DoubleSide,depthWrite:false,toneMapped:false})
@@ -1668,7 +1698,7 @@ function tick(dt){
   if(Math.floor(time/12)!==Math.floor((time-dt)/12))saveState();
   move(dt);
   updateCamera(dt);
-  if(state.settings.animations!==false)updateSky();
+  updateSky();
   nameplateAccumulator+=dt;if(nameplateAccumulator>=.08){nameplateAccumulator=0;updateNpcNameplates()}
   worldSimAccumulator+=dt;
   if(state.settings.animations!==false&&worldSimAccumulator>=.05){
@@ -1682,15 +1712,87 @@ function tick(dt){
   attackCooldown=Math.max(0,attackCooldown-dt);dodgeIFrames=Math.max(0,dodgeIFrames-dt);for(let i=0;i<3;i++)skillCooldowns[i]=Math.max(0,(skillCooldowns[i]||0)-dt);skillHudAccumulator+=dt;if(skillHudAccumulator>=.1){skillHudAccumulator=0;refreshSkillHud()}nearbyRefresh-=dt;if(nearbyRefresh<=0){nearbyTarget=findNearby();nearbyRefresh=.1}
   for(const e of enemies){
     if(!e||!e.root)continue;
-    const dx=player.position.x-e.root.position.x,dz=player.position.z-e.root.position.z,distance=Math.hypot(dx,dz)||1;
+    const dx=player.position.x-e.root.position.x;
+    const dz=player.position.z-e.root.position.z;
+    const distance=Math.hypot(dx,dz)||1;
     e.root.rotation.y=Math.atan2(dx,dz);
-    if(state.settings.animations!==false)e.root.position.y=.15+Math.sin(time*2+(e.root.id||0))*.12;if(e.isBoss){const ratio=e.hp/e.maxHp;const phase=ratio<=.33?3:ratio<=.66?2:1;if(phase>e.phase){e.phase=phase;e.cooldown=Math.min(e.cooldown,.55);e.attackSkill=phase;toastMsg('Warden phase '+phase+' — attack pattern changed.')}}
+
+    if(state.settings.animations!==false){
+      e.root.position.y=.15+Math.sin(time*2+(e.root.id||0))*.12;
+    }
+
+    if(e.isBoss){
+      const ratio=e.hp/e.maxHp;
+      const phase=ratio<=.33?3:ratio<=.66?2:1;
+      if(phase>e.phase)triggerBossPhase(e,phase);
+    }
+
     if(e.state==='windup'){
-      e.windup-=dt;e.body.material.emissive.setHex(e.isBoss&&e.attackSkill===2?0xffbd52:e.isBoss&&e.attackSkill===3?0xd267fc:0xff321c);if(state.settings.animations!==false)e.root.scale.setScalar(1.08+.07*Math.sin(time*28));
-      if(e.windup<=0){e.state='approach';e.cooldown=1.25+Math.random()*.45;e.root.scale.setScalar(1);e.body.material.emissive.setHex(0x684a79);const reach=e.isBoss?(e.attackSkill===2?4.4:e.attackSkill===3?3.6:2.75):2.75;if(distance<reach&&dodgeIFrames<=0){const mitigation=Math.min(.55,state.stats.ward*.055),moveScale=e.isBoss&&e.attackSkill===3?1.45:e.isBoss&&e.attackSkill===2?1.2:1;state.hp=Math.max(0,state.hp-e.attackDamage*moveScale*(1-mitigation));playGameSound('hurt');toastMsg(e.isBoss?'Warden skill '+e.attackSkill+' hit · dodge the next tell':'The shade struck you — dodge when its glow flares.')}}
-    }else{e.cooldown-=dt;if(distance<2.15&&e.cooldown<=0){e.state='windup';e.windup=e.isBoss ? .82 : .68;if(e.isBoss){e.attackSkill=e.attackSkill%3+1;toastMsg('Warden telegraphs Skill '+e.attackSkill+' · dodge now')}e.body.material.emissive.setHex(e.isBoss&&e.attackSkill===2?0xffbd52:0xff321c)}else if(distance>1.65){const step=Math.min(distance-1.65,2.15*dt);const next=resolveCollisions(e.root.position.x+dx/distance*step,e.root.position.z+dz/distance*step);e.root.position.x=next.x;e.root.position.z=next.z}}
+      e.windup-=dt;
+      if(e.body?.material?.emissive){
+        e.body.material.emissive.setHex(e.isBoss&&e.attackSkill===2?0xffbd52:e.isBoss&&e.attackSkill===3?0xd267fc:0xff321c);
+      }
+      if(state.settings.animations!==false)e.root.scale.setScalar(1.08+.07*Math.sin(time*28));
+
+      if(e.windup<=0){
+        e.state='approach';
+        e.cooldown=e.isBoss?1.55+Math.random()*.35:1.25+Math.random()*.45;
+        e.root.scale.setScalar(1);
+        if(e.body?.material?.emissive)e.body.material.emissive.setHex(0x684a79);
+
+        const reach=e.isBoss?(e.attackSkill===2?4.4:e.attackSkill===3?5.8:2.75):2.75;
+        if(distance<reach&&dodgeIFrames<=0){
+          const mitigation=Math.min(.55,state.stats.ward*.055);
+          const moveScale=e.isBoss?(e.attackSkill===3?1.48:e.attackSkill===2?1.22:1):1;
+          state.hp=Math.max(0,state.hp-e.attackDamage*moveScale*(1-mitigation));
+          playGameSound('hurt');
+          toastMsg(e.isBoss?'Warden Skill '+e.attackSkill+' hit · dodge the next tell':'The shade struck you — dodge when its glow flares.');
+        }
+      }
+    }else{
+      e.cooldown-=dt;
+      if(distance<2.15&&e.cooldown<=0){
+        e.state='windup';
+        if(e.isBoss){
+          const availableSkills=Math.max(1,e.phase);
+          e.attackSkill=(e.attackCycle%availableSkills)+1;
+          e.attackCycle++;
+          e.windup=e.attackSkill===3?1.15:e.attackSkill===2?.98:.76;
+          const radius=e.attackSkill===3?5.8:e.attackSkill===2?4.4:2.65;
+          const color=e.attackSkill===3?0xd66dff:e.attackSkill===2?0xffbd62:0xff6548;
+          createBossTelegraph(e,radius,color,e.windup);
+          playBossAnimation(e.attackSkill===1?'Light1':'Heavy',e.windup+.12);
+          toastMsg(e.attackSkill===3?'Warden telegraphs the Crownfall wave · dodge now.'
+            :e.attackSkill===2?'Warden gathers an arena shockwave · move or dodge.'
+            :'Warden telegraphs a melee strike · dodge now.');
+        }else{
+          e.windup=.68;
+        }
+        if(e.body?.material?.emissive)e.body.material.emissive.setHex(e.isBoss&&e.attackSkill===2?0xffbd52:0xff321c);
+      }else if(distance>1.65){
+        const step=Math.min(distance-1.65,2.15*dt);
+        const next=resolveCollisions(e.root.position.x+dx/distance*step,e.root.position.z+dz/distance*step);
+        e.root.position.x=next.x;
+        e.root.position.z=next.z;
+      }
+    }
+
+    if(e.isBoss)updateBossAnimation(dt,e,distance);
   }
-  if(state.settings.animations!==false)productionBossMixer?.update(dt);
+
+  for(let i=bossTelegraphs.length-1;i>=0;i--){
+    const tell=bossTelegraphs[i];
+    tell.remaining-=dt;
+    const progress=THREE.MathUtils.clamp(1-tell.remaining/tell.duration,0,1);
+    tell.mesh.scale.setScalar(.24+.76*progress);
+    tell.mesh.material.opacity=.88*(1-progress);
+    if(tell.remaining<=0){
+      tell.mesh.removeFromParent();
+      tell.mesh.geometry.dispose();
+      tell.mesh.material.dispose();
+      bossTelegraphs.splice(i,1);
+    }
+  }
   encounterHudAccumulator+=dt;if(encounterHudAccumulator>=.12){encounterHudAccumulator=0;setEncounterHud(encounter)}
 
   // Warm lantern/fire flicker is kept subtle so the scene still reads naturally in daylight.
@@ -1808,8 +1910,21 @@ $('systemContent').addEventListener('input',e=>{if(e.target.id==='sensitivitySet
 $('systemContent').addEventListener('change',e=>{if(e.target.id==='qualitySetting'){state.settings.quality=e.target.value;applySettings()}if(e.target.id==='motionSetting'){state.settings.reducedMotion=e.target.checked;saveState()}if(e.target.id==='soundSetting'){state.settings.sound=e.target.checked;saveState();if(state.settings.sound)playGameSound('success')}if(e.target.id==='animationsSetting'){state.settings.animations=e.target.checked;applySettings()}if(e.target.id==='effectsSetting'){state.settings.visualEffects=e.target.checked;applySettings()}});
 $('skillHotbar').addEventListener('click',e=>{const b=e.target.closest('[data-skill]');if(b)useSkill(Number(b.dataset.skill))});
 window.addEventListener('beforeunload',saveState);
-props.traverse(o=>{if(o.isMesh)o.castShadow=false;});
-treeSpots.forEach(g=>g.traverse(o=>{if(o.isMesh)o.castShadow=true;}));
+function hasShadowCasterAncestor(object){
+  let parent=object;
+  while(parent&&parent!==props){
+    if(parent.userData?.shadowCaster)return true;
+    parent=parent.parent;
+  }
+  return false;
+}
+props.traverse(object=>{
+  if(!object.isMesh)return;
+  object.receiveShadow=true;
+  object.castShadow=hasShadowCasterAncestor(object);
+});
+treeSpots.forEach(g=>g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}));
+characters.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
 function setupTouchControls(){
   const controls=document.createElement('div');controls.className='touch-controls';controls.innerHTML='<div class="touch-stick" aria-label="Movement joystick"><i></i></div><div class="touch-actions"><button data-action="interact">USE</button><button data-action="attack">HIT</button><button data-action="dodge">ROLL</button><button data-action="inventory">BAG</button><button data-action="skill" data-skill="0">1</button><button data-action="skill" data-skill="1">2</button><button data-action="skill" data-skill="2">3</button></div>';document.querySelector('.stage').appendChild(controls);
   const stick=controls.querySelector('.touch-stick'),knob=stick.querySelector('i');let pointerId=null;
@@ -1841,9 +1956,11 @@ function frame(t){
   if(fpsAccumulator>=1){
     const avgFrame=fpsAccumulator/Math.max(1,fpsFrames);
     const previousDpr=adaptiveDpr;
+    currentFps=fpsFrames/Math.max(.001,fpsAccumulator);
     if(state.settings.quality==='auto'&&avgFrame>.024)adaptiveDpr=Math.max(.85,adaptiveDpr-.05);
     else if((state.settings.quality==='auto'||state.settings.quality==='high')&&avgFrame<.017)adaptiveDpr=Math.min(maxDpr,adaptiveDpr+.04);
     if(Math.abs(adaptiveDpr-previousDpr)>.04){renderer.setPixelRatio(adaptiveDpr);lastWidth=0;resize()}
+    syncRenderQuality();
     fpsAccumulator=0;fpsFrames=0;
   }
   const dt=Math.min(.033,rawDt);
