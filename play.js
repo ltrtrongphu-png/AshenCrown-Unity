@@ -1340,7 +1340,7 @@ function spawnEnemy(){
   characters.add(g);
   const maxHp=Math.round((isBoss?150:state.quest>=3?90:45)*(1+(state.chapter-1)*.18)+Math.max(0,state.level-1)*4);
   const baseAttackDamage=(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2);
-  encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,baseAttackDamage,attackDamage:baseAttackDamage,attackSkill:0,attackCycle:0,body:b,isBoss};
+  encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,baseAttackDamage,attackDamage:baseAttackDamage,attackSkill:0,attackCycle:0,body:b,fallbackVisuals:g.children.slice(),isBoss};
   enemies=[encounter];
   if(isBoss)attachProductionBoss(encounter);
   setEncounterHud(encounter);
@@ -1566,7 +1566,8 @@ function attachProductionBoss(enemy){
   productionBossScene.removeFromParent();
   enemy.root.add(productionBossScene);
   // Preserve the normalized foot-pivot offset computed from the GLB bounds.
-  if(enemy.body)enemy.body.visible=false;
+  if(Array.isArray(enemy.fallbackVisuals))enemy.fallbackVisuals.forEach(object=>{if(object)object.visible=false});
+  else if(enemy.body)enemy.body.visible=false;
   for(const action of Object.values(productionBossActions))action.stop();
   activeBossAction='';
   bossActionUntil=0;
