@@ -1,5 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -65,6 +66,26 @@ for (const file of resourceFiles) {
   resourceHash.update('\\0');
 }
 const resourceVersion = 'ashen-production-' + resourceHash.digest('hex').slice(0, 16);
+
+// Parse browser scripts before shipping. This catches syntax regressions that a file-copy
+// build would otherwise miss because the browser code is not executed by Node.
+function checkJavaScriptSyntax(file, module = false) {
+  const args = module ? ['--check', '--input-type=module'] : ['--check'];
+  const result = spawnSync(process.execPath, args, {
+    cwd: repoRoot,
+    input: readFileSync(join(repoRoot, file), 'utf8'),
+    encoding: 'utf8',
+  });
+  if (result.error || result.status !== 0) {
+    throw new Error(`JavaScript syntax check failed for ${file}: ${result.stderr || result.error?.message || 'unknown error'}`);
+  }
+}
+for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js']) {
+  checkJavaScriptSyntax(file, false);
+}
+for (const file of ['play.js', 'model3d.js']) {
+  checkJavaScriptSyntax(file, true);
+}
 
 for (const page of ['index.html', 'play.html']) {
   const html = readFileSync(join(repoRoot, page), 'utf8');
