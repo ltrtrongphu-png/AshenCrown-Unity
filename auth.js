@@ -34,7 +34,7 @@ const authReady = (async () => {
     if (error) throw error;
     currentSession = data.session || null;
     supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') { recoveryMode = true; mode = 'recover'; }
+      if (event === 'PASSWORD_RECOVERY') { recoveryMode = true; mode = 'recover'; if (modal) modal.hidden = false; }
       currentSession = session || null;
       updateAccountButton();
       renderAuthModal();
@@ -94,6 +94,7 @@ function ensureAuthUi() {
   document.getElementById('ashenAuthForm').addEventListener('submit', submitAuthForm);
   document.getElementById('ashenAuthReset').addEventListener('click', resetPassword);
   document.getElementById('ashenAuthSignOut').addEventListener('click', signOut);
+  if (recoveryMode) modal.hidden = false;
   renderAuthModal();
 }
 
@@ -176,7 +177,7 @@ async function submitAuthForm(event) {
     setAuthNotice(error?.message || 'Could not complete account request.', 'error');
   } finally {
     submit.disabled = false;
-    submit.textContent = mode === 'signup' ? 'CREATE ACCOUNT' : 'SIGN IN';
+    submit.textContent = recoveryMode ? 'UPDATE PASSWORD' : mode === 'signup' ? 'CREATE ACCOUNT' : 'SIGN IN';
   }
 }
 async function resetPassword() {
