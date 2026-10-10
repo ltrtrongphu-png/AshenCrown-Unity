@@ -1565,7 +1565,7 @@ function attachProductionBoss(enemy){
   if(!productionBossScene||!enemy?.isBoss)return;
   productionBossScene.removeFromParent();
   enemy.root.add(productionBossScene);
-  productionBossScene.position.set(0,0,0);
+  // Preserve the normalized foot-pivot offset computed from the GLB bounds.
   if(enemy.body)enemy.body.visible=false;
   for(const action of Object.values(productionBossActions))action.stop();
   activeBossAction='';
@@ -1728,7 +1728,7 @@ function tick(dt){
     e.root.rotation.y=Math.atan2(dx,dz);
 
     if(state.settings.animations!==false){
-      e.root.position.y=.15+Math.sin(time*2+(e.root.id||0))*.12;
+      e.root.position.y=.02+Math.sin(time*2+(e.root.id||0))*.022;
     }
 
     if(e.isBoss){
