@@ -1534,7 +1534,7 @@ async function loadFullResourceModels(manifest,cache){
 
       productionPlayerScene=sentinel.scene;
       productionPlayerScene.name='production-player-model';
-      prepareProductionModel(productionPlayerScene,2.08,'player');
+      prepareProductionModel(productionPlayerScene,2.42,'player');
       player.add(productionPlayerScene);
       playerVisual.visible=false;
 
@@ -1958,7 +1958,7 @@ function setupTouchControls(){
 }
 loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
 if(state.tutorial!==false)$('tutorial').classList.add('show');
-time=DAY_LENGTH*.30;
+time=DAY_LENGTH*.08;
 showChapterTitle((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.title)||'THE LAST EMBER','Explore · meet people · make choices · shape the world');
 if(activeMapId==='sanctuary')spawnWildlifeBurst(10);
 updateSky();
