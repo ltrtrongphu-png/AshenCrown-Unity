@@ -6,11 +6,52 @@ scene.background=new THREE.Color(0x0a0b0e); scene.fog=new THREE.Fog(0x151311,58,
 const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
 let maxDpr=Math.min(window.devicePixelRatio||1,1.25);
 renderer.setPixelRatio(maxDpr); renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12;
-renderer.shadowMap.enabled=false; renderer.shadowMap.autoUpdate=false;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
+renderer.shadowMap.enabled=false; renderer.shadowMap.autoUpdate=false; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const camera=new THREE.PerspectiveCamera(55,1,.1,260); camera.position.set(0,4,8);
-scene.add(new THREE.HemisphereLight(0xcbd3d8,0x24201c,1.25));
-const sun=new THREE.DirectionalLight(0xffd0a4,1.05); sun.position.set(-18,22,12); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-100; sun.shadow.camera.right=100; sun.shadow.camera.top=100; sun.shadow.camera.bottom=-100; sun.shadow.camera.far=260; scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xcbd3d8,0x24201c,1.2));
+const fillLight=new THREE.DirectionalLight(0xffd6b0,.38);
+fillLight.position.set(16,9,12);scene.add(fillLight);
+const rimLight=new THREE.DirectionalLight(0x789dcc,.42);
+rimLight.position.set(-12,7,-18);scene.add(rimLight);
+
+const sun=new THREE.DirectionalLight(0xffd0a4,1.05);
+sun.position.set(-18,22,12);sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-42;sun.shadow.camera.right=42;sun.shadow.camera.top=42;sun.shadow.camera.bottom=-42;sun.shadow.camera.near=.5;sun.shadow.camera.far=180;
+sun.shadow.bias=-.0002;sun.shadow.normalBias=.025;sun.shadow.radius=2.5;
+scene.add(sun,sun.target);
+
+// A small, procedural studio environment gives the authored metallic PBR maps
+// a consistent warm/cool reflection without requiring another downloaded asset.
+const environmentCanvas=document.createElement('canvas');
+environmentCanvas.width=512;environmentCanvas.height=256;
+const environmentContext=environmentCanvas.getContext('2d');
+const environmentGradient=environmentContext.createLinearGradient(0,0,0,256);
+environmentGradient.addColorStop(0,'#152337');
+environmentGradient.addColorStop(.28,'#52677b');
+environmentGradient.addColorStop(.48,'#d9b38a');
+environmentGradient.addColorStop(.58,'#746050');
+environmentGradient.addColorStop(1,'#15110e');
+environmentContext.fillStyle=environmentGradient;
+environmentContext.fillRect(0,0,512,256);
+for(const lightRect of [
+  [76,42,36,8,'rgba(177,210,255,.95)'],
+  [310,53,54,10,'rgba(255,216,164,.95)'],
+  [410,84,22,5,'rgba(255,136,76,.8)'],
+  [183,67,18,4,'rgba(255,239,205,.72)']
+]){
+  environmentContext.shadowBlur=18;environmentContext.shadowColor=lightRect[4];
+  environmentContext.fillStyle=lightRect[4];
+  environmentContext.fillRect(lightRect[0],lightRect[1],lightRect[2],lightRect[3]);
+}
+environmentContext.shadowBlur=0;
+const environmentTexture=new THREE.CanvasTexture(environmentCanvas);
+environmentTexture.colorSpace=THREE.SRGBColorSpace;
+environmentTexture.mapping=THREE.EquirectangularReflectionMapping;
+environmentTexture.needsUpdate=true;
+scene.environment=environmentTexture;
+scene.environmentIntensity=.32;
 const world=new THREE.Group(), characters=new THREE.Group(), props=new THREE.Group(), effects=new THREE.Group(); scene.add(world);
 const sanctuaryBuild=new THREE.Group();world.add(sanctuaryBuild);
 world.add(characters,props,effects);
@@ -216,9 +257,13 @@ function updateSky(){
   const sunDir=skyUniforms.uSunDir.value.copy(sunPosition).normalize();
   const day=Math.max(0,Math.min(1,(sunY+.16)/.34));
 
-  sun.position.copy(sunPosition);
-  sun.intensity=.55+1.05*day;
+  const targetX=player.position.x,targetZ=player.position.z;
+  sun.target.position.set(targetX,0,targetZ);
+  sun.position.copy(sun.target.position).addScaledVector(sunDir,90);
+  sun.intensity=.3+1.35*day;
   sun.color.copy(sunCoolColor).lerp(sunWarmColor,Math.max(.08,day));
+  sun.target.updateMatrixWorld();
+  sun.shadow.camera.updateProjectionMatrix();
   skyUniforms.uSunDir.value.copy(sunDir);
   skyUniforms.uDay.value=day;
 
@@ -230,8 +275,9 @@ function updateSky(){
   skyUniforms.uNight.value.copy(skyNightColor);
   skyUniforms.uSunColor.value.copy(skySunColor);
 
-  sunDisc.position.copy(sunPosition);
-  sunHalo.position.copy(sunPosition);
+  skyDome.position.copy(camera.position);
+  sunDisc.position.copy(camera.position).addScaledVector(sunDir,115);
+  sunHalo.position.copy(sunDisc.position);
   sunDisc.material.opacity=Math.max(.05,day);
   sunHalo.material.opacity=.13+.18*day;
 
@@ -247,7 +293,7 @@ const ROLE_DEFS={
   glassblade:{name:'Glassblade',style:'Twin edge · fast single-target damage',colors:[0x31505a,0x65b6ae],skills:[['Quickdraw',28,4.6,5],['Afterimage',48,6,9],['Shatterstep',68,7,14]]},
   cinderweaver:{name:'Cinderweaver',style:'Ember arts · ranged burst damage',colors:[0x583c67,0xd99855],skills:[['Cinder Lance',38,10,7],['Starburst',46,6,10],['Ashfall',76,11,17]]},
   briarshot:{name:'Briarshot',style:'Longbow · piercing and area damage',colors:[0x3d5736,0xa5a654],skills:[['Thornbolt',32,12,5],['Briar Volley',48,10,9],['Huntmark',66,14,14]]}
-};const state={day:1,role:'ashbreaker',appearance:'default',skillPoints:0,skillRanks:[0,0,0],weaponRank:0,currentMap:'sanctuary',hunt:{kills:0},chapterGathered:0,settings:{quality:'auto',sensitivity:1,reducedMotion:false,sound:true,volume:.35,animations:true,visualEffects:true,uiScale:1,cameraFov:55},xp:0,level:1,hp:100,maxHp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],equipment:{core:null,charm:null,armor:null,relic:null},stats:{vitality:0,focus:0,ward:0},meta:{renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0,hubLevel:0,chaptersComplete:0},collectedNodes:[],tutorial:true,log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
+};const state={day:1,role:'ashbreaker',appearance:'default',skillPoints:0,skillRanks:[0,0,0],weaponRank:0,currentMap:'sanctuary',hunt:{kills:0},chapterGathered:0,settings:{quality:'auto',sensitivity:1,reducedMotion:false,sound:true,volume:.35,animations:true,visualEffects:true,uiScale:1,cameraFov:55,resourcePackDisabled:false},xp:0,level:1,hp:100,maxHp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],equipment:{core:null,charm:null,armor:null,relic:null},stats:{vitality:0,focus:0,ward:0},meta:{renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0,hubLevel:0,chaptersComplete:0},collectedNodes:[],tutorial:true,log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
 const keys={}; let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0,legacyMapSave=false;
 const player=new THREE.Group(); player.position.set(0,0,7); characters.add(player);
 
@@ -288,7 +334,9 @@ function actor(c,a){
   return g;
 }
 const playerVisual=actor(0x29221d,0x613724);player.add(playerVisual);
-let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},activePlayerAction='',playerActionUntil=0,fullPackLoaderPromise=null;
+let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null;
+const bossTelegraphs=[];
+
 const armorMat=new THREE.MeshStandardMaterial({color:0x302a29,roughness:.84,metalness:.18});
 const brassMat=new THREE.MeshStandardMaterial({color:0x9d6b42,roughness:.78,metalness:.28});
 const chestplate=new THREE.Mesh(new THREE.OctahedronGeometry(.43,0),armorMat);chestplate.scale.set(.88,1.18,.52);chestplate.position.set(0,1.08,.27);chestplate.castShadow=true;playerVisual.add(chestplate);
@@ -1242,6 +1290,7 @@ let fpsAccumulator=0;
 let fpsFrames=0;
 let encounterHudAccumulator=0;
 let adaptiveDpr=1;
+let currentFps=60;
 function spawnEnemy(){
   if(enemies.length)return;
   if(activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
@@ -1330,13 +1379,186 @@ function resourceBytes(bytes){return bytes>=1048576?(bytes/1048576).toFixed(1)+'
 function packProgress(percent,label){const bar=$('resourcePackProgress'),status=$('resourcePackStatus');if(bar)bar.value=percent;if(status)status.textContent=label}
 async function readResourceManifest(){const response=await fetch('./resource-pack.json',{cache:'no-store'});if(!response.ok)throw new Error('Resource pack manifest is unavailable.');return response.json()}
 async function refreshResourcePackUi(){const status=$('resourcePackStatus'),download=$('downloadResourcePack'),remove=$('removeResourcePack');if(!status||!download||!remove)return;try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0),installed=await Promise.all(manifest.files.map(file=>cache.match(new URL(file.url,location.origin))));const complete=installed.every(Boolean);status.textContent=complete?'Installed · the production models are ready from local storage.':'Optional full pack · '+resourceBytes(total)+' downloaded once and reused from this browser.';download.disabled=complete||resourcePackLoading;download.textContent=complete?'FULL PACK INSTALLED':resourcePackLoading?'DOWNLOADING…':'DOWNLOAD FULL PACK';remove.disabled=!complete||resourcePackLoading;remove.hidden=!complete;if($('resourcePackProgress'))$('resourcePackProgress').value=complete?100:0}catch{status.textContent='Resource pack status is unavailable while offline.';download.disabled=true}}
-async function installResourcePack(){if(resourcePackLoading)return;resourcePackLoading=true;const button=$('downloadResourcePack'),remove=$('removeResourcePack');if(button)button.disabled=true;if(remove)remove.disabled=true;try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0);let finished=0;for(let index=0;index<manifest.files.length;index++){const file=manifest.files[index],url=new URL(file.url,location.origin),cached=await cache.match(url);if(cached){finished+=file.size;packProgress(Math.round(finished/total*100),'Already saved · '+(index+1)+' / '+manifest.files.length);continue}packProgress(Math.round(finished/total*100),'Downloading model '+(index+1)+' / '+manifest.files.length+'…');const response=await fetch(url,{cache:'force-cache'});if(!response.ok)throw new Error('Could not download '+url.pathname);const bytes=await response.arrayBuffer();if(file.size&&bytes.byteLength!==file.size)throw new Error('The downloaded model was incomplete. Please retry.');await cache.put(url,new Response(bytes,{headers:response.headers}));finished+=bytes.byteLength;packProgress(Math.round(finished/total*100),'Saved '+(index+1)+' / '+manifest.files.length+' models')};try{await navigator.storage?.persist?.()}catch{};await loadFullResourceModels(manifest,cache);state.settings.resourcePackVersion=manifest.version;saveState();packProgress(100,'Full pack installed · future visits use the saved models.')}catch(error){packProgress(0,(error&&error.message)||'Download failed. You can retry when online.')}finally{resourcePackLoading=false;await refreshResourcePackUi()}}
-async function removeResourcePack(){const manifest=await readResourceManifest();await caches.delete(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion='';saveState();location.reload()}
+async function installResourcePack(){if(resourcePackLoading)return;state.settings.resourcePackDisabled=false;resourcePackLoading=true;const button=$('downloadResourcePack'),remove=$('removeResourcePack');if(button)button.disabled=true;if(remove)remove.disabled=true;if(!button)toastMsg('Loading production 3D models and embedded PBR textures in the background…');try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0);let finished=0;for(let index=0;index<manifest.files.length;index++){const file=manifest.files[index],url=new URL(file.url,location.origin),cached=await cache.match(url);if(cached){finished+=file.size;packProgress(Math.round(finished/total*100),'Already saved · '+(index+1)+' / '+manifest.files.length);continue}packProgress(Math.round(finished/total*100),'Downloading model '+(index+1)+' / '+manifest.files.length+'…');const response=await fetch(url,{cache:'force-cache'});if(!response.ok)throw new Error('Could not download '+url.pathname);const bytes=await response.arrayBuffer();if(file.size&&bytes.byteLength!==file.size)throw new Error('The downloaded model was incomplete. Please retry.');await cache.put(url,new Response(bytes,{headers:response.headers}));finished+=bytes.byteLength;packProgress(Math.round(finished/total*100),'Saved '+(index+1)+' / '+manifest.files.length+' models')};try{await navigator.storage?.persist?.()}catch{};await loadFullResourceModels(manifest,cache);state.settings.resourcePackVersion=manifest.version;saveState();packProgress(100,'Full pack installed · production models and textures are ready.');if(!button)toastMsg('Production character and boss models loaded with aligned PBR textures.')}catch(error){packProgress(0,(error&&error.message)||'Download failed. You can retry when online.');if(!button)toastMsg('Production model download failed; the aligned fallback remains active.')}finally{resourcePackLoading=false;await refreshResourcePackUi()}}
+async function removeResourcePack(){const manifest=await readResourceManifest();await caches.delete(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion='';state.settings.resourcePackDisabled=true;saveState();location.reload()}
 function playPlayerAnimation(name,hold=0){const action=productionPlayerActions[name];if(!action||!productionPlayerMixer||state.settings.animations===false)return;if(activePlayerAction!==name){const previous=productionPlayerActions[activePlayerAction];if(previous)previous.fadeOut(.08);action.reset().fadeIn(.08).play();activePlayerAction=name}if(hold>0)playerActionUntil=performance.now()+hold}
 function updatePlayerAnimation(dt,moving,sprinting){if(!productionPlayerMixer||state.settings.animations===false)return;if(performance.now()>=playerActionUntil)playPlayerAnimation(moving?(sprinting?'Run':'Walk'):'Idle');productionPlayerMixer.update(dt)}
-async function loadFullResourceModels(manifest,cache){if(fullPackLoaderPromise)return fullPackLoaderPromise;fullPackLoaderPromise=(async()=>{try{const loaderModule=await import('https://esm.sh/three@0.186.1/examples/jsm/loaders/GLTFLoader.js'),loader=new loaderModule.GLTFLoader(),files=await Promise.all(manifest.files.map(async file=>{const response=await cache.match(new URL(file.url,location.origin));if(!response)throw new Error('Full pack is incomplete.');const buffer=await response.arrayBuffer();return new Promise((resolve,reject)=>loader.parse(buffer,'',resolve,reject))})),sentinel=files.find((_,i)=>manifest.files[i].url.includes('AshenSentinel')),regent=files.find((_,i)=>manifest.files[i].url.includes('AshenRegent'));if(!sentinel||!regent)throw new Error('The production models are missing from the pack.');productionPlayerScene=sentinel.scene;productionPlayerScene.name='production-player-model';productionPlayerScene.scale.setScalar(.98);player.add(productionPlayerScene);playerVisual.visible=false;productionPlayerMixer=new THREE.AnimationMixer(productionPlayerScene);productionPlayerActions=Object.fromEntries(sentinel.animations.map(clip=>[clip.name,productionPlayerMixer.clipAction(clip)]));activePlayerAction='';playPlayerAnimation('Idle');productionBossScene=regent.scene;productionBossAnimations=regent.animations;productionBossScene.name='production-boss-model';productionBossScene.scale.setScalar(.82);if(encounter?.isBoss)attachProductionBoss(encounter);return true}catch(error){fullPackLoaderPromise=null;throw error}})();return fullPackLoaderPromise}
-function attachProductionBoss(enemy){if(!productionBossScene||!enemy?.isBoss)return;enemy.body.visible=false;enemy.root.add(productionBossScene);productionBossScene.position.set(0,0,0);const idleClip=productionBossAnimations.find(clip=>clip.name==='Idle');productionBossMixer=null;if(idleClip){productionBossMixer=new THREE.AnimationMixer(productionBossScene);productionBossMixer.clipAction(idleClip).play()}}
-async function loadCachedResourcePack(){if(!('caches'in window))return;try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version);if((await Promise.all(manifest.files.map(file=>cache.match(new URL(file.url,location.origin))))).every(Boolean))await loadFullResourceModels(manifest,cache)}catch{}}
+function fitModelToHeight(model,targetHeight){
+  model.position.set(0,0,0);
+  model.updateMatrixWorld(true);
+  const initialBounds=new THREE.Box3().setFromObject(model);
+  const initialSize=initialBounds.getSize(new THREE.Vector3());
+  if(initialSize.y>1e-4){
+    model.scale.multiplyScalar(targetHeight/initialSize.y);
+  }
+  model.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(model);
+  const centerX=(bounds.min.x+bounds.max.x)*.5;
+  const centerZ=(bounds.min.z+bounds.max.z)*.5;
+  model.position.x-=centerX;
+  model.position.y-=bounds.min.y;
+  model.position.z-=centerZ;
+  model.updateMatrixWorld(true);
+  return new THREE.Box3().setFromObject(model);
+}
+
+function prepareProductionModel(model,targetHeight,label){
+  const bounds=fitModelToHeight(model,targetHeight);
+  const maxAnisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()||1);
+  model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    object.frustumCulled=true;
+    object.userData.productionModelPart=true;
+    const materials=Array.isArray(object.material)?object.material:[object.material];
+    for(const material of materials){
+      if(!material)continue;
+      // Preserve the authored GLB material groups. Only enforce correct glTF color spaces.
+      if(material.map){
+        material.map.colorSpace=THREE.SRGBColorSpace;
+        material.map.anisotropy=maxAnisotropy;
+      }
+      if(material.emissiveMap){
+        material.emissiveMap.colorSpace=THREE.SRGBColorSpace;
+        material.emissiveMap.anisotropy=maxAnisotropy;
+      }
+      for(const texture of [material.normalMap,material.metalnessMap,material.roughnessMap,material.aoMap]){
+        if(texture)texture.anisotropy=maxAnisotropy;
+      }
+      if('roughness' in material)material.roughness=THREE.MathUtils.clamp(material.roughness,.18,.96);
+      if('metalness' in material)material.metalness=THREE.MathUtils.clamp(material.metalness,0,1);
+      material.needsUpdate=true;
+    }
+  });
+  model.userData.normalizedHeight=bounds.max.y-bounds.min.y;
+  model.userData.assetRole=label;
+  return bounds;
+}
+
+function playBossAnimation(name,hold=0){
+  const action=productionBossActions[name];
+  if(!action||!productionBossMixer||state.settings.animations===false)return;
+  if(activeBossAction!==name){
+    const previous=productionBossActions[activeBossAction];
+    if(previous)previous.fadeOut(.12);
+    action.reset().fadeIn(.12).play();
+    activeBossAction=name;
+  }
+  if(hold>0)bossActionUntil=performance.now()+hold*1000;
+}
+
+function updateBossAnimation(dt,enemy,distance){
+  if(!productionBossMixer||state.settings.animations===false)return;
+  if(performance.now()>=bossActionUntil){
+    const name=enemy.state==='windup'
+      ?(enemy.attackSkill===1?'Light1':'Heavy')
+      :(distance>2.05?'Walk':'Idle');
+    if(activeBossAction!==name)playBossAnimation(name);
+  }
+  productionBossMixer.update(dt);
+}
+
+function createBossTelegraph(enemy,radius,color,duration){
+  const ring=new THREE.Mesh(
+    new THREE.RingGeometry(radius*.91,radius,48),
+    new THREE.MeshBasicMaterial({color,transparent:true,opacity:.88,side:THREE.DoubleSide,depthWrite:false,toneMapped:false})
+  );
+  ring.rotation.x=-Math.PI/2;
+  ring.position.set(enemy.root.position.x,.045,enemy.root.position.z);
+  ring.scale.setScalar(.24);
+  ring.renderOrder=4;
+  effects.add(ring);
+  bossTelegraphs.push({mesh:ring,duration,remaining:duration});
+}
+
+function triggerBossPhase(enemy,phase){
+  enemy.phase=phase;
+  enemy.attackCycle=0;
+  enemy.attackSkill=phase;
+  enemy.cooldown=.48;
+  enemy.attackDamage=Math.round(enemy.baseAttackDamage*(phase===1?1:phase===2?1.22:1.48));
+  createBossTelegraph(enemy,phase===1?2.6:phase===2?4.4:5.8,phase===3?0xd66dff:0xffbd62,.95);
+  playBossAnimation(phase===3?'Enrage':'Heavy',1.1);
+  toastMsg(phase===2?'Warden Phase II · the arena shockwave is wider.'
+    :phase===3?'Warden Phase III · the final assault begins.'
+    :'Warden Phase I · read the attack tells.');
+}
+
+async function loadFullResourceModels(manifest,cache){
+  if(fullPackLoaderPromise)return fullPackLoaderPromise;
+  fullPackLoaderPromise=(async()=>{
+    try{
+      const loaderModule=await import('https://esm.sh/three@0.186.1/examples/jsm/loaders/GLTFLoader.js');
+      const loader=new loaderModule.GLTFLoader();
+      const files=await Promise.all(manifest.files.map(async file=>{
+        const response=await cache.match(new URL(file.url,location.origin));
+        if(!response)throw new Error('Full pack is incomplete.');
+        const buffer=await response.arrayBuffer();
+        return new Promise((resolve,reject)=>loader.parse(buffer,'',resolve,reject));
+      }));
+      const sentinel=files.find((_,i)=>manifest.files[i].url.includes('AshenSentinel'));
+      const regent=files.find((_,i)=>manifest.files[i].url.includes('AshenRegent'));
+      if(!sentinel||!regent)throw new Error('The production models are missing from the pack.');
+
+      productionPlayerScene=sentinel.scene;
+      productionPlayerScene.name='production-player-model';
+      prepareProductionModel(productionPlayerScene,2.08,'player');
+      player.add(productionPlayerScene);
+      playerVisual.visible=false;
+
+      productionPlayerMixer=new THREE.AnimationMixer(productionPlayerScene);
+      productionPlayerActions=Object.fromEntries(sentinel.animations.map(clip=>[clip.name,productionPlayerMixer.clipAction(clip)]));
+      activePlayerAction='';
+      playPlayerAnimation('Idle');
+
+      productionBossScene=regent.scene;
+      productionBossScene.name='production-boss-model';
+      prepareProductionModel(productionBossScene,3.15,'boss');
+      productionBossAnimations=regent.animations;
+      productionBossMixer=new THREE.AnimationMixer(productionBossScene);
+      productionBossActions=Object.fromEntries(regent.animations.map(clip=>[clip.name,productionBossMixer.clipAction(clip)]));
+      activeBossAction='';
+      if(encounter?.isBoss)attachProductionBoss(encounter);
+
+      return true;
+    }catch(error){
+      fullPackLoaderPromise=null;
+      throw error;
+    }
+  })();
+  return fullPackLoaderPromise;
+}
+
+function attachProductionBoss(enemy){
+  if(!productionBossScene||!enemy?.isBoss)return;
+  productionBossScene.removeFromParent();
+  enemy.root.add(productionBossScene);
+  productionBossScene.position.set(0,0,0);
+  if(enemy.body)enemy.body.visible=false;
+  for(const action of Object.values(productionBossActions))action.stop();
+  activeBossAction='';
+  bossActionUntil=0;
+  playBossAnimation('Idle');
+}
+
+async function loadCachedResourcePack(){
+  if(!('caches'in window))return;
+  try{
+    const manifest=await readResourceManifest();
+    const cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version);
+    if((await Promise.all(manifest.files.map(file=>cache.match(new URL(file.url,location.origin))))).every(Boolean)){
+      await loadFullResourceModels(manifest,cache);
+      return;
+    }
+    const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+    if(state.settings.resourcePackDisabled===true||connection?.saveData===true||state.settings.quality==='performance')return;
+    // Download production meshes and their embedded PBR textures once in the background.
+    await installResourcePack();
+  }catch(error){
+    console.warn('[Ashen Crown] Production model pack kept on fallback:',error);
+  }
+}
 function showChapterTitle(title,subtitle){const el=$('message');el.querySelector('strong').textContent=title;el.querySelector('span').textContent=subtitle;el.classList.remove('dismissed');clearTimeout(el._dismissTimer);el._dismissTimer=setTimeout(()=>el.classList.add('dismissed'),4600)}
 const SHOP_STOCK={merchant_01:[{name:'Hearthguard Coat',type:'Armor',rarity:'Rare',price:55,level:1,attrs:['+Vitality','+Ward'],stats:{vitality:2,ward:2},desc:'A reinforced coat for long roads.'},{name:'Ember Focus Ring',type:'Trinket',rarity:'Rare',price:70,level:2,attrs:['+Focus'],stats:{focus:2},desc:'Sharpens the ember pulse.'},{name:'Wayfarer Core',type:'Core',rarity:'Epic',price:110,level:3,attrs:['+Vitality','+Focus'],stats:{vitality:2,focus:2},desc:'A balanced core for explorers.'}],merchant_02:[{name:'Roadwarden Mantle',type:'Armor',rarity:'Epic',price:120,level:3,attrs:['+Ward','+Vitality'],stats:{ward:3,vitality:2},desc:'Built for guards beyond the old gate.'},{name:'Glassheart Relic',type:'Relic',rarity:'Epic',price:135,level:4,attrs:['+Focus','+Ward'],stats:{focus:2,ward:2},desc:'Stores a second pulse of ember light.'},{name:'Crownroad Sigil',type:'Relic',rarity:'Legendary',price:220,level:5,attrs:['+Vitality','+Focus','+Ward'],stats:{vitality:3,focus:3,ward:3},desc:'A rare mark from the old crownlands.'}]};
 let shopMenu=null;
