@@ -25,6 +25,8 @@ const webFiles = [
   'campaign.js',
   'model3d.js',
   'play.js',
+  'auth-config.js',
+  'auth.js',
   'sw.js',
   'Assets/ashen-crown-logo.svg',
   'Assets/Models/Bosses/AshenRegent.glb',
