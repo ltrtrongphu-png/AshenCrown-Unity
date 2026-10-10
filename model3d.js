@@ -177,7 +177,7 @@ if (host) {
           });
         });
       }
-      normalizeModelToHeight(gltf.scene, 2.08);
+      normalizeModelToHeight(gltf.scene, 2.42);
       prepareModelMaterials(gltf.scene);
       gltf.scene.position.y = .14;
       gltf.scene.name = 'AshenSentinel_Showcase';
