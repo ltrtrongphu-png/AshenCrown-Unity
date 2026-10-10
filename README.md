@@ -281,3 +281,16 @@ The repository includes the Ashen Sentinel and Ashen Regent character meshes plu
 - GLB material groups and embedded PBR textures are preserved. Base-color/emissive textures use sRGB, while normal/metallic/roughness/occlusion maps remain linear data.
 - The `/play` model pack downloads in the background in Auto/High mode and is cached locally. It is skipped when the browser requests data saving, Performance quality is selected, or the user has explicitly removed the pack.
 - Directional shadows are enabled in High mode, adaptive in Auto mode, and disabled in Performance mode. The day/night clock continues while character animations are disabled.
+## Website accounts and cloud saves
+
+The browser site uses Supabase Auth for email/password sign-up, sign-in, password reset and per-user cloud save sync.
+
+- `auth-config.js` contains only the public Supabase project URL and publishable browser key. These are intentionally public values, not service-role credentials.
+- The web save uses `public.player_web_saves`. Row Level Security must remain enabled, with SELECT/INSERT/UPDATE policies checking `auth.uid() = user_id`. The frontend never uses a service-role key.
+- In Supabase Dashboard → Authentication → URL Configuration, set the Site URL to the production website and add the production and preview redirect URLs used by Vercel (including the path pattern used by sign-up and password reset).
+- Configure email confirmation and SMTP for production delivery, then test registration, confirmation, sign-in and password reset on the deployed domain.
+- After sign-in, the browser compares local and cloud save timestamps and loads the newer snapshot. Cloud writes are throttled to reduce database traffic.
+
+### Security boundary
+
+This is still a single-player browser demo: localStorage and client-submitted JSON can be modified by the player. Row Level Security isolates one account's save row from other accounts, but it does not prove that a level, inventory or reward is legitimate. Do not use client-submitted save fields for competitive rankings, paid items, PvP, or other trust-sensitive rewards without a server-authoritative validation layer.
