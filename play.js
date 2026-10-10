@@ -1847,7 +1847,68 @@ function resourceBytes(bytes){return bytes>=1048576?(bytes/1048576).toFixed(1)+'
 function packProgress(percent,label){const bar=$('resourcePackProgress'),status=$('resourcePackStatus');if(bar)bar.value=percent;if(status)status.textContent=label}
 async function readResourceManifest(){const response=await fetch('./resource-pack.json',{cache:'no-store'});if(!response.ok)throw new Error('Resource pack manifest is unavailable.');return response.json()}
 async function refreshResourcePackUi(){const status=$('resourcePackStatus'),download=$('downloadResourcePack'),remove=$('removeResourcePack');if(!status||!download||!remove)return;try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0),installed=await Promise.all(manifest.files.map(file=>cache.match(new URL(file.url,location.origin))));const complete=installed.every(Boolean);status.textContent=complete?'Installed · the production models are ready from local storage.':'Production model pack · '+resourceBytes(total)+' one-time download, saved in this browser.';download.disabled=complete||resourcePackLoading;download.textContent=complete?'FULL PACK INSTALLED':resourcePackLoading?'DOWNLOADING…':'DOWNLOAD FULL PACK';remove.disabled=!complete||resourcePackLoading;remove.hidden=!complete;if($('resourcePackProgress'))$('resourcePackProgress').value=complete?100:0}catch{status.textContent='Resource pack status is unavailable while offline.';download.disabled=true}}
-async function installResourcePack(){if(resourcePackLoading)return;state.settings.resourcePackDisabled=false;state.settings.resourcePackDisabledVersion=MODEL_PIPELINE_VERSION;resourcePackLoading=true;const button=$('downloadResourcePack'),remove=$('removeResourcePack');if(button)button.disabled=true;if(remove)remove.disabled=true;if(!button)toastMsg('Loading production 3D models and embedded PBR textures in the background…');try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0);let finished=0;for(let index=0;index<manifest.files.length;index++){const file=manifest.files[index],url=new URL(file.url,location.origin),cached=await cache.match(url);if(cached){finished+=file.size;packProgress(Math.round(finished/total*100),'Already saved · '+(index+1)+' / '+manifest.files.length);continue}packProgress(Math.round(finished/total*100),'Downloading model '+(index+1)+' / '+manifest.files.length+'…');const response=await fetch(url,{cache:'force-cache'});if(!response.ok)throw new Error('Could not download '+url.pathname);const bytes=await response.arrayBuffer();if(file.size&&bytes.byteLength!==file.size)throw new Error('The downloaded model was incomplete. Please retry.');await cache.put(url,new Response(bytes,{headers:response.headers}));finished+=bytes.byteLength;packProgress(Math.round(finished/total*100),'Saved '+(index+1)+' / '+manifest.files.length+' models')};try{await navigator.storage?.persist?.()}catch{};await loadFullResourceModels(manifest,cache);await pruneOldResourcePackCaches(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion=manifest.version;saveState();packProgress(100,'Full pack installed · production models and textures are ready.');if(!button)toastMsg('Production character and boss models loaded with aligned PBR textures.')}catch(error){packProgress(0,(error&&error.message)||'Download failed. You can retry when online.');if(!button)toastMsg('Production model download failed; the aligned fallback remains active.')}finally{resourcePackLoading=false;await refreshResourcePackUi()}}
+async function installResourcePack(){
+  if(resourcePackLoading)return;
+  state.settings.resourcePackDisabled=false;
+  state.settings.resourcePackDisabledVersion=MODEL_PIPELINE_VERSION;
+  resourcePackLoading=true;
+
+  const button=$('downloadResourcePack'),remove=$('removeResourcePack');
+  if(button)button.disabled=true;
+  if(remove)remove.disabled=true;
+  if(!button)toastMsg('Loading production 3D models and embedded PBR textures in the background…');
+
+  try{
+    const manifest=await readResourceManifest();
+    const cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version);
+    const total=manifest.files.reduce((sum,file)=>sum+file.size,0);
+    const completed=new Set();
+    let finished=0;
+
+    const markCompleted=(file,bytes)=>{
+      if(completed.has(file.url))return;
+      completed.add(file.url);
+      finished+=bytes;
+      const percent=total>0?Math.round(finished/total*100):100;
+      packProgress(percent,'Downloaded '+completed.size+' / '+manifest.files.length+' production models…');
+    };
+
+    // Fetch both GLBs concurrently. The previous serial download doubled the
+    // wait before the player model could replace its fallback mesh.
+    await Promise.all(manifest.files.map(async(file,index)=>{
+      const url=new URL(file.url,location.origin);
+      const cached=await cache.match(url);
+      if(cached){
+        markCompleted(file,file.size||0);
+        return;
+      }
+
+      packProgress(Math.round(finished/Math.max(1,total)*100),'Downloading production model '+(index+1)+' / '+manifest.files.length+'…');
+      const response=await fetch(url,{cache:'force-cache'});
+      if(!response.ok)throw new Error('Could not download '+url.pathname);
+      const bytes=await response.arrayBuffer();
+      if(file.size&&bytes.byteLength!==file.size)throw new Error('The downloaded model was incomplete. Please retry.');
+      await cache.put(url,new Response(bytes,{headers:response.headers}));
+      markCompleted(file,bytes.byteLength);
+    }));
+
+    try{await navigator.storage?.persist?.()}catch{}
+    await loadFullResourceModels(manifest,cache);
+    await pruneOldResourcePackCaches(RESOURCE_CACHE_PREFIX+manifest.version);
+    state.settings.resourcePackVersion=manifest.version;
+    state.settings.resourcePackDisabled=false;
+    state.settings.resourcePackDisabledVersion=MODEL_PIPELINE_VERSION;
+    saveState();
+    packProgress(100,'Full pack installed · the player model is ready; boss art loads when its encounter begins.');
+    if(!button)toastMsg('Production character model loaded with aligned PBR textures.');
+  }catch(error){
+    packProgress(0,(error&&error.message)||'Download failed. You can retry when online.');
+    if(!button)toastMsg('Production model download failed; the aligned fallback remains active.');
+  }finally{
+    resourcePackLoading=false;
+    await refreshResourcePackUi();
+  }
+}
 async function removeResourcePack(){const manifest=await readResourceManifest();await caches.delete(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion='';state.settings.resourcePackDisabled=true;state.settings.resourcePackDisabledVersion=MODEL_PIPELINE_VERSION;saveState();location.reload()}
 function playPlayerAnimation(name,hold=0){const action=productionPlayerActions[name];if(!action||!productionPlayerMixer||state.settings.animations===false)return;if(activePlayerAction!==name){const previous=productionPlayerActions[activePlayerAction];if(previous)previous.fadeOut(.08);action.reset().fadeIn(.08).play();activePlayerAction=name}if(hold>0)playerActionUntil=performance.now()+hold}
 function updatePlayerAnimation(dt,moving,sprinting){if(!productionPlayerMixer||state.settings.animations===false)return;if(performance.now()>=playerActionUntil)playPlayerAnimation(moving?(sprinting?'Run':'Walk'):'Idle');productionPlayerMixer.update(dt)}
