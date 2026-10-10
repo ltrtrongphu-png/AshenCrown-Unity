@@ -1291,6 +1291,7 @@ let worldSimAccumulator=0;
 let fpsAccumulator=0;
 let fpsFrames=0;
 let encounterHudAccumulator=0;
+let shadowRefreshAccumulator=0;
 let adaptiveDpr=1;
 let currentFps=60;
 function spawnEnemy(){
@@ -1375,7 +1376,7 @@ function advanceChapter(){if(state.quest<5||state.chapter>=10)return;state.meta.
 function syncRenderQuality(){
   const quality=state.settings.quality||'auto';
   const shadowsAllowed=state.settings.visualEffects!==false&&(
-    quality==='high'||(quality==='auto'&&currentFps>=48&&adaptiveDpr>=.98)
+    quality==='high'||(quality==='auto'&&currentFps>=55&&adaptiveDpr>=.98)
   );
   if(renderer.shadowMap.enabled!==shadowsAllowed){
     renderer.shadowMap.enabled=shadowsAllowed;
@@ -1795,8 +1796,19 @@ function tick(dt){
   }
   encounterHudAccumulator+=dt;if(encounterHudAccumulator>=.12){encounterHudAccumulator=0;setEncounterHud(encounter)}
 
+  // Refresh the player-centered directional shadow map a few times per second.
+  // This keeps moving shadows readable without paying the full cost every frame.
+  if(renderer.shadowMap.enabled){
+    shadowRefreshAccumulator+=dt;
+    if(shadowRefreshAccumulator>=.24){
+      renderer.shadowMap.needsUpdate=true;
+      shadowRefreshAccumulator=0;
+    }
+  }else{
+    shadowRefreshAccumulator=0;
+  }
+
   // Warm lantern/fire flicker is kept subtle so the scene still reads naturally in daylight.
-  if(Math.floor(time*30)%8===0)renderer.shadowMap.needsUpdate=true;
   const nightFactor=Math.max(0,(0.28-skyUniforms.uDay.value)/0.28);
   for(let i=0;i<lightSources.length;i++){
     const light=lightSources[i];
