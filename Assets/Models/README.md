@@ -2,7 +2,7 @@
 
 ## Included character art
 
-The repository includes two original, rigged, stylized dark-fantasy characters:
+The repository includes two original, rigged, stylized dark-fantasy characters. The web viewer normalizes imported models to a known world-space height and centers their feet at the ground plane, while preserving the GLB's material groups and embedded PBR maps:
 
 | Asset | Role | Height | Distinguishing details |
 |---|---|---:|---|
@@ -11,7 +11,7 @@ The repository includes two original, rigged, stylized dark-fantasy characters:
 
 Both models use a 19-joint humanoid rig and six clips: `Idle`, `Walk`, `Run`, `Light1`, `Heavy`, and `Enrage`. The rig joint names follow Unity Humanoid naming conventions. Armor and cloth sections are parented rigidly to their matching joints, which preserves hard-surface silhouettes during motion; they are not skinned meshes. The self-contained GLB files carry their material images and can be imported independently.
 
-The shared 1024 × 1024 texture sources are in `Textures/`: neutral base color, tangent-space normal, metallic/roughness/occlusion, and emissive ember fissures. GLB materials reference these maps with separate obsidian, cloth, brass, and emissive-glass material factors. The deterministic source generator is `tools/generate_ashen_production_assets.py` (Python 3, NumPy, Pillow).
+The shared 1024 × 1024 texture sources are in `Textures/`: neutral base color, tangent-space normal, metallic/roughness/occlusion, and emissive ember fissures. GLB materials reference these maps with separate obsidian, cloth, brass, and emissive-glass material factors. In Three.js, base-color and emissive maps must be treated as sRGB, while normal/metallic/roughness/occlusion maps remain linear data; do not replace the authored material groups with one flat material. The deterministic source generator is `tools/generate_ashen_production_assets.py` (Python 3, NumPy, Pillow).
 
 ## Import into Unity
 
