@@ -299,3 +299,8 @@ This is still a single-player browser demo: localStorage and client-submitted JS
 ## Browser game CDN fallback and runtime diagnostics
 
 The story demo loads the pinned Three.js version 0.186.1 using jsDelivr, then esm.sh and unpkg if a provider fails. CSP permits only these explicitly listed providers. The play boot watchdog reports the browser's actual JavaScript / WebGL error and source location when available. A successful Vercel build is not a substitute for a real browser/WebGL smoke test.
+
+
+## Self-hosted Three.js runtime
+
+The Vercel build installs the exact `three@0.186.1` package and copies the official `three.module.js` plus its matching `three.core.js` into `dist/vendor/`. The browser loads this same-origin bundle first, so normal game startup does not depend on third-party CDNs. Pinned CDN fallbacks remain for recovery if the self-hosted assets are unavailable.
