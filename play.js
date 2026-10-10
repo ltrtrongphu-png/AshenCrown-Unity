@@ -2,6 +2,7 @@
 // prevent the entire game from starting.
 async function loadThreeEngine() {
   const sources = [
+    ['self-hosted bundle', new URL('./vendor/three.module.js', import.meta.url).href],
     ['jsDelivr', 'https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js'],
     ['esm.sh', 'https://esm.sh/three@0.186.1'],
     ['unpkg', 'https://unpkg.com/three@0.186.1/build/three.module.js']
