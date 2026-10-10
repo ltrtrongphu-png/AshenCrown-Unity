@@ -94,3 +94,6 @@ button:focus-visible,a:focus-visible{outline-color:#f1ad7d;outline-offset:3px}
 .quest-steps li.done:after{content:"✓";position:absolute;right:8px;top:7px;color:#8cba87;font-weight:700}
 .quest-target{margin-top:9px;padding:7px 8px;border-left:2px solid #cc7748;background:rgba(179,86,46,.09);color:#e5a878;font-size:8px;line-height:1.4;letter-spacing:.08em;text-transform:uppercase}
 @media(max-width:760px){.quest-panel{max-height:52vh}.quest-steps li{padding:6px 6px 6px 25px;font-size:9px}.quest-steps li:before{left:6px;top:6px}.quest-target{font-size:7px}.play-language-label select{max-width:54px;padding:5px 3px}}
+
+/* Rarity and skill unlock feedback */
+.skill-hotbar button.locked{opacity:.58;border-style:dashed;filter:saturate(.45);cursor:not-allowed}.skill-upgrades .skill-locked{opacity:.72}.skill-upgrades button:disabled{cursor:not-allowed;opacity:.5}.item-rarity{font-style:normal;letter-spacing:.1em}.rarity-Common{border-color:rgba(154,145,136,.35)}.rarity-Uncommon{border-color:rgba(139,191,146,.45)}.rarity-Rare{border-color:rgba(126,177,207,.5)}.rarity-Epic{border-color:rgba(182,155,225,.55)}.rarity-Legendary{border-color:rgba(217,182,110,.6)}.item-bound{display:inline-block;margin-top:10px;color:#766a60;font-size:8px;letter-spacing:.08em}
