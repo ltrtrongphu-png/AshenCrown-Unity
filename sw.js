@@ -13,6 +13,7 @@ const APP_FILES = [
   './Assets/ashen-crown-logo.svg',
   './resource-pack.json',
 ];
+const CURRENT_ASSETS = new Set(APP_FILES.map((path) => new URL(path, self.location.href).href));
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -57,10 +58,14 @@ self.addEventListener('fetch', (event) => {
       }
     }
 
-    const cached = await cache.match(request);
+    // Return only assets belonging to the active build's precache. Navigations
+    // above are network-first; unknown same-origin assets are revalidated online.
+    const cached = CURRENT_ASSETS.has(url.href) ? await cache.match(request) : null;
     if (cached) return cached;
     const response = await fetch(request);
-    if (response.ok && (response.type === 'basic' || response.type === 'cors')) await cache.put(request, response.clone());
+    if (response.ok && (response.type === 'basic' || response.type === 'cors')) {
+      await cache.put(request, response.clone());
+    }
     return response;
   })());
 });
