@@ -754,7 +754,7 @@ const ROLE_DEFS={
   glassblade:{name:'Glassblade',style:'Twin edge · fast single-target damage',colors:[0x31505a,0x65b6ae],skills:[['Quickdraw',28,4.6,5],['Afterimage',48,6,9],['Shatterstep',68,7,14]]},
   cinderweaver:{name:'Cinderweaver',style:'Ember arts · ranged burst damage',colors:[0x583c67,0xd99855],skills:[['Cinder Lance',38,10,7],['Starburst',46,6,10],['Ashfall',76,11,17]]},
   briarshot:{name:'Briarshot',style:'Longbow · piercing and area damage',colors:[0x3d5736,0xa5a654],skills:[['Thornbolt',32,12,5],['Briar Volley',48,10,9],['Huntmark',66,14,14]]}
-};const state={day:1,role:'ashbreaker',appearance:'default',skillPoints:0,skillRanks:[0,0,0],weaponRank:0,currentMap:'sanctuary',hunt:{kills:0},chapterGathered:0,settings:{quality:'auto',sensitivity:1,reducedMotion:false,sound:true,volume:.35,animations:true,visualEffects:true,uiScale:1,cameraFov:55,resourcePackDisabled:false},xp:0,level:1,hp:100,maxHp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],equipment:{core:null,charm:null,armor:null,relic:null},stats:{vitality:0,focus:0,ward:0},meta:{renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0,hubLevel:0,chaptersComplete:0},collectedNodes:[],tutorial:true,log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
+};const state={day:1,savedAt:0,role:'ashbreaker',appearance:'default',skillPoints:0,skillRanks:[0,0,0],weaponRank:0,currentMap:'sanctuary',hunt:{kills:0},chapterGathered:0,settings:{quality:'auto',sensitivity:1,reducedMotion:false,sound:true,volume:.35,animations:true,visualEffects:true,uiScale:1,cameraFov:55,resourcePackDisabled:false},xp:0,level:1,hp:100,maxHp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],equipment:{core:null,charm:null,armor:null,relic:null},stats:{vitality:0,focus:0,ward:0},meta:{renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0,hubLevel:0,chaptersComplete:0},collectedNodes:[],tutorial:true,log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
 const keys={};
 const CHAPTER_LEVEL_CAPS=[3,5,7,9,11,13,15,17,19,20];
 const EQUIPMENT_RARITIES=['Common','Uncommon','Rare','Epic','Legendary'];
@@ -1899,7 +1899,10 @@ function finishEncounter(){
     dropEquipment(true);setQuest()
   }else{
     item('Ashen Wisp Fragment','Material','Common',['Crafting']);
-    if(Math.random()<.36)dropEquipment(false);else if(!bellWaiting)toastMsg('Shade defeated · Ashen Wisp Fragment + 25 Ashen');
+    // Ordinary enemies unlock gear drops after the player accepts an NPC quest.
+    const gearUnlocked=state.quest>=1||state.meta.chaptersComplete>0;
+    if(gearUnlocked&&Math.random()<.36)dropEquipment(false);
+    else if(!bellWaiting)toastMsg('Shade defeated · Ashen Wisp Fragment + 25 Ashen');
   }
   encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy()}saveState()
 }
@@ -2659,13 +2662,13 @@ function loadState(){
     if(raw){
       const saved=JSON.parse(raw);
       if(saved&&typeof saved==='object'&&!Array.isArray(saved)){legacyMapSave=saved.mapVersion!==1;
-        const numeric=['xp','level','hp','stamina','coins','shards','echoes','quest','chapter','day','chapterGathered','weaponRank'];
+        const numeric=['xp','level','hp','stamina','coins','shards','echoes','quest','chapter','day','savedAt','chapterGathered','weaponRank'];
         for(const key of numeric)if(Number.isFinite(Number(saved[key])))state[key]=Number(saved[key]);
         state.xp=Math.max(0,state.xp);state.level=Math.max(1,state.level);state.quest=THREE.MathUtils.clamp(state.quest,0,5);state.hp=Math.max(0,state.hp);state.stamina=THREE.MathUtils.clamp(state.stamina,0,100);state.coins=Math.max(0,state.coins);state.shards=Math.max(0,state.shards);state.echoes=Math.max(0,state.echoes);
-        state.role=ROLE_DEFS[saved.role]?saved.role:'ashbreaker';state.appearance=['default','moon','moss'].includes(saved.appearance)?saved.appearance:'default';state.skillPoints=Math.max(0,Number(saved.skillPoints)||0);state.skillRanks=Array.isArray(saved.skillRanks)?saved.skillRanks.slice(0,3).map(v=>THREE.MathUtils.clamp(Math.floor(Number(v)||0),0,3)):[0,0,0];state.skillPoints=Math.max(state.skillPoints,Math.max(0,state.level-1-state.skillRanks.reduce((sum,v)=>sum+v,0)));state.settings=Object.assign(state.settings,saved.settings&&typeof saved.settings==='object'?saved.settings:{});if(state.settings.resourcePackDisabled===true&&state.settings.resourcePackDisabledVersion!==MODEL_PIPELINE_VERSION)state.settings.resourcePackDisabled=false;if(!['auto','performance','high'].includes(state.settings.quality))state.settings.quality='auto';state.settings.sensitivity=THREE.MathUtils.clamp(Number(state.settings.sensitivity)||1,.5,2);state.settings.volume=THREE.MathUtils.clamp(Number(state.settings.volume??.35),0,1);state.settings.uiScale=THREE.MathUtils.clamp(Number(state.settings.uiScale)||1,.8,1.2);state.settings.cameraFov=THREE.MathUtils.clamp(Number(state.settings.cameraFov)||55,42,68);for(const key of ['sound','animations','visualEffects','reducedMotion'])if(typeof state.settings[key]!=='boolean')state.settings[key]=true;state.rep=Object.assign(state.rep,saved.rep&&typeof saved.rep==='object'?saved.rep:{});for(const key of ['lyra','orren','seer']){const value=Number(state.rep[key]);state.rep[key]=Number.isFinite(value)?THREE.MathUtils.clamp(Math.floor(value),-1000,1000):0}
-        state.flags=Object.assign(state.flags,saved.flags&&typeof saved.flags==='object'?saved.flags:{});state.currentMap=MAPS[saved.currentMap]?saved.currentMap:'sanctuary';
+        state.role=ROLE_DEFS[saved.role]?saved.role:'ashbreaker';state.appearance=['default','moon','moss'].includes(saved.appearance)?saved.appearance:'default';state.skillPoints=Math.max(0,Number(saved.skillPoints)||0);state.skillRanks=Array.isArray(saved.skillRanks)?saved.skillRanks.slice(0,3).map(v=>THREE.MathUtils.clamp(Math.floor(Number(v)||0),0,3)):[0,0,0];state.skillPoints=Math.max(state.skillPoints,Math.max(0,state.level-1-state.skillRanks.reduce((sum,v)=>sum+v,0)));state.settings={...state.settings,...(saved.settings&&typeof saved.settings==='object'&&!Array.isArray(saved.settings)?saved.settings:{})};if(state.settings.resourcePackDisabled===true&&state.settings.resourcePackDisabledVersion!==MODEL_PIPELINE_VERSION)state.settings.resourcePackDisabled=false;if(!['auto','performance','high'].includes(state.settings.quality))state.settings.quality='auto';state.settings.sensitivity=THREE.MathUtils.clamp(Number(state.settings.sensitivity)||1,.5,2);state.settings.volume=THREE.MathUtils.clamp(Number(state.settings.volume??.35),0,1);state.settings.uiScale=THREE.MathUtils.clamp(Number(state.settings.uiScale)||1,.8,1.2);state.settings.cameraFov=THREE.MathUtils.clamp(Number(state.settings.cameraFov)||55,42,68);for(const key of ['sound','animations','visualEffects','reducedMotion'])if(typeof state.settings[key]!=='boolean')state.settings[key]=true;state.rep={...state.rep,...(saved.rep&&typeof saved.rep==='object'&&!Array.isArray(saved.rep)?saved.rep:{})};for(const key of ['lyra','orren','seer']){const value=Number(state.rep[key]);state.rep[key]=Number.isFinite(value)?THREE.MathUtils.clamp(Math.floor(value),-1000,1000):0}
+        state.flags={...state.flags,...(saved.flags&&typeof saved.flags==='object'&&!Array.isArray(saved.flags)?saved.flags:{})};state.currentMap=MAPS[saved.currentMap]?saved.currentMap:'sanctuary';
         if(state.flags.bellWardenDefeated&&state.quest===3)state.quest=4;
-        state.meta=Object.assign(state.meta,saved.meta&&typeof saved.meta==='object'?saved.meta:{});
+        state.meta={...state.meta,...(saved.meta&&typeof saved.meta==='object'&&!Array.isArray(saved.meta)?saved.meta:{})};
         for(const key of ['renown','mastery','legacy','points','contracts','developmentDay','hubLevel','chaptersComplete']){const value=Number(state.meta[key]);state.meta[key]=Number.isFinite(value)?THREE.MathUtils.clamp(Math.floor(value),0,1000000):0}
         state.chapter=THREE.MathUtils.clamp(Math.floor(state.chapter),1,10);state.level=Math.min(Math.max(1,Math.floor(state.level)),chapterLevelCap(state.chapter));state.xp=THREE.MathUtils.clamp(Math.floor(state.xp),0,xpNeededForLevel(state.level)-1);
         state.equipment={core:null,charm:null,armor:null,relic:null};
@@ -2683,7 +2686,7 @@ function loadState(){
 }
 function nodeKey(n){return n.type+':'+n.x+':'+n.z}
 function restoreCollectedNodes(){const collected=new Set(Array.isArray(state.collectedNodes)?state.collectedNodes:[]);for(const n of nodes){n.collected=collected.has(nodeKey(n));n.root.visible=!n.collected}}
-function saveState(){try{state.saveVersion=5;state.mapVersion=1;state.inventory=state.inventory.slice(-500);state.level=Math.min(Math.max(1,Math.floor(Number(state.level)||1)),chapterLevelCap());state.xp=state.level>=chapterLevelCap()?0:THREE.MathUtils.clamp(Math.floor(Number(state.xp)||0),0,xpNeededForLevel(state.level)-1);state.currentMap=activeMapId;state.playerPosition={x:player.position.x,z:player.position.z};localStorage.setItem('ashen-crown-3d',JSON.stringify(state));const status=$('saveStatus');if(status){status.textContent='SAVED LOCALLY';status.dataset.state='saved'}}catch{const status=$('saveStatus');if(status){status.textContent='SAVE UNAVAILABLE';status.dataset.state='error'}if(!saveWarningShown){saveWarningShown=true;toastMsg('Unable to save: browser storage is unavailable.')}}}
+function saveState(){try{state.saveVersion=5;state.mapVersion=1;state.inventory=state.inventory.slice(-500);state.level=Math.min(Math.max(1,Math.floor(Number(state.level)||1)),chapterLevelCap());state.xp=state.level>=chapterLevelCap()?0:THREE.MathUtils.clamp(Math.floor(Number(state.xp)||0),0,xpNeededForLevel(state.level)-1);state.currentMap=activeMapId;state.playerPosition={x:player.position.x,z:player.position.z};state.savedAt=Date.now();const serialized=JSON.stringify(state);localStorage.setItem('ashen-crown-3d',serialized);window.AshenAuth?.queueSave?.(state);const status=$('saveStatus');if(status){status.textContent='SAVED LOCALLY';status.dataset.state='saved'}}catch{const status=$('saveStatus');if(status){status.textContent='SAVE UNAVAILABLE';status.dataset.state='error'}if(!saveWarningShown){saveWarningShown=true;toastMsg('Unable to save: browser storage is unavailable.')}}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveState,180)}
 function refreshEquipment(){
   document.querySelectorAll('.equip-slot').forEach(button=>{const equipped=state.equipment[button.dataset.slot],label=equipped?equipped.name:'Empty';button.innerHTML=escapeHtml(button.dataset.slot.toUpperCase())+'<span>'+escapeHtml(label)+'</span>';button.title=equipped?'Click to unequip '+equipped.name:'Open inventory to choose equipment'})
@@ -2710,7 +2713,7 @@ function openMap(){renderWorldMap();$('worldMap').classList.add('show')}
 let lastWidth=0,lastHeight=0;
 function resize(){const r=canvas.getBoundingClientRect(),w=Math.max(1,Math.round(r.width)),h=Math.max(1,Math.round(r.height));if(w===lastWidth&&h===lastHeight)return;lastWidth=w;lastHeight=h;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 window.addEventListener('resize',resize);window.addEventListener('keydown',e=>{
-  if(e.repeat&&['Space','KeyE','KeyG','KeyF','KeyI','KeyJ','KeyK','KeyM','Escape','Digit1','Digit2','Digit3'].includes(e.code))return;
+  if(e.repeat&&['Space','KeyE','KeyG','KeyF','KeyI','KeyJ','KeyK','KeyL','KeyM','Escape','Digit1','Digit2','Digit3'].includes(e.code))return;
   if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','Space'].includes(e.code))e.preventDefault();
   if(e.code==='Escape'){
     if(shopMenu?.classList.contains('show'))shopMenu.classList.remove('show');
@@ -2723,6 +2726,11 @@ window.addEventListener('resize',resize);window.addEventListener('keydown',e=>{
     else{$('pause').classList.toggle('show');state.paused=$('pause').classList.contains('show')}
     Object.keys(keys).forEach(k=>keys[k]=false);return;
   }
+  if($('metaMenu').classList.contains('show')&&['ArrowLeft','ArrowRight','KeyL'].includes(e.code)){
+    const tabs=[...document.querySelectorAll('.meta-tabs button')],active=Math.max(0,tabs.findIndex(b=>b.classList.contains('active'))),delta=e.code==='ArrowLeft'?-1:1;
+    if(tabs.length){archive(tabs[(active+delta+tabs.length)%tabs.length].dataset.meta);e.preventDefault()}return;
+  }
+  if(e.code==='KeyL'){archive('rank');return}
   if(anyOverlayOpen())return;
   keys[e.code]=true;
   if(e.code==='KeyE')openInventory();if(e.code==='KeyG')interact();if(e.code==='KeyF')pulse();if(e.code==='Digit1')useSkill(0);if(e.code==='Digit2')useSkill(1);if(e.code==='Digit3')useSkill(2);if(e.code==='Space')dodge();if(e.code==='KeyC')openSystemMenu('role');if(e.code==='KeyO')openSystemMenu('settings');if(e.code==='KeyB')openSystemMenu('base');if(e.code==='KeyI')openInventory();if(e.code==='KeyM')openMap();if(e.code==='Slash'||e.code==='F1')$('tutorial').classList.add('show');if(e.code==='KeyJ'){$('journal').classList.toggle('open');renderJournal('story')}if(e.code==='KeyK')archive();
@@ -2765,6 +2773,28 @@ function setupTouchControls(){
   function moveStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,42/len),nx=dx*scale,ny=dy*scale;knob.style.transform='translate('+nx+'px,'+ny+'px)';keys.KeyD=nx>17;keys.KeyA=nx< -17;keys.KeyS=ny>17;keys.KeyW=ny< -17}
   controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='inventory')openInventory();else if(action==='skill')useSkill(Number(button.dataset.skill))}));
 }
+async function syncCloudSaveFromAccount(){
+  const auth=window.AshenAuth;if(!auth?.loadCloudSave)return;
+  try{
+    await auth.ready;
+    const session=await auth.getSession();if(!session?.user)return;
+    const cloud=await auth.loadCloudSave(),remote=cloud?.save_json;
+    let local=null;try{local=JSON.parse(localStorage.getItem('ashen-crown-3d')||'null')}catch{}
+    const validRemote=remote&&typeof remote==='object'&&!Array.isArray(remote)&&Number(remote.level)>=1;
+    if(validRemote){
+      const remoteStamp=Number(remote.savedAt)||Date.parse(cloud.updated_at||'')||0;
+      const localStamp=Number(local?.savedAt)||0;
+      if(!local||remoteStamp>localStamp){
+        remote.savedAt=remoteStamp||Date.now();
+        localStorage.setItem('ashen-crown-3d',JSON.stringify(remote));
+        location.reload();return;
+      }
+    }
+    if(local)auth.queueSave?.(local);
+  }catch(error){console.warn('[Ashen Crown] Cloud save sync unavailable:',error?.message||error)}
+}
+window.addEventListener('ashen:auth',event=>{if(event.detail?.session?.user)void syncCloudSaveFromAccount()});
+window.AshenAuth?.ready?.then(()=>syncCloudSaveFromAccount()).catch(()=>{});
 loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
 if(state.tutorial!==false)$('tutorial').classList.add('show');
 time=DAY_LENGTH*.08;
