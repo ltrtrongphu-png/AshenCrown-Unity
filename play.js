@@ -157,11 +157,11 @@ function replaceIgnoreCase(source,search,replacement){
     if(leftBoundary&&rightBoundary){
       out+=source.slice(from,index)+replacement;
       from=index+search.length;
+    }else{
+      // Skip only this occurrence while preserving the original text.
+      out+=source.slice(from,index+1);
+      from=index+1;
     }
-    index=lower.indexOf(needle,Math.max(index+1,from));
-    if(index===-1)return out+source.slice(from);
-    // Re-enter with the next match if the just-found occurrence was skipped.
-    lower.indexOf; 
   }
   return out+source.slice(from);
 }
