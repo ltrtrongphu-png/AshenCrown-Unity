@@ -1,4 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -31,6 +33,19 @@ const webFiles = [
 ];
 const optionalAssets = new Set(['Assets/ashen-crown-logo.svg']);
 const generatedFiles = new Set(['resource-pack.json']);
+
+// Build a content-derived identifier so the service worker and production
+// shell cache is invalidated whenever any shipped web asset changes.
+const buildHash = createHash('sha256');
+for (const file of webFiles) {
+  if (generatedFiles.has(file)) continue;
+  const source = join(repoRoot, file);
+  if (!existsSync(source) || !statSync(source).isFile()) continue;
+  buildHash.update(file).update('\\0');
+  buildHash.update(readFileSync(source));
+  buildHash.update('\\0');
+}
+const buildId = buildHash.digest('hex').slice(0, 16);
 const resourceFiles = [
   'Assets/Models/Characters/AshenSentinel.glb',
   'Assets/Models/Bosses/AshenRegent.glb',
@@ -42,6 +57,34 @@ for (const file of webFiles) {
   if ((!existsSync(source) || !statSync(source).isFile()) && !optionalAssets.has(file)) {
     throw new Error(`Required web deployment file is missing: ${file}`);
   }
+}
+
+const resourceHash = createHash('sha256');
+for (const file of resourceFiles) {
+  resourceHash.update(file).update('\\0');
+  resourceHash.update(readFileSync(join(repoRoot, file)));
+  resourceHash.update('\\0');
+}
+const resourceVersion = 'ashen-production-' + resourceHash.digest('hex').slice(0, 16);
+
+// Parse browser scripts before shipping. This catches syntax regressions that a file-copy
+// build would otherwise miss because the browser code is not executed by Node.
+function checkJavaScriptSyntax(file, module = false) {
+  const args = module ? ['--check', '--input-type=module'] : ['--check'];
+  const result = spawnSync(process.execPath, args, {
+    cwd: repoRoot,
+    input: readFileSync(join(repoRoot, file), 'utf8'),
+    encoding: 'utf8',
+  });
+  if (result.error || result.status !== 0) {
+    throw new Error(`JavaScript syntax check failed for ${file}: ${result.stderr || result.error?.message || 'unknown error'}`);
+  }
+}
+for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js']) {
+  checkJavaScriptSyntax(file, false);
+}
+for (const file of ['play.js', 'model3d.js']) {
+  checkJavaScriptSyntax(file, true);
 }
 
 for (const page of ['index.html', 'play.html']) {
@@ -63,7 +106,7 @@ for (const file of webFiles) {
   mkdirSync(dirname(destination), { recursive: true });
   if (file === 'resource-pack.json') {
     const manifest = {
-      version: 'ashen-production-2026-10-07-v1',
+      version: `${resourceVersion}`,
       label: 'Ashen Crown Production Models',
       files: resourceFiles.map((path) => ({
         url: `/${path.replaceAll('\\', '/')}`,
@@ -72,7 +115,15 @@ for (const file of webFiles) {
     };
     writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`);
   } else if (existsSync(join(repoRoot, file))) {
-    cpSync(join(repoRoot, file), destination);
+    if (file === 'sw.js') {
+      const worker = readFileSync(join(repoRoot, file), 'utf8');
+      if (!worker.includes('__ASHEN_BUILD_ID__')) {
+        throw new Error('sw.js is missing the __ASHEN_BUILD_ID__ cache-version placeholder.');
+      }
+      writeFileSync(destination, worker.replaceAll('__ASHEN_BUILD_ID__', buildId));
+    } else {
+      cpSync(join(repoRoot, file), destination);
+    }
   } else if (file === 'Assets/ashen-crown-logo.svg') {
     writeFileSync(destination, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Ashen Crown emblem"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3c08a"/><stop offset=".5" stop-color="#c96b3d"/><stop offset="1" stop-color="#71331f"/></linearGradient></defs><path d="M128 18 159 69 204 38 194 104c-13 43-38 68-66 81-28-13-53-38-66-81L52 38l45 31z" fill="#0b0908" stroke="url(#g)" stroke-width="6" stroke-linejoin="round"/><path d="M69 104c18 13 38 19 59 19s41-6 59-19M83 105l10-37 35 55 35-55 10 37m-87 40c17 12 30 18 42 22 12-4 25-10 42-22" fill="none" stroke="#d98a58" stroke-width="4"/><path d="m128 91 13 25-13 29-13-29z" fill="#f0a46d"/><circle cx="128" cy="116" r="7" fill="#fff0d8"/></svg>\n`);
     console.warn('Logo source is absent from the checkout; generated the branded fallback SVG.');
@@ -80,4 +131,4 @@ for (const file of webFiles) {
 }
 
 const artifactBytes = webFiles.reduce((total, file) => total + statSync(join(outputDir, file)).size, 0);
-console.log(`Prepared ${webFiles.length} browser files (${(artifactBytes / 1024 / 1024).toFixed(2)} MiB) in dist/.`);
+console.log(`Prepared ${webFiles.length} browser files (${(artifactBytes / 1024 / 1024).toFixed(2)} MiB) in dist/ (build ${buildId}).`);

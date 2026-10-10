@@ -271,3 +271,13 @@ The presentation layer now has a dedicated quality/performance path for producti
 - `Presentation/Item3DPresentationSystem.cs` reuses tier material variants and disables shadows on decorative item particles to reduce draw/state churn.
 
 The repository includes the Ashen Sentinel and Ashen Regent character meshes plus authored PBR texture maps. The importer pipeline optimizes these and later FBX/GLB assets when they are brought into the consuming Unity project.
+
+## 15. Production Model Rendering and Cache Safety
+
+- `tools/build-web.mjs` computes a content fingerprint for the web shell and injects it into the service-worker cache name on each deployment.
+- The production model-pack version is hashed separately from the web shell, so CSS/JS-only changes do not trigger an unnecessary 8 MB model re-download.
+- The browser script build validates the syntax of shipped classic and ES-module JavaScript before producing `dist/`.
+- Production player and showcase scenes are normalized to the same 2.42-unit height with feet at the ground plane; the boss is normalized independently to 3.15 units.
+- GLB material groups and embedded PBR textures are preserved. Base-color/emissive textures use sRGB, while normal/metallic/roughness/occlusion maps remain linear data.
+- The `/play` model pack downloads in the background in Auto/High mode and is cached locally. It is skipped when the browser requests data saving, Performance quality is selected, or the user has explicitly removed the pack.
+- Directional shadows are enabled in High mode, adaptive in Auto mode, and disabled in Performance mode. The day/night clock continues while character animations are disabled.

@@ -6,11 +6,52 @@ scene.background=new THREE.Color(0x0a0b0e); scene.fog=new THREE.Fog(0x151311,58,
 const renderer=new THREE.WebGLRenderer({canvas,antialias:false,powerPreference:'high-performance'});
 let maxDpr=Math.min(window.devicePixelRatio||1,1.25);
 renderer.setPixelRatio(maxDpr); renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12;
-renderer.shadowMap.enabled=false; renderer.shadowMap.autoUpdate=false;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
+renderer.shadowMap.enabled=false; renderer.shadowMap.autoUpdate=false; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const camera=new THREE.PerspectiveCamera(55,1,.1,260); camera.position.set(0,4,8);
-scene.add(new THREE.HemisphereLight(0xcbd3d8,0x24201c,1.25));
-const sun=new THREE.DirectionalLight(0xffd0a4,1.05); sun.position.set(-18,22,12); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-100; sun.shadow.camera.right=100; sun.shadow.camera.top=100; sun.shadow.camera.bottom=-100; sun.shadow.camera.far=260; scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xcbd3d8,0x24201c,1.2));
+const fillLight=new THREE.DirectionalLight(0xffd6b0,.38);
+fillLight.position.set(16,9,12);scene.add(fillLight);
+const rimLight=new THREE.DirectionalLight(0x789dcc,.42);
+rimLight.position.set(-12,7,-18);scene.add(rimLight);
+
+const sun=new THREE.DirectionalLight(0xffd0a4,1.05);
+sun.position.set(-18,22,12);sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-42;sun.shadow.camera.right=42;sun.shadow.camera.top=42;sun.shadow.camera.bottom=-42;sun.shadow.camera.near=.5;sun.shadow.camera.far=180;
+sun.shadow.bias=-.0002;sun.shadow.normalBias=.025;sun.shadow.radius=2.5;
+scene.add(sun,sun.target);
+
+// A small, procedural studio environment gives the authored metallic PBR maps
+// a consistent warm/cool reflection without requiring another downloaded asset.
+const environmentCanvas=document.createElement('canvas');
+environmentCanvas.width=512;environmentCanvas.height=256;
+const environmentContext=environmentCanvas.getContext('2d');
+const environmentGradient=environmentContext.createLinearGradient(0,0,0,256);
+environmentGradient.addColorStop(0,'#152337');
+environmentGradient.addColorStop(.28,'#52677b');
+environmentGradient.addColorStop(.48,'#d9b38a');
+environmentGradient.addColorStop(.58,'#746050');
+environmentGradient.addColorStop(1,'#15110e');
+environmentContext.fillStyle=environmentGradient;
+environmentContext.fillRect(0,0,512,256);
+for(const lightRect of [
+  [76,42,36,8,'rgba(177,210,255,.95)'],
+  [310,53,54,10,'rgba(255,216,164,.95)'],
+  [410,84,22,5,'rgba(255,136,76,.8)'],
+  [183,67,18,4,'rgba(255,239,205,.72)']
+]){
+  environmentContext.shadowBlur=18;environmentContext.shadowColor=lightRect[4];
+  environmentContext.fillStyle=lightRect[4];
+  environmentContext.fillRect(lightRect[0],lightRect[1],lightRect[2],lightRect[3]);
+}
+environmentContext.shadowBlur=0;
+const environmentTexture=new THREE.CanvasTexture(environmentCanvas);
+environmentTexture.colorSpace=THREE.SRGBColorSpace;
+environmentTexture.mapping=THREE.EquirectangularReflectionMapping;
+environmentTexture.needsUpdate=true;
+scene.environment=environmentTexture;
+scene.environmentIntensity=.32;
 const world=new THREE.Group(), characters=new THREE.Group(), props=new THREE.Group(), effects=new THREE.Group(); scene.add(world);
 const sanctuaryBuild=new THREE.Group();world.add(sanctuaryBuild);
 world.add(characters,props,effects);
@@ -216,9 +257,13 @@ function updateSky(){
   const sunDir=skyUniforms.uSunDir.value.copy(sunPosition).normalize();
   const day=Math.max(0,Math.min(1,(sunY+.16)/.34));
 
-  sun.position.copy(sunPosition);
-  sun.intensity=.55+1.05*day;
+  const targetX=player.position.x,targetZ=player.position.z;
+  sun.target.position.set(targetX,0,targetZ);
+  sun.position.copy(sun.target.position).addScaledVector(sunDir,90);
+  sun.intensity=.3+1.35*day;
   sun.color.copy(sunCoolColor).lerp(sunWarmColor,Math.max(.08,day));
+  sun.target.updateMatrixWorld();
+  sun.shadow.camera.updateProjectionMatrix();
   skyUniforms.uSunDir.value.copy(sunDir);
   skyUniforms.uDay.value=day;
 
@@ -230,8 +275,9 @@ function updateSky(){
   skyUniforms.uNight.value.copy(skyNightColor);
   skyUniforms.uSunColor.value.copy(skySunColor);
 
-  sunDisc.position.copy(sunPosition);
-  sunHalo.position.copy(sunPosition);
+  skyDome.position.copy(camera.position);
+  sunDisc.position.copy(camera.position).addScaledVector(sunDir,115);
+  sunHalo.position.copy(sunDisc.position);
   sunDisc.material.opacity=Math.max(.05,day);
   sunHalo.material.opacity=.13+.18*day;
 
@@ -247,7 +293,7 @@ const ROLE_DEFS={
   glassblade:{name:'Glassblade',style:'Twin edge · fast single-target damage',colors:[0x31505a,0x65b6ae],skills:[['Quickdraw',28,4.6,5],['Afterimage',48,6,9],['Shatterstep',68,7,14]]},
   cinderweaver:{name:'Cinderweaver',style:'Ember arts · ranged burst damage',colors:[0x583c67,0xd99855],skills:[['Cinder Lance',38,10,7],['Starburst',46,6,10],['Ashfall',76,11,17]]},
   briarshot:{name:'Briarshot',style:'Longbow · piercing and area damage',colors:[0x3d5736,0xa5a654],skills:[['Thornbolt',32,12,5],['Briar Volley',48,10,9],['Huntmark',66,14,14]]}
-};const state={day:1,role:'ashbreaker',appearance:'default',skillPoints:0,skillRanks:[0,0,0],weaponRank:0,currentMap:'sanctuary',hunt:{kills:0},chapterGathered:0,settings:{quality:'auto',sensitivity:1,reducedMotion:false,sound:true,volume:.35,animations:true,visualEffects:true,uiScale:1,cameraFov:55},xp:0,level:1,hp:100,maxHp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],equipment:{core:null,charm:null,armor:null,relic:null},stats:{vitality:0,focus:0,ward:0},meta:{renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0,hubLevel:0,chaptersComplete:0},collectedNodes:[],tutorial:true,log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
+};const state={day:1,role:'ashbreaker',appearance:'default',skillPoints:0,skillRanks:[0,0,0],weaponRank:0,currentMap:'sanctuary',hunt:{kills:0},chapterGathered:0,settings:{quality:'auto',sensitivity:1,reducedMotion:false,sound:true,volume:.35,animations:true,visualEffects:true,uiScale:1,cameraFov:55,resourcePackDisabled:false},xp:0,level:1,hp:100,maxHp:100,stamina:100,coins:40,shards:0,echoes:0,quest:0,chapter:1,rep:{lyra:0,orren:0,seer:0},flags:{gate:false,truth:false},inventory:[],equipment:{core:null,charm:null,armor:null,relic:null},stats:{vitality:0,focus:0,ward:0},meta:{renown:0,mastery:0,legacy:0,points:0,contracts:0,developmentDay:0,hubLevel:0,chaptersComplete:0},collectedNodes:[],tutorial:true,log:['You wake beneath the sanctuary with an ember glowing in your palm.']};
 const keys={}; let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0,legacyMapSave=false;
 const player=new THREE.Group(); player.position.set(0,0,7); characters.add(player);
 
@@ -288,7 +334,9 @@ function actor(c,a){
   return g;
 }
 const playerVisual=actor(0x29221d,0x613724);player.add(playerVisual);
-let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},activePlayerAction='',playerActionUntil=0,fullPackLoaderPromise=null;
+let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null;
+const bossTelegraphs=[];
+
 const armorMat=new THREE.MeshStandardMaterial({color:0x302a29,roughness:.84,metalness:.18});
 const brassMat=new THREE.MeshStandardMaterial({color:0x9d6b42,roughness:.78,metalness:.28});
 const chestplate=new THREE.Mesh(new THREE.OctahedronGeometry(.43,0),armorMat);chestplate.scale.set(.88,1.18,.52);chestplate.position.set(0,1.08,.27);chestplate.castShadow=true;playerVisual.add(chestplate);
@@ -316,6 +364,7 @@ const bellLandmarks=[];
 const groundMat=wmat('groundSurface',0x17140f,.98);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(240,240,48,48),groundMat);
 ground.rotation.x=-Math.PI/2;
+ground.receiveShadow=true;
 world.add(ground);
 
 const grid=new THREE.GridHelper(120,60,0x332a24,0x1b1714);
@@ -332,6 +381,7 @@ function path(x,z,w,d,rot=0,color=0x2a201a){
   p.rotation.x=-Math.PI/2;
   p.rotation.z=rot;
   p.position.set(x,.018,z);
+  p.receiveShadow=true;
   paths.add(p);
 }
 
@@ -471,7 +521,7 @@ function wbox(x,y,z,color,key,emission=0){
   return mesh;
 }
 function tree(x,z,s=1,variant=0){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='AshenTree';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.scale.setScalar(s);
 
@@ -517,7 +567,7 @@ for(let i=0;i<48;i++){
 }
 
 function rock(x,z,s=1){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='RockCluster';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.rotation.y=(x*0.17+z*0.09);
   const r=new THREE.Mesh(new THREE.DodecahedronGeometry(.75,1),wmat('rock',0x45413b,.94));
@@ -575,7 +625,7 @@ function lantern(x,z,tall=1){
 [[-7,-4,1],[7,-4,1],[-8,7,.8],[8,7,.8],[0,-13,1],[-17,-20,.8],[18,-22,.8],[36,-7,.9],[-36,8,.9]].forEach(p=>lantern(...p));
 
 function house(x,z,s=1,rot=0,variant=0,name='House'){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.userData.shadowCaster=true;
   g.name=name;
   g.position.set(x,0,z);
   g.rotation.y=rot;
@@ -634,7 +684,7 @@ function house(x,z,s=1,rot=0,variant=0,name='House'){
 }
 
 function well(x,z,s=1){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='VillageWell';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   const base=new THREE.Mesh(new THREE.CylinderGeometry(1.55*s,1.75*s,.75*s,14),wmat('wellStone',0x59514a,.94));
   base.position.y=.38*s;
@@ -658,7 +708,7 @@ function well(x,z,s=1){
 }
 
 function fence(x,z,len=8,rot=0){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='WoodFence';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.rotation.y=rot;
   for(let i=0;i<=len;i++){
@@ -680,7 +730,7 @@ function fence(x,z,len=8,rot=0){
 }
 
 function bridge(x,z,len=14,rot=0){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='WoodBridge';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.rotation.y=rot;
   for(let i=0;i<len;i++){
@@ -726,7 +776,7 @@ function pond(x,z,rx,rz){
 }
 
 function ruin(x,z,s=1){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='HollowRuin';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   g.rotation.y=(x+z)*.03;
   for(const p of [[-2,1,0],[2,1,.2],[-1.2,1,1.8],[1.4,1,1.7]]){
@@ -785,7 +835,7 @@ function hollowBell(x,z){
 hollowBell(56,-12);
 
 function campfire(x,z){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='Campfire';g.userData.shadowCaster=true;
   g.position.set(x,0,z);
   for(let i=0;i<6;i++){
     const log=wbox(.22,1.2,.22,0x503226,'fireLog');
@@ -808,7 +858,7 @@ function campfire(x,z){
 [[-1,-1],[17,12],[-17,-30],[37,-6],[49,39],[-49,-14]].forEach(p=>campfire(...p));
 
 function stall(x,z,rot=0,variant=0){
-  const g=new THREE.Group();
+  const g=new THREE.Group();g.name='MarketStall';g.userData.shadowCaster=true;
   g.position.set(x,0,z); g.rotation.y=rot;
   const wood=wmat('stallWood',0x4b3428,.92);
   const roof=wmat('stallRoof'+variant,variant%2?0x6c3b31:0x45525f,.94);
@@ -836,7 +886,7 @@ function crate(x,z,s=1){
   const c=wbox(.72*s,.72*s,.72*s,0x715137,'crate'); c.position.set(x,.36*s,z); props.add(c); addBoxCollider(x,z,.40*s,.40*s,0,'crate'); return c;
 }
 function cart(x,z,rot=0){
-  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;
+  const g=new THREE.Group();g.name='MarketCart';g.userData.shadowCaster=true;g.position.set(x,0,z);g.rotation.y=rot;
   const bed=wbox(2.1,.35,1.15,0x5b3f2d,'cartBed');bed.position.y=.72;g.add(bed);
   for(const sx of [-.75,.75]){
     const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.48,.48,.16,18),wmat('wheel',0x33251e,.98));
@@ -854,7 +904,7 @@ crate(-7,14,.9); crate(9,14,.8); crate(-16,-22,.9); crate(-2,-27,1);
 cart(1,13,.04); cart(-15,-25,.22);
 
 function forge(x,z){
-  const g=new THREE.Group();g.position.set(x,0,z);
+  const g=new THREE.Group();g.name='VillageForge';g.userData.shadowCaster=true;g.position.set(x,0,z);
   const base=wbox(2.5,.55,2.0,0x49423d,'forgeBase');base.position.y=.28;g.add(base);
   const roof=new THREE.Mesh(new THREE.ConeGeometry(1.9,1.35,4),wmat('forgeRoof',0x313136,.92));
   roof.position.y=2.35;roof.rotation.y=Math.PI/4;roof.castShadow=true;g.add(roof);
@@ -1241,7 +1291,9 @@ let worldSimAccumulator=0;
 let fpsAccumulator=0;
 let fpsFrames=0;
 let encounterHudAccumulator=0;
+let shadowRefreshAccumulator=0;
 let adaptiveDpr=1;
+let currentFps=60;
 function spawnEnemy(){
   if(enemies.length)return;
   if(activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
@@ -1287,7 +1339,8 @@ function spawnEnemy(){
   g.add(e1,e2);
   characters.add(g);
   const maxHp=Math.round((isBoss?150:state.quest>=3?90:45)*(1+(state.chapter-1)*.18)+Math.max(0,state.level-1)*4);
-  encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,attackDamage:(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2),attackSkill:0,body:b,isBoss};
+  const baseAttackDamage=(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2);
+  encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,baseAttackDamage,attackDamage:baseAttackDamage,attackSkill:0,attackCycle:0,body:b,fallbackVisuals:g.children.slice(),isBoss};
   enemies=[encounter];
   if(isBoss)attachProductionBoss(encounter);
   setEncounterHud(encounter);
@@ -1320,7 +1373,33 @@ function upgradeSkill(index){if(!state.skillPoints||!Number.isInteger(index)||in
 function recordHuntKill(boss){state.hunt=state.hunt||{kills:0};state.hunt.kills++;state.shards+=boss?3:1;if(state.hunt.kills%5===0)toastMsg('Hunt contract ready · claim it at the Sanctuary');}
 function finishEncounter(){const defeated=encounter;if(!defeated)return;const bellWaiting=!defeated.isBoss&&state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated;defeated.root.removeFromParent();enemies=[];recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);if(defeated.isBoss){const ch=window.ASHEN_CAMPAIGN[state.chapter-1]||window.ASHEN_CAMPAIGN[0];state.flags.bellWardenDefeated=true;state.quest=4;if(state.chapter===1){item('Eda Vey’s Name','Quest Relic','Legendary',['Memory','Identity'],{focus:2});state.log.unshift('The Bell Warden was Eda Vey, the keeper who refused to let the Crown erase her village.');toastMsg('The Bell Warden falls — Eda Vey is remembered.')}else{item(ch.items[ch.items.length-1]||ch.title,'Chapter Relic','Legendary',['Chapter '+state.chapter,'Boss Drop'],{focus:2});state.log.unshift('The chapter warden fell. '+ch.title+' can no longer keep its record hidden.');toastMsg(ch.title+' warden defeated · chapter relic recovered')}setQuest()}else{item('Ashen Wisp Fragment','Relic','Rare',['Encounter Drop'],{focus:1});if(!bellWaiting)toastMsg('Encounter cleared · +1 forge shard')}encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy()}saveState()}
 function advanceChapter(){if(state.quest<5||state.chapter>=10)return;state.meta.chaptersComplete=Math.max(state.meta.chaptersComplete,state.chapter);updateSanctuaryBuild();state.chapter++;state.quest=0;state.chapterGathered=0;state.echoes=0;state.flags.bellAwakened=false;state.flags.bellWardenDefeated=false;state.flags.gate=false;state.flags.truth=false;state.flags.sanctuaryOpen=false;state.flags.protectedSanctuary=false;state.collectedNodes=[];restoreCollectedNodes();state.hp=state.maxHp;state.stamina=100;setActiveMap(mapIdForChapter(state.chapter));const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];state.log.unshift('Expedition '+state.chapter+' begins: '+(chapter?.title||'The next road')+'.');saveState();$('systemMenu').classList.remove('show');setQuest();showChapterTitle(chapter?.title||'NEW EXPEDITION','Explore '+MAPS[activeMapId].name+' · gather · hunt · shape this chapter');toastMsg('Chapter '+String(state.chapter).padStart(2,'0')+' · '+MAPS[activeMapId].name)}
-function applySettings(){const settings=state.settings,native=window.devicePixelRatio||1,r=canvas.getBoundingClientRect(),pixelBudget=Math.sqrt(3600000/Math.max(1,r.width*r.height)),qualityCap=settings.quality==='performance'?1:settings.quality==='high'?2:1.6;maxDpr=Math.max(.85,Math.min(native,qualityCap,pixelBudget));adaptiveDpr=settings.quality==='high'?maxDpr:Math.min(maxDpr,Math.max(.95,adaptiveDpr));renderer.setPixelRatio(adaptiveDpr);document.documentElement.classList.toggle('animations-off',settings.animations===false);document.documentElement.style.setProperty('--game-ui-scale',String(settings.uiScale||1));camera.fov=THREE.MathUtils.clamp(Number(settings.cameraFov)||55,42,68);camera.updateProjectionMatrix();effects.visible=settings.visualEffects!==false;lastWidth=0;resize();saveState()}function item(name,type,rarity,attrs,stats={}){state.meta.renown+=rarity==='Legendary'?4:rarity==='Epic'?3:2;state.meta.points+=1;const inferred={...stats};if(attrs.includes('Ward')&&!inferred.ward)inferred.ward=1;if(attrs.includes('Vitality')&&!inferred.vitality)inferred.vitality=1;if(attrs.includes('Focus')&&!inferred.focus)inferred.focus=1;state.inventory.push({name,type,rarity,attrs,stats:inferred});state.log.unshift('Collected '+name+'.');scheduleSave()}
+function syncRenderQuality(){
+  const quality=state.settings.quality||'auto';
+  const shadowsAllowed=state.settings.visualEffects!==false&&(
+    quality==='high'||(quality==='auto'&&currentFps>=55&&adaptiveDpr>=.98)
+  );
+  if(renderer.shadowMap.enabled!==shadowsAllowed){
+    renderer.shadowMap.enabled=shadowsAllowed;
+    renderer.shadowMap.needsUpdate=shadowsAllowed;
+  }
+  sun.castShadow=shadowsAllowed;
+  renderer.shadowMap.autoUpdate=false;
+}
+function applySettings(){
+  const settings=state.settings,native=window.devicePixelRatio||1,r=canvas.getBoundingClientRect();
+  const pixelBudget=Math.sqrt(3600000/Math.max(1,r.width*r.height));
+  const qualityCap=settings.quality==='performance'?1:settings.quality==='high'?2:1.6;
+  maxDpr=Math.max(.85,Math.min(native,qualityCap,pixelBudget));
+  adaptiveDpr=settings.quality==='high'?maxDpr:Math.min(maxDpr,Math.max(.95,adaptiveDpr));
+  renderer.setPixelRatio(adaptiveDpr);
+  document.documentElement.classList.toggle('animations-off',settings.animations===false);
+  document.documentElement.style.setProperty('--game-ui-scale',String(settings.uiScale||1));
+  camera.fov=THREE.MathUtils.clamp(Number(settings.cameraFov)||55,42,68);
+  camera.updateProjectionMatrix();
+  effects.visible=settings.visualEffects!==false;
+  syncRenderQuality();
+  lastWidth=0;resize();saveState();
+}function item(name,type,rarity,attrs,stats={}){state.meta.renown+=rarity==='Legendary'?4:rarity==='Epic'?3:2;state.meta.points+=1;const inferred={...stats};if(attrs.includes('Ward')&&!inferred.ward)inferred.ward=1;if(attrs.includes('Vitality')&&!inferred.vitality)inferred.vitality=1;if(attrs.includes('Focus')&&!inferred.focus)inferred.focus=1;state.inventory.push({name,type,rarity,attrs,stats:inferred});state.log.unshift('Collected '+name+'.');scheduleSave()}
 function toastMsg(t){$('toast').textContent=t;$('toast').classList.add('show');toastTimer=3}
 let gameAudio=null;
 function playGameSound(kind='ui'){if(!state.settings.sound)return;const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)return;try{gameAudio??=new AudioCtor();if(gameAudio.state==='suspended')gameAudio.resume().catch(()=>{});const presets={ui:[360,.055,'sine'],attack:[145,.075,'triangle'],skill:[520,.13,'sawtooth'],collect:[740,.16,'sine'],hurt:[92,.18,'triangle'],success:[620,.22,'sine']},[frequency,duration,wave]=presets[kind]||presets.ui,osc=gameAudio.createOscillator(),gain=gameAudio.createGain(),now=gameAudio.currentTime,volume=Math.max(0,Math.min(1,Number(state.settings.volume)||0));if(!volume)return;osc.type=wave;osc.frequency.setValueAtTime(frequency,now);if(kind==='skill'||kind==='success')osc.frequency.exponentialRampToValueAtTime(frequency*1.5,now+duration);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(volume*.12,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);osc.connect(gain);gain.connect(gameAudio.destination);osc.start(now);osc.stop(now+duration+.015)}catch{}}
@@ -1329,14 +1408,198 @@ let resourcePackLoading=false;
 function resourceBytes(bytes){return bytes>=1048576?(bytes/1048576).toFixed(1)+' MB':Math.ceil(bytes/1024)+' KB'}
 function packProgress(percent,label){const bar=$('resourcePackProgress'),status=$('resourcePackStatus');if(bar)bar.value=percent;if(status)status.textContent=label}
 async function readResourceManifest(){const response=await fetch('./resource-pack.json',{cache:'no-store'});if(!response.ok)throw new Error('Resource pack manifest is unavailable.');return response.json()}
-async function refreshResourcePackUi(){const status=$('resourcePackStatus'),download=$('downloadResourcePack'),remove=$('removeResourcePack');if(!status||!download||!remove)return;try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0),installed=await Promise.all(manifest.files.map(file=>cache.match(new URL(file.url,location.origin))));const complete=installed.every(Boolean);status.textContent=complete?'Installed · the production models are ready from local storage.':'Optional full pack · '+resourceBytes(total)+' downloaded once and reused from this browser.';download.disabled=complete||resourcePackLoading;download.textContent=complete?'FULL PACK INSTALLED':resourcePackLoading?'DOWNLOADING…':'DOWNLOAD FULL PACK';remove.disabled=!complete||resourcePackLoading;remove.hidden=!complete;if($('resourcePackProgress'))$('resourcePackProgress').value=complete?100:0}catch{status.textContent='Resource pack status is unavailable while offline.';download.disabled=true}}
-async function installResourcePack(){if(resourcePackLoading)return;resourcePackLoading=true;const button=$('downloadResourcePack'),remove=$('removeResourcePack');if(button)button.disabled=true;if(remove)remove.disabled=true;try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0);let finished=0;for(let index=0;index<manifest.files.length;index++){const file=manifest.files[index],url=new URL(file.url,location.origin),cached=await cache.match(url);if(cached){finished+=file.size;packProgress(Math.round(finished/total*100),'Already saved · '+(index+1)+' / '+manifest.files.length);continue}packProgress(Math.round(finished/total*100),'Downloading model '+(index+1)+' / '+manifest.files.length+'…');const response=await fetch(url,{cache:'force-cache'});if(!response.ok)throw new Error('Could not download '+url.pathname);const bytes=await response.arrayBuffer();if(file.size&&bytes.byteLength!==file.size)throw new Error('The downloaded model was incomplete. Please retry.');await cache.put(url,new Response(bytes,{headers:response.headers}));finished+=bytes.byteLength;packProgress(Math.round(finished/total*100),'Saved '+(index+1)+' / '+manifest.files.length+' models')};try{await navigator.storage?.persist?.()}catch{};await loadFullResourceModels(manifest,cache);state.settings.resourcePackVersion=manifest.version;saveState();packProgress(100,'Full pack installed · future visits use the saved models.')}catch(error){packProgress(0,(error&&error.message)||'Download failed. You can retry when online.')}finally{resourcePackLoading=false;await refreshResourcePackUi()}}
-async function removeResourcePack(){const manifest=await readResourceManifest();await caches.delete(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion='';saveState();location.reload()}
+async function refreshResourcePackUi(){const status=$('resourcePackStatus'),download=$('downloadResourcePack'),remove=$('removeResourcePack');if(!status||!download||!remove)return;try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0),installed=await Promise.all(manifest.files.map(file=>cache.match(new URL(file.url,location.origin))));const complete=installed.every(Boolean);status.textContent=complete?'Installed · the production models are ready from local storage.':'Production model pack · '+resourceBytes(total)+' one-time download, saved in this browser.';download.disabled=complete||resourcePackLoading;download.textContent=complete?'FULL PACK INSTALLED':resourcePackLoading?'DOWNLOADING…':'DOWNLOAD FULL PACK';remove.disabled=!complete||resourcePackLoading;remove.hidden=!complete;if($('resourcePackProgress'))$('resourcePackProgress').value=complete?100:0}catch{status.textContent='Resource pack status is unavailable while offline.';download.disabled=true}}
+async function installResourcePack(){if(resourcePackLoading)return;state.settings.resourcePackDisabled=false;resourcePackLoading=true;const button=$('downloadResourcePack'),remove=$('removeResourcePack');if(button)button.disabled=true;if(remove)remove.disabled=true;if(!button)toastMsg('Loading production 3D models and embedded PBR textures in the background…');try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version),total=manifest.files.reduce((sum,file)=>sum+file.size,0);let finished=0;for(let index=0;index<manifest.files.length;index++){const file=manifest.files[index],url=new URL(file.url,location.origin),cached=await cache.match(url);if(cached){finished+=file.size;packProgress(Math.round(finished/total*100),'Already saved · '+(index+1)+' / '+manifest.files.length);continue}packProgress(Math.round(finished/total*100),'Downloading model '+(index+1)+' / '+manifest.files.length+'…');const response=await fetch(url,{cache:'force-cache'});if(!response.ok)throw new Error('Could not download '+url.pathname);const bytes=await response.arrayBuffer();if(file.size&&bytes.byteLength!==file.size)throw new Error('The downloaded model was incomplete. Please retry.');await cache.put(url,new Response(bytes,{headers:response.headers}));finished+=bytes.byteLength;packProgress(Math.round(finished/total*100),'Saved '+(index+1)+' / '+manifest.files.length+' models')};try{await navigator.storage?.persist?.()}catch{};await loadFullResourceModels(manifest,cache);await pruneOldResourcePackCaches(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion=manifest.version;saveState();packProgress(100,'Full pack installed · production models and textures are ready.');if(!button)toastMsg('Production character and boss models loaded with aligned PBR textures.')}catch(error){packProgress(0,(error&&error.message)||'Download failed. You can retry when online.');if(!button)toastMsg('Production model download failed; the aligned fallback remains active.')}finally{resourcePackLoading=false;await refreshResourcePackUi()}}
+async function removeResourcePack(){const manifest=await readResourceManifest();await caches.delete(RESOURCE_CACHE_PREFIX+manifest.version);state.settings.resourcePackVersion='';state.settings.resourcePackDisabled=true;saveState();location.reload()}
 function playPlayerAnimation(name,hold=0){const action=productionPlayerActions[name];if(!action||!productionPlayerMixer||state.settings.animations===false)return;if(activePlayerAction!==name){const previous=productionPlayerActions[activePlayerAction];if(previous)previous.fadeOut(.08);action.reset().fadeIn(.08).play();activePlayerAction=name}if(hold>0)playerActionUntil=performance.now()+hold}
 function updatePlayerAnimation(dt,moving,sprinting){if(!productionPlayerMixer||state.settings.animations===false)return;if(performance.now()>=playerActionUntil)playPlayerAnimation(moving?(sprinting?'Run':'Walk'):'Idle');productionPlayerMixer.update(dt)}
-async function loadFullResourceModels(manifest,cache){if(fullPackLoaderPromise)return fullPackLoaderPromise;fullPackLoaderPromise=(async()=>{try{const loaderModule=await import('https://esm.sh/three@0.186.1/examples/jsm/loaders/GLTFLoader.js'),loader=new loaderModule.GLTFLoader(),files=await Promise.all(manifest.files.map(async file=>{const response=await cache.match(new URL(file.url,location.origin));if(!response)throw new Error('Full pack is incomplete.');const buffer=await response.arrayBuffer();return new Promise((resolve,reject)=>loader.parse(buffer,'',resolve,reject))})),sentinel=files.find((_,i)=>manifest.files[i].url.includes('AshenSentinel')),regent=files.find((_,i)=>manifest.files[i].url.includes('AshenRegent'));if(!sentinel||!regent)throw new Error('The production models are missing from the pack.');productionPlayerScene=sentinel.scene;productionPlayerScene.name='production-player-model';productionPlayerScene.scale.setScalar(.98);player.add(productionPlayerScene);playerVisual.visible=false;productionPlayerMixer=new THREE.AnimationMixer(productionPlayerScene);productionPlayerActions=Object.fromEntries(sentinel.animations.map(clip=>[clip.name,productionPlayerMixer.clipAction(clip)]));activePlayerAction='';playPlayerAnimation('Idle');productionBossScene=regent.scene;productionBossAnimations=regent.animations;productionBossScene.name='production-boss-model';productionBossScene.scale.setScalar(.82);if(encounter?.isBoss)attachProductionBoss(encounter);return true}catch(error){fullPackLoaderPromise=null;throw error}})();return fullPackLoaderPromise}
-function attachProductionBoss(enemy){if(!productionBossScene||!enemy?.isBoss)return;enemy.body.visible=false;enemy.root.add(productionBossScene);productionBossScene.position.set(0,0,0);const idleClip=productionBossAnimations.find(clip=>clip.name==='Idle');productionBossMixer=null;if(idleClip){productionBossMixer=new THREE.AnimationMixer(productionBossScene);productionBossMixer.clipAction(idleClip).play()}}
-async function loadCachedResourcePack(){if(!('caches'in window))return;try{const manifest=await readResourceManifest(),cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version);if((await Promise.all(manifest.files.map(file=>cache.match(new URL(file.url,location.origin))))).every(Boolean))await loadFullResourceModels(manifest,cache)}catch{}}
+function fitModelToHeight(model,targetHeight){
+  model.position.set(0,0,0);
+  model.updateMatrixWorld(true);
+  const initialBounds=new THREE.Box3().setFromObject(model);
+  const initialSize=initialBounds.getSize(new THREE.Vector3());
+  if(initialSize.y>1e-4){
+    model.scale.multiplyScalar(targetHeight/initialSize.y);
+  }
+  model.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(model);
+  const centerX=(bounds.min.x+bounds.max.x)*.5;
+  const centerZ=(bounds.min.z+bounds.max.z)*.5;
+  model.position.x-=centerX;
+  model.position.y-=bounds.min.y;
+  model.position.z-=centerZ;
+  model.updateMatrixWorld(true);
+  return new THREE.Box3().setFromObject(model);
+}
+
+function prepareProductionModel(model,targetHeight,label){
+  const bounds=fitModelToHeight(model,targetHeight);
+  const maxAnisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()||1);
+  model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    object.frustumCulled=true;
+    object.userData.productionModelPart=true;
+    const materials=Array.isArray(object.material)?object.material:[object.material];
+    for(const material of materials){
+      if(!material)continue;
+      // Preserve the authored GLB material groups. Only enforce correct glTF color spaces.
+      if(material.map){
+        material.map.colorSpace=THREE.SRGBColorSpace;
+        material.map.anisotropy=maxAnisotropy;
+      }
+      if(material.emissiveMap){
+        material.emissiveMap.colorSpace=THREE.SRGBColorSpace;
+        material.emissiveMap.anisotropy=maxAnisotropy;
+      }
+      for(const texture of [material.normalMap,material.metalnessMap,material.roughnessMap,material.aoMap]){
+        if(texture)texture.anisotropy=maxAnisotropy;
+      }
+      if('roughness' in material)material.roughness=THREE.MathUtils.clamp(material.roughness,.18,.96);
+      if('metalness' in material)material.metalness=THREE.MathUtils.clamp(material.metalness,0,1);
+      material.needsUpdate=true;
+    }
+  });
+  model.userData.normalizedHeight=bounds.max.y-bounds.min.y;
+  model.userData.assetRole=label;
+  return bounds;
+}
+
+function playBossAnimation(name,hold=0){
+  const action=productionBossActions[name];
+  if(!action||!productionBossMixer||state.settings.animations===false)return;
+  if(activeBossAction!==name){
+    const previous=productionBossActions[activeBossAction];
+    if(previous)previous.fadeOut(.12);
+    action.reset().fadeIn(.12).play();
+    activeBossAction=name;
+  }
+  if(hold>0)bossActionUntil=performance.now()+hold*1000;
+}
+
+function updateBossAnimation(dt,enemy,distance){
+  if(!productionBossMixer||state.settings.animations===false)return;
+  if(performance.now()>=bossActionUntil){
+    const name=enemy.state==='windup'
+      ?(enemy.attackSkill===1?'Light1':'Heavy')
+      :(distance>2.05?'Walk':'Idle');
+    if(activeBossAction!==name)playBossAnimation(name);
+  }
+  productionBossMixer.update(dt);
+}
+
+function createBossTelegraph(enemy,radius,color,duration){
+  if(state.settings.visualEffects===false)return;
+  const ring=new THREE.Mesh(
+    new THREE.RingGeometry(radius*.91,radius,48),
+    new THREE.MeshBasicMaterial({color,transparent:true,opacity:.88,side:THREE.DoubleSide,depthWrite:false,toneMapped:false})
+  );
+  ring.rotation.x=-Math.PI/2;
+  ring.position.set(enemy.root.position.x,.045,enemy.root.position.z);
+  ring.scale.setScalar(.24);
+  ring.renderOrder=4;
+  effects.add(ring);
+  bossTelegraphs.push({mesh:ring,duration,remaining:duration});
+}
+
+function triggerBossPhase(enemy,phase){
+  enemy.phase=phase;
+  enemy.attackCycle=0;
+  enemy.attackSkill=phase;
+  enemy.cooldown=.48;
+  enemy.attackDamage=Math.round(enemy.baseAttackDamage*(phase===1?1:phase===2?1.22:1.48));
+  createBossTelegraph(enemy,phase===1?2.6:phase===2?4.4:5.8,phase===3?0xd66dff:0xffbd62,.95);
+  playBossAnimation(phase===3?'Enrage':'Heavy',1.1);
+  toastMsg(phase===2?'Warden Phase II · the arena shockwave is wider.'
+    :phase===3?'Warden Phase III · the final assault begins.'
+    :'Warden Phase I · read the attack tells.');
+}
+
+async function loadFullResourceModels(manifest,cache){
+  if(fullPackLoaderPromise)return fullPackLoaderPromise;
+  fullPackLoaderPromise=(async()=>{
+    try{
+      const loaderModule=await import('https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/loaders/GLTFLoader.js');
+      const loader=new loaderModule.GLTFLoader();
+      const files=await Promise.all(manifest.files.map(async file=>{
+        const response=await cache.match(new URL(file.url,location.origin));
+        if(!response)throw new Error('Full pack is incomplete.');
+        const buffer=await response.arrayBuffer();
+        return new Promise((resolve,reject)=>loader.parse(buffer,'',resolve,reject));
+      }));
+      const sentinel=files.find((_,i)=>manifest.files[i].url.includes('AshenSentinel'));
+      const regent=files.find((_,i)=>manifest.files[i].url.includes('AshenRegent'));
+      if(!sentinel||!regent)throw new Error('The production models are missing from the pack.');
+
+      productionPlayerScene=sentinel.scene;
+      productionPlayerScene.name='production-player-model';
+      prepareProductionModel(productionPlayerScene,2.42,'player');
+      player.add(productionPlayerScene);
+      playerVisual.visible=false;
+
+      productionPlayerMixer=new THREE.AnimationMixer(productionPlayerScene);
+      productionPlayerActions=Object.fromEntries(sentinel.animations.map(clip=>[clip.name,productionPlayerMixer.clipAction(clip)]));
+      activePlayerAction='';
+      playPlayerAnimation('Idle');
+
+      productionBossScene=regent.scene;
+      productionBossScene.name='production-boss-model';
+      prepareProductionModel(productionBossScene,3.15,'boss');
+      productionBossAnimations=regent.animations;
+      productionBossMixer=new THREE.AnimationMixer(productionBossScene);
+      productionBossActions=Object.fromEntries(regent.animations.map(clip=>[clip.name,productionBossMixer.clipAction(clip)]));
+      activeBossAction='';
+      if(encounter?.isBoss)attachProductionBoss(encounter);
+
+      return true;
+    }catch(error){
+      fullPackLoaderPromise=null;
+      throw error;
+    }
+  })();
+  return fullPackLoaderPromise;
+}
+
+function attachProductionBoss(enemy){
+  if(!productionBossScene||!enemy?.isBoss)return;
+  productionBossScene.removeFromParent();
+  enemy.root.add(productionBossScene);
+  // Preserve the normalized foot-pivot offset computed from the GLB bounds.
+  if(Array.isArray(enemy.fallbackVisuals))enemy.fallbackVisuals.forEach(object=>{if(object)object.visible=false});
+  else if(enemy.body)enemy.body.visible=false;
+  for(const action of Object.values(productionBossActions))action.stop();
+  activeBossAction='';
+  bossActionUntil=0;
+  playBossAnimation('Idle');
+}
+
+async function pruneOldResourcePackCaches(activeCacheName){
+  if(!('caches'in window))return;
+  const names=await caches.keys();
+  await Promise.all(names
+    .filter(name=>name.startsWith(RESOURCE_CACHE_PREFIX)&&name!==activeCacheName)
+    .map(name=>caches.delete(name)));
+}
+
+async function loadCachedResourcePack(){
+  if(!('caches'in window))return;
+  try{
+    const manifest=await readResourceManifest();
+    const cache=await caches.open(RESOURCE_CACHE_PREFIX+manifest.version);
+    if((await Promise.all(manifest.files.map(file=>cache.match(new URL(file.url,location.origin))))).every(Boolean)){
+      await loadFullResourceModels(manifest,cache);
+      await pruneOldResourcePackCaches(RESOURCE_CACHE_PREFIX+manifest.version);
+      return;
+    }
+    const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+    if(state.settings.resourcePackDisabled===true||connection?.saveData===true||state.settings.quality==='performance')return;
+    // Download production meshes and their embedded PBR textures once in the background.
+    await installResourcePack();
+  }catch(error){
+    console.warn('[Ashen Crown] Production model pack kept on fallback:',error);
+  }
+}
 function showChapterTitle(title,subtitle){const el=$('message');el.querySelector('strong').textContent=title;el.querySelector('span').textContent=subtitle;el.classList.remove('dismissed');clearTimeout(el._dismissTimer);el._dismissTimer=setTimeout(()=>el.classList.add('dismissed'),4600)}
 const SHOP_STOCK={merchant_01:[{name:'Hearthguard Coat',type:'Armor',rarity:'Rare',price:55,level:1,attrs:['+Vitality','+Ward'],stats:{vitality:2,ward:2},desc:'A reinforced coat for long roads.'},{name:'Ember Focus Ring',type:'Trinket',rarity:'Rare',price:70,level:2,attrs:['+Focus'],stats:{focus:2},desc:'Sharpens the ember pulse.'},{name:'Wayfarer Core',type:'Core',rarity:'Epic',price:110,level:3,attrs:['+Vitality','+Focus'],stats:{vitality:2,focus:2},desc:'A balanced core for explorers.'}],merchant_02:[{name:'Roadwarden Mantle',type:'Armor',rarity:'Epic',price:120,level:3,attrs:['+Ward','+Vitality'],stats:{ward:3,vitality:2},desc:'Built for guards beyond the old gate.'},{name:'Glassheart Relic',type:'Relic',rarity:'Epic',price:135,level:4,attrs:['+Focus','+Ward'],stats:{focus:2,ward:2},desc:'Stores a second pulse of ember light.'},{name:'Crownroad Sigil',type:'Relic',rarity:'Legendary',price:220,level:5,attrs:['+Vitality','+Focus','+Ward'],stats:{vitality:3,focus:3,ward:3},desc:'A rare mark from the old crownlands.'}]};
 let shopMenu=null;
@@ -1446,7 +1709,7 @@ function tick(dt){
   if(Math.floor(time/12)!==Math.floor((time-dt)/12))saveState();
   move(dt);
   updateCamera(dt);
-  if(state.settings.animations!==false)updateSky();
+  updateSky();
   nameplateAccumulator+=dt;if(nameplateAccumulator>=.08){nameplateAccumulator=0;updateNpcNameplates()}
   worldSimAccumulator+=dt;
   if(state.settings.animations!==false&&worldSimAccumulator>=.05){
@@ -1460,19 +1723,102 @@ function tick(dt){
   attackCooldown=Math.max(0,attackCooldown-dt);dodgeIFrames=Math.max(0,dodgeIFrames-dt);for(let i=0;i<3;i++)skillCooldowns[i]=Math.max(0,(skillCooldowns[i]||0)-dt);skillHudAccumulator+=dt;if(skillHudAccumulator>=.1){skillHudAccumulator=0;refreshSkillHud()}nearbyRefresh-=dt;if(nearbyRefresh<=0){nearbyTarget=findNearby();nearbyRefresh=.1}
   for(const e of enemies){
     if(!e||!e.root)continue;
-    const dx=player.position.x-e.root.position.x,dz=player.position.z-e.root.position.z,distance=Math.hypot(dx,dz)||1;
+    const dx=player.position.x-e.root.position.x;
+    const dz=player.position.z-e.root.position.z;
+    const distance=Math.hypot(dx,dz)||1;
     e.root.rotation.y=Math.atan2(dx,dz);
-    if(state.settings.animations!==false)e.root.position.y=.15+Math.sin(time*2+(e.root.id||0))*.12;if(e.isBoss){const ratio=e.hp/e.maxHp;const phase=ratio<=.33?3:ratio<=.66?2:1;if(phase>e.phase){e.phase=phase;e.cooldown=Math.min(e.cooldown,.55);e.attackSkill=phase;toastMsg('Warden phase '+phase+' — attack pattern changed.')}}
+
+    if(state.settings.animations!==false){
+      e.root.position.y=.02+Math.sin(time*2+(e.root.id||0))*.022;
+    }
+
+    if(e.isBoss){
+      const ratio=e.hp/e.maxHp;
+      const phase=ratio<=.33?3:ratio<=.66?2:1;
+      if(phase>e.phase)triggerBossPhase(e,phase);
+    }
+
     if(e.state==='windup'){
-      e.windup-=dt;e.body.material.emissive.setHex(e.isBoss&&e.attackSkill===2?0xffbd52:e.isBoss&&e.attackSkill===3?0xd267fc:0xff321c);if(state.settings.animations!==false)e.root.scale.setScalar(1.08+.07*Math.sin(time*28));
-      if(e.windup<=0){e.state='approach';e.cooldown=1.25+Math.random()*.45;e.root.scale.setScalar(1);e.body.material.emissive.setHex(0x684a79);const reach=e.isBoss?(e.attackSkill===2?4.4:e.attackSkill===3?3.6:2.75):2.75;if(distance<reach&&dodgeIFrames<=0){const mitigation=Math.min(.55,state.stats.ward*.055),moveScale=e.isBoss&&e.attackSkill===3?1.45:e.isBoss&&e.attackSkill===2?1.2:1;state.hp=Math.max(0,state.hp-e.attackDamage*moveScale*(1-mitigation));playGameSound('hurt');toastMsg(e.isBoss?'Warden skill '+e.attackSkill+' hit · dodge the next tell':'The shade struck you — dodge when its glow flares.')}}
-    }else{e.cooldown-=dt;if(distance<2.15&&e.cooldown<=0){e.state='windup';e.windup=e.isBoss ? .82 : .68;if(e.isBoss){e.attackSkill=e.attackSkill%3+1;toastMsg('Warden telegraphs Skill '+e.attackSkill+' · dodge now')}e.body.material.emissive.setHex(e.isBoss&&e.attackSkill===2?0xffbd52:0xff321c)}else if(distance>1.65){const step=Math.min(distance-1.65,2.15*dt);const next=resolveCollisions(e.root.position.x+dx/distance*step,e.root.position.z+dz/distance*step);e.root.position.x=next.x;e.root.position.z=next.z}}
+      e.windup-=dt;
+      if(e.body?.material?.emissive){
+        e.body.material.emissive.setHex(e.isBoss&&e.attackSkill===2?0xffbd52:e.isBoss&&e.attackSkill===3?0xd267fc:0xff321c);
+      }
+      if(state.settings.animations!==false)e.root.scale.setScalar(1.08+.07*Math.sin(time*28));
+
+      if(e.windup<=0){
+        e.state='approach';
+        e.cooldown=e.isBoss?1.55+Math.random()*.35:1.25+Math.random()*.45;
+        e.root.scale.setScalar(1);
+        if(e.body?.material?.emissive)e.body.material.emissive.setHex(0x684a79);
+
+        const reach=e.isBoss?(e.attackSkill===2?4.4:e.attackSkill===3?5.8:2.75):2.75;
+        if(distance<reach&&dodgeIFrames<=0){
+          const mitigation=Math.min(.55,state.stats.ward*.055);
+          const moveScale=e.isBoss?(e.attackSkill===3?1.48:e.attackSkill===2?1.22:1):1;
+          state.hp=Math.max(0,state.hp-e.attackDamage*moveScale*(1-mitigation));
+          playGameSound('hurt');
+          toastMsg(e.isBoss?'Warden Skill '+e.attackSkill+' hit · dodge the next tell':'The shade struck you — dodge when its glow flares.');
+        }
+      }
+    }else{
+      e.cooldown-=dt;
+      if(distance<2.15&&e.cooldown<=0){
+        e.state='windup';
+        if(e.isBoss){
+          const availableSkills=Math.max(1,e.phase);
+          e.attackSkill=(e.attackCycle%availableSkills)+1;
+          e.attackCycle++;
+          e.windup=e.attackSkill===3?1.15:e.attackSkill===2?.98:.76;
+          const radius=e.attackSkill===3?5.8:e.attackSkill===2?4.4:2.65;
+          const color=e.attackSkill===3?0xd66dff:e.attackSkill===2?0xffbd62:0xff6548;
+          createBossTelegraph(e,radius,color,e.windup);
+          playBossAnimation(e.attackSkill===1?'Light1':'Heavy',e.windup+.12);
+          toastMsg(e.attackSkill===3?'Warden telegraphs the Crownfall wave · dodge now.'
+            :e.attackSkill===2?'Warden gathers an arena shockwave · move or dodge.'
+            :'Warden telegraphs a melee strike · dodge now.');
+        }else{
+          e.windup=.68;
+        }
+        if(e.body?.material?.emissive)e.body.material.emissive.setHex(e.isBoss&&e.attackSkill===2?0xffbd52:0xff321c);
+      }else if(distance>1.65){
+        const step=Math.min(distance-1.65,2.15*dt);
+        const next=resolveCollisions(e.root.position.x+dx/distance*step,e.root.position.z+dz/distance*step);
+        e.root.position.x=next.x;
+        e.root.position.z=next.z;
+      }
+    }
+
+    if(e.isBoss)updateBossAnimation(dt,e,distance);
   }
-  if(state.settings.animations!==false)productionBossMixer?.update(dt);
+
+  for(let i=bossTelegraphs.length-1;i>=0;i--){
+    const tell=bossTelegraphs[i];
+    tell.remaining-=dt;
+    const progress=THREE.MathUtils.clamp(1-tell.remaining/tell.duration,0,1);
+    tell.mesh.scale.setScalar(.24+.76*progress);
+    tell.mesh.material.opacity=.88*(1-progress);
+    if(tell.remaining<=0){
+      tell.mesh.removeFromParent();
+      tell.mesh.geometry.dispose();
+      tell.mesh.material.dispose();
+      bossTelegraphs.splice(i,1);
+    }
+  }
   encounterHudAccumulator+=dt;if(encounterHudAccumulator>=.12){encounterHudAccumulator=0;setEncounterHud(encounter)}
 
+  // Refresh the player-centered directional shadow map a few times per second.
+  // This keeps moving shadows readable without paying the full cost every frame.
+  if(renderer.shadowMap.enabled){
+    shadowRefreshAccumulator+=dt;
+    if(shadowRefreshAccumulator>=.24){
+      renderer.shadowMap.needsUpdate=true;
+      shadowRefreshAccumulator=0;
+    }
+  }else{
+    shadowRefreshAccumulator=0;
+  }
+
   // Warm lantern/fire flicker is kept subtle so the scene still reads naturally in daylight.
-  if(Math.floor(time*30)%8===0)renderer.shadowMap.needsUpdate=true;
   const nightFactor=Math.max(0,(0.28-skyUniforms.uDay.value)/0.28);
   for(let i=0;i<lightSources.length;i++){
     const light=lightSources[i];
@@ -1586,8 +1932,21 @@ $('systemContent').addEventListener('input',e=>{if(e.target.id==='sensitivitySet
 $('systemContent').addEventListener('change',e=>{if(e.target.id==='qualitySetting'){state.settings.quality=e.target.value;applySettings()}if(e.target.id==='motionSetting'){state.settings.reducedMotion=e.target.checked;saveState()}if(e.target.id==='soundSetting'){state.settings.sound=e.target.checked;saveState();if(state.settings.sound)playGameSound('success')}if(e.target.id==='animationsSetting'){state.settings.animations=e.target.checked;applySettings()}if(e.target.id==='effectsSetting'){state.settings.visualEffects=e.target.checked;applySettings()}});
 $('skillHotbar').addEventListener('click',e=>{const b=e.target.closest('[data-skill]');if(b)useSkill(Number(b.dataset.skill))});
 window.addEventListener('beforeunload',saveState);
-props.traverse(o=>{if(o.isMesh)o.castShadow=false;});
-treeSpots.forEach(g=>g.traverse(o=>{if(o.isMesh)o.castShadow=true;}));
+function hasShadowCasterAncestor(object){
+  let parent=object;
+  while(parent&&parent!==props){
+    if(parent.userData?.shadowCaster)return true;
+    parent=parent.parent;
+  }
+  return false;
+}
+props.traverse(object=>{
+  if(!object.isMesh)return;
+  object.receiveShadow=true;
+  object.castShadow=hasShadowCasterAncestor(object);
+});
+treeSpots.forEach(g=>g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}));
+characters.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
 function setupTouchControls(){
   const controls=document.createElement('div');controls.className='touch-controls';controls.innerHTML='<div class="touch-stick" aria-label="Movement joystick"><i></i></div><div class="touch-actions"><button data-action="interact">USE</button><button data-action="attack">HIT</button><button data-action="dodge">ROLL</button><button data-action="inventory">BAG</button><button data-action="skill" data-skill="0">1</button><button data-action="skill" data-skill="1">2</button><button data-action="skill" data-skill="2">3</button></div>';document.querySelector('.stage').appendChild(controls);
   const stick=controls.querySelector('.touch-stick'),knob=stick.querySelector('i');let pointerId=null;
@@ -1600,7 +1959,7 @@ function setupTouchControls(){
 }
 loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
 if(state.tutorial!==false)$('tutorial').classList.add('show');
-time=DAY_LENGTH*.30;
+time=DAY_LENGTH*.08;
 showChapterTitle((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.title)||'THE LAST EMBER','Explore · meet people · make choices · shape the world');
 if(activeMapId==='sanctuary')spawnWildlifeBurst(10);
 updateSky();
@@ -1619,9 +1978,11 @@ function frame(t){
   if(fpsAccumulator>=1){
     const avgFrame=fpsAccumulator/Math.max(1,fpsFrames);
     const previousDpr=adaptiveDpr;
+    currentFps=fpsFrames/Math.max(.001,fpsAccumulator);
     if(state.settings.quality==='auto'&&avgFrame>.024)adaptiveDpr=Math.max(.85,adaptiveDpr-.05);
     else if((state.settings.quality==='auto'||state.settings.quality==='high')&&avgFrame<.017)adaptiveDpr=Math.min(maxDpr,adaptiveDpr+.04);
     if(Math.abs(adaptiveDpr-previousDpr)>.04){renderer.setPixelRatio(adaptiveDpr);lastWidth=0;resize()}
+    syncRenderQuality();
     fpsAccumulator=0;fpsFrames=0;
   }
   const dt=Math.min(.033,rawDt);
