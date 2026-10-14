@@ -134,24 +134,56 @@ namespace AshenCrown.Editor.Tools
             serialized.ApplyModifiedPropertiesWithoutUndo();
             AddVisualCapsule(root.transform, archetype == "Elite"
                 ? new Color(.32f, .19f, .16f)
-                : archetype == "Ranged" ? new Color(.24f, .25f, .31f) : new Color(.28f, .22f, .31f), 1f);
+                : archetype == "Ranged" ? new Color(.24f, .25f, .31f) : new Color(.28f, .22f, .31f), 1f, true);
             SetLayerRecursively(root, LayerMask.NameToLayer("Enemy"));
         }
 
         static void CreateBoss(Vector3 position)
         {
             GameObject root = new GameObject("Ashen Regent");
+            root.layer = LayerMask.NameToLayer("Enemy");
             root.transform.position = position;
             NavMeshAgent agent = root.AddComponent<NavMeshAgent>();
             agent.speed = 2.7f;
             agent.radius = .8f;
             agent.height = 2.6f;
             root.AddComponent<HealthAndDamageSystem>();
-            root.AddComponent<BossController>();
-            AddVisualCapsule(root.transform, new Color(.25f, .12f, .11f), 1.3f);
+            BossController boss = root.AddComponent<BossController>();
+            ConfigureSandboxBoss(boss);
+            AddVisualCapsule(root.transform, new Color(.25f, .12f, .11f), 1.3f, true);
+            SetLayerRecursively(root, LayerMask.NameToLayer("Enemy"));
         }
 
-        static void AddVisualCapsule(Transform parent, Color color, float scale)
+        static void ConfigureSandboxBoss(BossController boss)
+        {
+            var serialized = new SerializedObject(boss);
+            SerializedProperty phases = serialized.FindProperty("phases");
+            if (phases == null) return;
+            phases.arraySize = 1;
+            SerializedProperty phase = phases.GetArrayElementAtIndex(0);
+            phase.FindPropertyRelative("name").stringValue = "Sandbox Phase";
+            phase.FindPropertyRelative("enterAtHealthPercent").floatValue = 1f;
+            phase.FindPropertyRelative("moveSpeed").floatValue = 2.7f;
+            phase.FindPropertyRelative("speedMultiplier").floatValue = 1f;
+            phase.FindPropertyRelative("aoeMultiplier").floatValue = 1f;
+            phase.FindPropertyRelative("transitionDuration").floatValue = .8f;
+            SerializedProperty attacks = phase.FindPropertyRelative("attacks");
+            if (attacks != null)
+            {
+                attacks.arraySize = 1;
+                SerializedProperty attack = attacks.GetArrayElementAtIndex(0);
+                attack.FindPropertyRelative("name").stringValue = "Regent Slash";
+                attack.FindPropertyRelative("maxRange").floatValue = 3.5f;
+                attack.FindPropertyRelative("damage").floatValue = 24f;
+                attack.FindPropertyRelative("windup").floatValue = .75f;
+                attack.FindPropertyRelative("active").floatValue = .2f;
+                attack.FindPropertyRelative("recover").floatValue = 1.1f;
+                attack.FindPropertyRelative("cooldown").floatValue = 2.6f;
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void AddVisualCapsule(Transform parent, Color color, float scale, bool keepCollider = false)
         {
             GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             visual.name = "Visual Capsule";
@@ -159,7 +191,7 @@ namespace AshenCrown.Editor.Tools
             visual.transform.localPosition = new Vector3(0f, scale, 0f);
             visual.transform.localScale = new Vector3(scale * .8f, scale, scale * .8f);
             Collider collider = visual.GetComponent<Collider>();
-            if (collider != null) Object.DestroyImmediate(collider);
+            if (!keepCollider && collider != null) Object.DestroyImmediate(collider);
             var renderer = visual.GetComponent<Renderer>();
             var material = new Material(Shader.Find("Standard"));
             material.color = color;
