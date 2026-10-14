@@ -18,7 +18,7 @@
 
 ### Not yet verified
 - Unity Editor compile, generated scene playability and NavMesh/AI behavior.
-- Latest observed Web CI passed reference checks, 6/6 web utility tests, JavaScript syntax checks, artifact assertions, whitespace checks and built 21 browser files (~9.90 MiB). Security checks (npm audit/Gitleaks) also passed. CodeQL for the final boss-attachment commit was still running when last checked.
+- Latest observed Web CI passed reference checks, 6/6 web utility tests, JavaScript syntax checks, artifact assertions, whitespace checks and built 21 browser files (~9.90 MiB). Security checks (npm audit/Gitleaks) also passed. CodeQL passed on the current PR head, as of 2026-10-14.
 - Browser FPS/heap/GPU soak metrics, Lighthouse and real deployment 404s.
 - Migration 002 applied against a live/local Supabase instance and two-user RLS isolation.
 - Unity Editor compile, generated sandbox playability, and the newly authored animation/feedback/HUD EditMode test sources.
