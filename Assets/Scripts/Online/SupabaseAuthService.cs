@@ -225,7 +225,7 @@ namespace AshenCrown.Online
                 yield break;
             }
 
-            if (saveData == null || Encoding.UTF8.GetByteCount(json) > 220000)
+            if (saveData == null || Encoding.UTF8.GetByteCount(json) > 180000)
             {
                 Error?.Invoke("Cloud save skipped because the local save is invalid or too large.");
                 yield break;
