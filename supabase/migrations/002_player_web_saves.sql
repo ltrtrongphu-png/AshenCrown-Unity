@@ -7,8 +7,29 @@ create table if not exists public.player_web_saves (
   version integer not null default 5,
   constraint player_web_saves_size_check check (pg_column_size(save_json) < 262144)
 );
+ 
+-- Upgrade an existing table safely too: IF NOT EXISTS on CREATE TABLE does not
+-- add columns/constraints to a table created manually in an earlier deployment.
+alter table public.player_web_saves
+  add column if not exists version integer not null default 5;
+
+do $
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'player_web_saves_size_check'
+      and conrelid = 'public.player_web_saves'::regclass
+  ) then
+    alter table public.player_web_saves
+      add constraint player_web_saves_size_check
+      check (pg_column_size(save_json) < 262144);
+  end if;
+end $;
 
 alter table public.player_web_saves enable row level security;
+revoke all on table public.player_web_saves from anon;
+grant select, insert, update on table public.player_web_saves to authenticated;
+revoke delete on table public.player_web_saves from authenticated;
 
 drop policy if exists player_web_saves_select_own on public.player_web_saves;
 create policy player_web_saves_select_own
