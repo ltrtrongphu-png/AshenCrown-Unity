@@ -91,10 +91,10 @@ function checkJavaScriptSyntax(file, module = false) {
     throw new Error(`JavaScript syntax check failed for ${file}: ${result.stderr || result.error?.message || 'unknown error'}`);
   }
 }
-for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js', 'play-boot.js']) {
+for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js', 'play-boot.js', 'auth-config.js']) {
   checkJavaScriptSyntax(file, false);
 }
-for (const file of ['play.js', 'model3d.js', 'vendor/three.module.js', 'vendor/three.core.js']) {
+for (const file of ['play.js', 'model3d.js', 'auth.js', 'vendor/three.module.js', 'vendor/three.core.js']) {
   checkJavaScriptSyntax(file, true);
 }
 
