@@ -21,8 +21,8 @@ This file distinguishes code changes completed in this branch from work still re
 - Open/compile in Unity 2021.3 LTS; resolve errors/warnings, test static reset/lifecycle, and create a real sandbox scene with navigation and configured combat/boss encounter.
 - Split the single runtime assembly only after a dependency graph is created and any cycles are identified.
 - Run `RegistryLifecycleTests` and add scene reload/unload subscription tests in Unity Editor; static lifecycle refactor is in place, but not runtime-tested.
-- Replace remaining IMGUI HUDs with a selected UI framework after migration/accessibility review; cache UI values and measure GC before/after.
-- Implement animation presentation controller, combat feedback/time-scale reset, controller assets, and timing tests. Do not claim missing animation clips exist.
+- Replace remaining IMGUI HUDs only after a framework/migration decision; this pass adds safe scale/alpha controls for feedback toasts but does not claim the entire HUD suite has migrated. Cache UI values and measure GC before/after.
+- `AnimatorSafe`, `AnimationPresentationController`, and the legacy `CharacterAnimationController` compatibility facade now share cached state checks, bounded locomotion/playback values, action de-duplication, and optional integration in player movement/combat. `CombatPresentationFeedback` owns shared hit-stop, hooks player hit/parry/perfect-dodge events, and respects reduced motion. HUD alpha/scale settings are exposed and applied to feedback toasts. Remaining: run Unity EditMode tests, author/verify real Animator Controllers/clips, add camera/animation integration PlayMode tests, and confirm state timing against the actual GLB rig.
 - Pool projectile/effect/floating-text objects, audit all singleton static cleanup, and measure Unity performance with Profiler/Memory Profiler.
 
 ### Save, authentication, and online safety
@@ -41,7 +41,7 @@ This file distinguishes code changes completed in this branch from work still re
 
 ### Baseline/CI/release
 - Recheck Web CI, npm audit, Gitleaks and CodeQL on the final PR head immediately before merge; they were green on the most recently completed source revision before the final boss-model fix.
-- Unity CI requires valid Unity license secrets; current workflow clearly skips when no license is configured.
+- Unity CI requires valid Unity license secrets; the workflow intentionally skips EditMode execution when the license is absent. Several new animation/combat/HUD test sources are authored but have not run in a Unity Editor.
 - Capture real browser performance numbers, gzip/Brotli sizes, 404/console traces, and Lighthouse before/after.
 - Finish `ARCHITECTURE.md`, `SAVE_FORMAT.md`, a full system status review, release checklist, and decision on project LICENSE.
 - Branch protection currently was reported disabled during Phase 0; enable required checks after CI stabilizes.
