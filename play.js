@@ -1861,6 +1861,26 @@ let encounterHudAccumulator=0;
 let shadowRefreshAccumulator=0;
 let adaptiveDpr=1;
 let currentFps=60;
+function attachProductionBoss(enemy){
+  if(!enemy?.isBoss||!enemy.root||!productionBossScene)return false;
+  if(productionBossScene.parent===enemy.root)return true;
+
+  // Hide the procedural fallback but retain its objects as a safe fallback if the
+  // production model path is not used. The single active encounter owns this model.
+  if(Array.isArray(enemy.fallbackVisuals)){
+    for(const visual of enemy.fallbackVisuals){
+      if(visual)visual.visible=false;
+    }
+  }
+
+  productionBossScene.visible=true;
+  enemy.root.add(productionBossScene);
+  enemy.productionModelAttached=true;
+  activeBossAction='';
+  playBossAnimation('Idle');
+  return true;
+}
+
 function spawnEnemy(){
   if(enemies.length)return;
   if(activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
