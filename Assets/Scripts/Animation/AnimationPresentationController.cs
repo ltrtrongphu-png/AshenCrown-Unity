@@ -74,6 +74,23 @@ namespace AshenCrown.Animation
             AnimatorSafe.SetBool(animator, GroundedHash, grounded);
         }
 
+        public void SetGrounded(bool grounded)
+        {
+            ResolveAnimator();
+            AnimatorSafe.SetBool(animator, GroundedHash, grounded);
+        }
+
+        public void SetCombat(bool combat)
+        {
+            ResolveAnimator();
+            AnimatorSafe.SetBool(animator, CombatHash, combat);
+        }
+
+        public void SetLocomotionDamp(float value)
+        {
+            locomotionDamp = Mathf.Clamp(value, 0f, 1f);
+        }
+
         public void PlayAction(string stateName, float fade = 0.08f, float playbackSpeed = 1f)
         {
             ResolveAnimator();
