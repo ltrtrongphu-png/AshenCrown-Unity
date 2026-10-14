@@ -26,6 +26,7 @@ namespace AshenCrown.Animation
 
         readonly Dictionary<string, int> parameterHashes = new Dictionary<string, int>(StringComparer.Ordinal);
         int activeActionHash;
+        bool animatorResolved;
 
         public Animator Animator => animator;
         public int ActiveActionHash => activeActionHash;
@@ -43,9 +44,13 @@ namespace AshenCrown.Animation
         public void SetAnimator(Animator value)
         {
             if (animator == value)
+            {
+                animatorResolved = true;
                 return;
+            }
 
             animator = value;
+            animatorResolved = true;
             activeActionHash = 0;
         }
 
@@ -156,8 +161,16 @@ namespace AshenCrown.Animation
 
         void ResolveAnimator()
         {
+            if (animatorResolved)
+                return;
+
             if (animator == null)
                 animator = GetComponentInChildren<Animator>();
+
+            // Resolve once, even when a prototype has no Animator. CharacterModelBinder
+            // calls SetAnimator when its model is loaded, so this stays allocation-free
+            // in Update/FixedUpdate/LateUpdate.
+            animatorResolved = true;
         }
     }
 }
