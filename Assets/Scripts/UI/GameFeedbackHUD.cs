@@ -86,7 +86,7 @@ namespace AshenCrown.UI
         {
             if (string.IsNullOrWhiteSpace(message)) return;
             queue.Enqueue(new Toast(message, Mathf.Clamp(duration, 1f, 8f)));
-            while (queue.Count > 8) queue.Dequeue();
+            while (queue.Count > HUDPresentationSettings.MaxQueuedToasts) queue.Dequeue();
         }
 
         void OnGUI()
@@ -95,7 +95,27 @@ namespace AshenCrown.UI
 
             panel.x = (Screen.width - panel.width) * 0.5f;
             panel.y = 72f;
-            GUI.Window(7301, panel, DrawToast, GUIContent.none);
+
+            Color previousColor = GUI.color;
+            Matrix4x4 previousMatrix = GUI.matrix;
+            float scale = HUDPresentationSettings.UIScale;
+            Vector3 pivot = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
+            GUI.matrix = Matrix4x4.Translate(pivot)
+                * Matrix4x4.Scale(new Vector3(scale, scale, 1f))
+                * Matrix4x4.Translate(-pivot)
+                * previousMatrix;
+            GUI.color = new Color(previousColor.r, previousColor.g, previousColor.b,
+                previousColor.a * HUDPresentationSettings.UIAlpha);
+
+            try
+            {
+                GUI.Window(7301, panel, DrawToast, GUIContent.none);
+            }
+            finally
+            {
+                GUI.matrix = previousMatrix;
+                GUI.color = previousColor;
+            }
         }
 
         void DrawToast(int id)
