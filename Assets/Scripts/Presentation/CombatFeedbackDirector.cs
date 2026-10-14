@@ -1,5 +1,6 @@
 using UnityEngine;
 using AshenCrown.Core;
+using AshenCrown.Combat;
 using AshenCrown.Player;
 
 namespace AshenCrown.Presentation
@@ -35,6 +36,12 @@ namespace AshenCrown.Presentation
         {
             if (reducedMotion)
                 return;
+
+            if (CombatPresentationFeedback.Instance != null)
+            {
+                CombatPresentationFeedback.Instance.Hit(Mathf.Clamp01(cameraShake / 0.16f), duration);
+                return;
+            }
 
             float safeDuration = Mathf.Clamp(float.IsNaN(duration) ? 0.12f : duration, 0.01f, 0.5f);
             if (cameraRig != null)
