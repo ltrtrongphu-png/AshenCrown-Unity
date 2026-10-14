@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using AshenCrown.Boss;
+using AshenCrown.Combat;
 using AshenCrown.Enemy;
 using AshenCrown.Endgame;
 using AshenCrown.Player;
@@ -23,6 +24,7 @@ namespace AshenCrown.Core
         readonly HashSet<BossController> boundBosses = new HashSet<BossController>();
         readonly Dictionary<BossController, Action> bossDeathHandlers = new Dictionary<BossController, Action>();
         PlayerCombatSystem boundPlayer;
+        HealthAndDamageSystem boundPlayerHealth;
 
         void Awake()
         {
@@ -67,6 +69,11 @@ namespace AshenCrown.Core
                 UnbindPlayer(boundPlayer);
                 boundPlayer = null;
             }
+            if (boundPlayerHealth != null)
+            {
+                boundPlayerHealth.OnDamaged -= HandlePlayerDamaged;
+                boundPlayerHealth = null;
+            }
 
             foreach (var pair in bossDeathHandlers)
                 if (pair.Key != null)
@@ -89,12 +96,25 @@ namespace AshenCrown.Core
 
             if (boundPlayer != null)
                 UnbindPlayer(boundPlayer);
+            if (boundPlayerHealth != null)
+                boundPlayerHealth.OnDamaged -= HandlePlayerDamaged;
 
             boundPlayer = player;
+            boundPlayerHealth = null;
             if (boundPlayer != null)
             {
                 boundPlayer.OnParry += HandleParry;
                 boundPlayer.OnPerfectDodge += HandlePerfectDodge;
+                boundPlayerHealth = boundPlayer.GetComponent<HealthAndDamageSystem>();
+                if (boundPlayerHealth != null)
+                    boundPlayerHealth.OnDamaged += HandlePlayerDamaged;
+
+                var movement = boundPlayer.GetComponent<PlayerMovementAndCamera>();
+                ThirdPersonCameraRig rig = movement != null && movement.cameraTransform != null
+                    ? movement.cameraTransform.GetComponent<ThirdPersonCameraRig>()
+                    : Camera.main != null ? Camera.main.GetComponent<ThirdPersonCameraRig>() : null;
+                if (CombatPresentationFeedback.Instance != null)
+                    CombatPresentationFeedback.Instance.SetCameraRig(rig);
             }
         }
 
@@ -102,6 +122,12 @@ namespace AshenCrown.Core
         {
             player.OnParry -= HandleParry;
             player.OnPerfectDodge -= HandlePerfectDodge;
+        }
+
+        void HandlePlayerDamaged(DamageResult result, DamageInfo info)
+        {
+            if (CombatPresentationFeedback.Instance != null)
+                CombatPresentationFeedback.Instance.Hit(0.35f, 0.04f);
         }
 
         void BindBoss(BossController boss)
@@ -128,6 +154,9 @@ namespace AshenCrown.Core
 
         void HandleParry(GameObject source)
         {
+            if (CombatPresentationFeedback.Instance != null)
+                CombatPresentationFeedback.Instance.Parry(0.8f);
+
             if (LongTermEngagementSystem.Instance != null)
             {
                 LongTermEngagementSystem.Instance.RecordAction(EngagementAction.Parry);
@@ -140,6 +169,9 @@ namespace AshenCrown.Core
 
         void HandlePerfectDodge()
         {
+            if (CombatPresentationFeedback.Instance != null)
+                CombatPresentationFeedback.Instance.PerfectDodge(1f);
+
             if (LongTermEngagementSystem.Instance != null)
             {
                 LongTermEngagementSystem.Instance.RecordAction(EngagementAction.PerfectDodge);
