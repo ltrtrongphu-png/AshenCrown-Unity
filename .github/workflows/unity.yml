@@ -1,6 +1,9 @@
 name: Unity EditMode Tests
 
 on:
+  push:
+    branches: [main, phase-0-audit]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -10,22 +13,22 @@ jobs:
   editmode:
     name: EditMode tests (Unity license required)
     runs-on: ubuntu-latest
+    env:
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+      UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - name: Run EditMode tests
-        if: ${{ secrets.UNITY_LICENSE != '' }}
+        if: ${{ env.UNITY_LICENSE != '' }}
         uses: game-ci/unity-test-runner@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           projectPath: .
           testMode: EditMode
           artifactsPath: artifacts
           githubToken: ${{ secrets.GITHUB_TOKEN }}
       - name: Explain why tests were skipped
-        if: ${{ secrets.UNITY_LICENSE == '' }}
+        if: ${{ env.UNITY_LICENSE == '' }}
         run: |
           echo "::warning::Unity EditMode tests were not run because UNITY_LICENSE is not configured."
-          echo "Configure UNITY_LICENSE (and the credentials required by your chosen GameCI licensing method) before using this workflow as a test result."
+          echo "Configure UNITY_LICENSE and any credentials required by your chosen GameCI licensing method."
