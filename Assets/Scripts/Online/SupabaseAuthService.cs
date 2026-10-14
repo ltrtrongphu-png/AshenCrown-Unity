@@ -207,7 +207,7 @@ namespace AshenCrown.Online
 
         public IEnumerator SaveCloud(string json)
         {
-            if (Config == null || !Config.autoCloudSave || CurrentUser == null || string.IsNullOrWhiteSpace(json))
+            if (!HasValidConfig() || !Config.autoCloudSave || CurrentUser == null || string.IsNullOrWhiteSpace(json))
                 yield break;
 
             yield return RefreshSessionIfNeeded();
@@ -225,7 +225,7 @@ namespace AshenCrown.Online
                 yield break;
             }
 
-            if (saveData == null || json.Length > 250000)
+            if (saveData == null || Encoding.UTF8.GetByteCount(json) > 220000)
             {
                 Error?.Invoke("Cloud save skipped because the local save is invalid or too large.");
                 yield break;
