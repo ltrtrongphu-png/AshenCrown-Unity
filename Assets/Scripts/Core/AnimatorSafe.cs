@@ -12,6 +12,12 @@ namespace AshenCrown.Core
         // Cache: ID của controller -> tập hash các parameter. Controller đổi (boss phase) thì key đổi.
         static readonly Dictionary<int, HashSet<int>> Cache = new Dictionary<int, HashSet<int>>();
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetCache()
+        {
+            Cache.Clear();
+        }
+
         static bool Has(Animator a, int hash)
         {
             if (a == null || a.runtimeAnimatorController == null) return false;
