@@ -24,6 +24,8 @@ jobs:
           node-version: 22
       - name: Install pinned runtime dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Check deployment references and save schema
+        run: npm run check:refs
       - name: Build allow-listed Vercel artifact
         run: node tools/build-web.mjs
       - name: Assert deployment assets exist
@@ -36,3 +38,8 @@ jobs:
           test -s dist/resource-pack.json
       - name: Check patch whitespace
         run: git diff --check origin/main...HEAD
+      - name: Upload deployment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashencrown-web-dist
+          path: dist/
