@@ -222,6 +222,8 @@ namespace AshenCrown.Player
             if (animator == null) animator = GetComponentInChildren<Animator>();
             animationPresentation = GetComponent<AnimationPresentationController>();
             if (animationPresentation == null)
+                animationPresentation = GetComponentInChildren<AnimationPresentationController>();
+            if (animationPresentation == null)
                 animationPresentation = gameObject.AddComponent<AnimationPresentationController>();
             animationPresentation.SetAnimator(animator);
 
@@ -661,7 +663,7 @@ namespace AshenCrown.Player
         void PlayAction(string stateName, float fade)
         {
             if (animationPresentation != null)
-                animationPresentation.PlayAction(stateName, fade, animator != null ? animator.speed : 1f);
+                animationPresentation.PlayAction(stateName, fade, 1f);
             else
                 AnimatorSafe.Play(animator, stateName, fade);
         }
