@@ -833,6 +833,42 @@ const playerVisual=actor(0x29221d,0x613724);player.add(playerVisual);
 let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null,productionGltfLoader=null,productionBossBuffer=null,productionBossLoadPromise=null;
 const bossTelegraphs=[];
 const transientEffects=[];
+const skillRingPool=[[],[],[]];
+const activeSkillRings=[];
+const skillRingRadii=[1.25,1.65,2.05];
+
+function createSkillRingEffect(index){
+  const mesh=new THREE.Mesh(
+    new THREE.TorusGeometry(skillRingRadii[index],.07,6,24),
+    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9})
+  );
+  mesh.rotation.x=Math.PI/2;
+  mesh.visible=false;
+  effects.add(mesh);
+  return {mesh,remaining:0,active:false};
+}
+
+for(let skillIndex=0;skillIndex<skillRingPool.length;skillIndex++){
+  // Prewarm so the normal skill hot path reuses mesh, geometry and material objects.
+  skillRingPool[skillIndex].push(createSkillRingEffect(skillIndex),createSkillRingEffect(skillIndex));
+}
+
+function spawnSkillRing(index,color,position){
+  const pool=skillRingPool[index];
+  let effect=pool.find(item=>!item.active);
+  if(!effect){
+    effect=createSkillRingEffect(index);
+    pool.push(effect);
+  }
+  effect.active=true;
+  effect.remaining=.36;
+  effect.mesh.material.color.setHex(color);
+  effect.mesh.material.opacity=.9;
+  effect.mesh.position.copy(position);
+  effect.mesh.position.y=.18;
+  effect.mesh.visible=true;
+  activeSkillRings.push(effect);
+}
 
 const armorMat=new THREE.MeshStandardMaterial({color:0x302a29,roughness:.38,metalness:.72});
 const brassMat=new THREE.MeshStandardMaterial({color:0x9d6b42,roughness:.31,metalness:.76});
@@ -1907,7 +1943,7 @@ function updateSanctuaryBuild(){for(const old of sanctuaryBuild.children){old.ge
 function applyRoleLook(){const role=activeRole(),palette={default:role.colors,ember:[0x302a29,0x9d6b42],moon:[0x303b48,0x83a7bd],moss:[0x394335,0x9ca66b]}[state.appearance]||role.colors;armorMat.color.setHex(palette[0]);brassMat.color.setHex(palette[1]);if(playerVisual.children[0]?.material)playerVisual.children[0].material.color.setHex(role.colors[0]);if(playerVisual.children[8]?.material)playerVisual.children[8].material.color.setHex(role.colors[1]);const capes=playerVisual.children.filter(o=>o.geometry?.type==='ConeGeometry');if(capes.length)capes[capes.length-1].material.color.setHex(role.colors[0]);swordBlade.visible=state.role==='ashbreaker';twinBlade.visible=state.role==='glassblade';roleStaff.visible=state.role==='cinderweaver';roleBow.visible=state.role==='briarshot';const roleButton=$('roleButton');if(roleButton)roleButton.textContent=role.name.toUpperCase();refreshSkillHud()}
 function refreshSkillHud(){const hotbar=$('skillHotbar');if(!hotbar)return;const role=activeRole();hotbar.querySelectorAll('[data-skill]').forEach((button,i)=>{const skill=role.skills[i],rank=state.skillRanks[i]||0,remaining=skillCooldowns[i]||0,unlocked=state.level>=skillUnlockLevel(i);button.querySelector('span').textContent=!unlocked?'LOCKED · LV '+skillUnlockLevel(i):remaining>0?remaining.toFixed(1)+'s':skill[0].toUpperCase();button.title=unlocked?skill[0]+' · Rank '+(rank+1)+' · press '+(i+1):skill[0]+' unlocks at level '+skillUnlockLevel(i);button.dataset.rank=rank;button.disabled=!unlocked;button.classList.toggle('locked',!unlocked);button.classList.toggle('cooling',remaining>0);button.querySelector('i').style.transform='scaleY('+Math.min(1,remaining/(skill[2]*(1-rank*.07)))+')'})}
 function calcPlayerDamage(base,rank=0,isSkill=false){const levelBonus=Math.max(0,state.level-1)*(isSkill?1.5:1.35),focusBonus=Math.max(0,state.stats.focus)*(isSkill?1.5:1.2),skillScale=isSkill ? .84*(1+rank*.14):1,weaponScale=1+Math.min(12,Math.max(0,state.weaponRank||0))*.02;return Math.round((base*skillScale+levelBonus+focusBonus)*weaponScale)}
-function useSkill(index){if(anyOverlayOpen()||!encounter||!activeRole().skills[index])return;if(state.level<skillUnlockLevel(index)){toastMsg('Unlock this skill at level '+skillUnlockLevel(index));return}const rank=state.skillRanks[index]||0,skill=activeRole().skills[index],cd=skill[2]*(1-rank*.07);skillCooldowns[index]=skillCooldowns[index]||0;if(skillCooldowns[index]>0||state.stamina<skill[3])return;const to=encounter.root.position.clone().sub(player.position);to.y=0;const distance=to.length(),range=['cinderweaver','briarshot'].includes(state.role)?14:5;if(distance>range){toastMsg('Out of range — '+skill[0]);return}skillCooldowns[index]=cd;state.stamina-=skill[3];player.rotation.y=Math.atan2(to.x,to.z);encounter.hp-=calcPlayerDamage(skill[1],rank,true);playGameSound('skill');playPlayerAnimation('Heavy',620);if(state.settings.visualEffects!==false){const color=activeRole().colors[1],ring=new THREE.Mesh(new THREE.TorusGeometry(Math.min(2.5,1.25+index*.4),.07,6,24),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9}));ring.rotation.x=Math.PI/2;ring.position.copy(player.position);ring.position.y=.18;effects.add(ring);transientEffects.push({mesh:ring,remaining:.36})}if(encounter.hp<=0)finishEncounter();else{setEncounterHud(encounter);encounter.cooldown=Math.max(encounter.cooldown,.6)}refreshSkillHud()}
+function useSkill(index){if(anyOverlayOpen()||!encounter||!activeRole().skills[index])return;if(state.level<skillUnlockLevel(index)){toastMsg('Unlock this skill at level '+skillUnlockLevel(index));return}const rank=state.skillRanks[index]||0,skill=activeRole().skills[index],cd=skill[2]*(1-rank*.07);skillCooldowns[index]=skillCooldowns[index]||0;if(skillCooldowns[index]>0||state.stamina<skill[3])return;const to=encounter.root.position.clone().sub(player.position);to.y=0;const distance=to.length(),range=['cinderweaver','briarshot'].includes(state.role)?14:5;if(distance>range){toastMsg('Out of range — '+skill[0]);return}skillCooldowns[index]=cd;state.stamina-=skill[3];player.rotation.y=Math.atan2(to.x,to.z);encounter.hp-=calcPlayerDamage(skill[1],rank,true);playGameSound('skill');playPlayerAnimation('Heavy',620);if(state.settings.visualEffects!==false)spawnSkillRing(index,activeRole().colors[1],player.position)if(encounter.hp<=0)finishEncounter();else{setEncounterHud(encounter);encounter.cooldown=Math.max(encounter.cooldown,.6)}refreshSkillHud()}
 const skillCooldowns=[0,0,0];let nearbyTarget=null,nearbyRefresh=0,nodeSpinAccumulator=0,skillHudAccumulator=0;
 function openSystemMenu(page){const modal=$('systemMenu'),title=$('systemTitle'),content=$('systemContent');if(!modal||!title||!content)return;modal.dataset.page=page;modal.classList.add('show');if(page==='role'){title.textContent='CHOOSE YOUR ATTACKING ROLE';content.innerHTML='<p class="system-intro">Every role is built to deal damage. Change roles whenever you return to the Sanctuary.</p><div class="role-grid">'+Object.entries(ROLE_DEFS).map(([id,r])=>'<button class="role-choice '+(state.role===id?'selected':'')+'" data-role="'+id+'"><b>'+r.name+'</b><span>'+r.style+'</span><small>'+r.skills.map((x,i)=>(i+1)+' '+x[0]).join(' · ')+'</small></button>').join('')+'</div><div class="system-row"><span>LOOK</span>'+[['default','Ash'],['moon','Moon'],['moss','Moss']].map(([id,label])=>'<button data-appearance="'+id+'" class="mini-choice '+(state.appearance===id?'selected':'')+'">'+label+'</button>').join('')+'</div>'}
 else if(page==='skills'){title.textContent='COMBAT SKILLS · '+state.skillPoints+' POINTS';content.innerHTML='<p class="system-intro">Skills unlock at levels 1, 2 and 3. Spend points to increase damage up to rank 4; cooldown reductions stay modest.</p><div class="skill-upgrades">'+activeRole().skills.map((sk,i)=>{const unlocked=state.level>=skillUnlockLevel(i),rank=state.skillRanks[i]||0;return '<article class="'+(!unlocked?'skill-locked':'')+'"><div><b>'+(i+1)+' · '+escapeHtml(sk[0])+'</b><small>'+(unlocked?'Rank '+(rank+1)+' / 4 · '+calcPlayerDamage(sk[1],rank,true)+' damage · '+(sk[2]*(1-rank*.07)).toFixed(1)+'s cooldown':'Unlock at level '+skillUnlockLevel(i))+'</small></div><button data-upgrade="'+i+'" '+(!unlocked||!state.skillPoints||rank>=3?'disabled':'')+'>'+(unlocked?(rank>=3?'MAX RANK':'UPGRADE'):'LOCKED')+'</button></article>'}).join('')+'</div>'}
@@ -2461,7 +2497,7 @@ function pulse(){
   const facing=new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y));
   if(distance>1.35&&facing.dot(toEnemy.normalize())<.12){toastMsg('Turn toward the shade before striking.');return}
   attackCooldown=.48;state.stamina-=12;encounter.hp-=calcPlayerDamage(18);playGameSound('attack');playPlayerAnimation('Light1',420);
-  if(state.settings.visualEffects!==false){const g=new THREE.Group();g.position.copy(player.position);for(let i=0;i<8;i++){const o=orb(.05,0xff8a4d,true),a=i*Math.PI/4;o.position.set(Math.cos(a),.8,Math.sin(a));g.add(o)}effects.add(g);setTimeout(()=>g.removeFromParent(),280)}
+  if(state.settings.visualEffects!==false){const g=new THREE.Group();g.position.copy(player.position);for(let i=0;i<8;i++){const o=orb(.05,0xff8a4d,true),a=i*Math.PI/4;o.position.set(Math.cos(a),.8,Math.sin(a));g.add(o)}effects.add(g);transientEffects.push({mesh:g,remaining:.28,disposeTree:true})}
   if(encounter.hp<=0)finishEncounter();else{setEncounterHud(encounter);encounter.cooldown=Math.max(encounter.cooldown,.55)}
 }
 const moveForward=new THREE.Vector3(),moveBack=new THREE.Vector3();
@@ -2573,14 +2609,33 @@ function tick(dt){
     if(e.isBoss)updateBossAnimation(dt,e,distance);
   }
 
+  for(let i=activeSkillRings.length-1;i>=0;i--){
+    const effect=activeSkillRings[i];
+    effect.remaining-=dt;
+    if(effect.remaining<=0){
+      effect.mesh.visible=false;
+      effect.active=false;
+      activeSkillRings.splice(i,1);
+    }
+  }
+
   for(let i=transientEffects.length-1;i>=0;i--){
     const effect=transientEffects[i];
     effect.remaining-=dt;
     if(effect.remaining<=0){
       effect.mesh.removeFromParent();
-      effect.mesh.geometry?.dispose();
-      if(Array.isArray(effect.mesh.material))effect.mesh.material.forEach(material=>material?.dispose());
-      else effect.mesh.material?.dispose();
+      if(effect.disposeTree){
+        effect.mesh.traverse(object=>{
+          if(!object.isMesh)return;
+          object.geometry?.dispose();
+          if(Array.isArray(object.material))object.material.forEach(material=>material?.dispose());
+          else object.material?.dispose();
+        });
+      }else{
+        effect.mesh.geometry?.dispose();
+        if(Array.isArray(effect.mesh.material))effect.mesh.material.forEach(material=>material?.dispose());
+        else effect.mesh.material?.dispose();
+      }
       transientEffects.splice(i,1);
     }
   }
