@@ -54,6 +54,12 @@ if (packageJson.dependencies?.three !== '0.186.1')
   fail('Three.js version must remain explicitly pinned to 0.186.1.');
 
 const auth = read('auth.js');
+const playSource = read('play.js');
+for (const match of playSource.matchAll(/(?:from\\s*|import\\()(['"])\\.\\/([^'"]+)\\1/g)) {
+  const modulePath = match[2].split(/[?#]/, 1)[0];
+  if (!allowList.includes(modulePath))
+    fail('play.js imports a local module outside the deployment allow-list: ' + modulePath);
+}
 const migration = read('supabase/migrations/002_player_web_saves.sql');
 for (const column of ['user_id', 'save_json', 'updated_at', 'version']) {
   if (!migration.includes(column)) fail('Browser save migration is missing column: ' + column);
