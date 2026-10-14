@@ -21,6 +21,10 @@ namespace AshenCrown.Animation
             if (presentation == null)
                 presentation = GetComponent<AnimationPresentationController>();
             if (presentation == null)
+                presentation = GetComponentInParent<AnimationPresentationController>();
+            if (presentation == null)
+                presentation = GetComponentInChildren<AnimationPresentationController>();
+            if (presentation == null)
                 presentation = gameObject.AddComponent<AnimationPresentationController>();
 
             presentation.SetAnimator(animator);
