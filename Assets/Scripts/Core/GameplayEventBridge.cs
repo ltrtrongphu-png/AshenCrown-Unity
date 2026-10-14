@@ -63,7 +63,10 @@ namespace AshenCrown.Core
             BossController.Unregistered -= UnbindBoss;
 
             if (boundPlayer != null)
+            {
                 UnbindPlayer(boundPlayer);
+                boundPlayer = null;
+            }
 
             foreach (var pair in bossDeathHandlers)
                 if (pair.Key != null)
