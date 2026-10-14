@@ -7,6 +7,7 @@ const APP_FILES = [
   './play.css',
   './campaign.js',
   './play.js',
+  './save-utils.js',
   './vendor/three.module.js',
   './vendor/three.core.js',
   './play-boot.js',
@@ -15,7 +16,7 @@ const APP_FILES = [
   './i18n.js',
   './model3d.js',
   './model3d.css',
-  './Assets/ashen-crown-logo.svg',
+  './assets/ashen-crown-logo.svg',
   './resource-pack.json',
 ];
 const CURRENT_ASSETS = new Set(APP_FILES.map((path) => new URL(path, self.location.href).href));

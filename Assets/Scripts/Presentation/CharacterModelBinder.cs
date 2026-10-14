@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using AshenCrown.Core;
+using AshenCrown.Animation;
 
 namespace AshenCrown.Presentation
 {
@@ -110,6 +111,12 @@ namespace AshenCrown.Presentation
         void CacheModelComponents()
         {
             modelAnimator = instance.GetComponentInChildren<Animator>(true);
+            var animationPresentation = GetComponent<AnimationPresentationController>();
+            if (animationPresentation == null)
+                animationPresentation = GetComponentInParent<AnimationPresentationController>();
+            if (animationPresentation != null)
+                animationPresentation.SetAnimator(modelAnimator);
+
             renderers = instance.GetComponentsInChildren<Renderer>(true);
             skinnedRenderers = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true);
             cachedCamera = Camera.main;

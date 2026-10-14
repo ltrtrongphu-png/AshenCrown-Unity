@@ -109,3 +109,20 @@ button:focus-visible,a:focus-visible{outline-color:#f1ad7d;outline-offset:3px}
 .game-boot-actions button{border:1px solid #be7048;background:#be7048;color:#150b07;padding:12px 17px;font:700 10px var(--sans);letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
 .game-boot-actions a{color:#bca895;font-size:10px;text-decoration:none}
 .game-boot-actions button:focus-visible,.game-boot-actions a:focus-visible{outline:2px solid #f0b485;outline-offset:3px}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    caret-color: auto;
+  }
+  .topbar, .quest-panel, .journal, .toast, .center-message, .dialogue, .pause, .result, .meta-menu, .inventory-menu, .world-map {
+    backdrop-filter: none !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid #f0b485;
+  outline-offset: 3px;
+}

@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using AshenCrown.Core;
+using AshenCrown.Animation;
 
 namespace AshenCrown.Player
 {
@@ -54,6 +55,7 @@ namespace AshenCrown.Player
         public bool HasMoveInput { get; private set; }
         public Vector3 MoveInputWorld { get; private set; }
         public Vector3 Velocity => horizontalVelocity;
+        public bool IsGrounded => controller != null && controller.isGrounded;
 
         /// <summary>Combat bật khi đang vung đòn / lăn... để chặn đi bộ.</summary>
         public bool MovementLocked { get; set; }
@@ -66,6 +68,7 @@ namespace AshenCrown.Player
         public event Action<IDamageable> OnLockOnChanged;
 
         CharacterController controller;
+        AnimationPresentationController animationPresentation;
         PlayerStamina stamina;
         Camera cam;
 
@@ -81,6 +84,14 @@ namespace AshenCrown.Player
         {
             controller = GetComponent<CharacterController>();
             stamina = GetComponent<PlayerStamina>();
+            if (animator == null) animator = GetComponentInChildren<Animator>();
+            animationPresentation = GetComponent<AnimationPresentationController>();
+            if (animationPresentation == null)
+                animationPresentation = GetComponentInChildren<AnimationPresentationController>();
+            if (animationPresentation == null)
+                animationPresentation = gameObject.AddComponent<AnimationPresentationController>();
+            animationPresentation.SetAnimator(animator);
+
             if (cameraTransform == null && Camera.main != null) cameraTransform = Camera.main.transform;
             if (cameraTransform != null) cam = cameraTransform.GetComponent<Camera>();
         }
@@ -324,15 +335,20 @@ namespace AshenCrown.Player
 
         void UpdateAnimator(float dt)
         {
-            if (animator == null) return;
-
-            // Vận tốc theo hệ trục của nhân vật -> Blend Tree strafe 8 hướng khi lock-on.
+            // Preserve legacy parameter names while also updating the newer shared blend-tree contract.
             Vector3 local = transform.InverseTransformDirection(horizontalVelocity) / sprintSpeed;
-            AnimatorSafe.SetFloat(animator, "MoveX", local.x, 0.08f, dt);
-            AnimatorSafe.SetFloat(animator, "MoveZ", local.z, 0.08f, dt);
-            AnimatorSafe.SetFloat(animator, "Speed", horizontalVelocity.magnitude / sprintSpeed, 0.08f, dt);
-            AnimatorSafe.SetBool(animator, "Sprint", IsSprinting);
-            AnimatorSafe.SetBool(animator, "LockedOn", IsLockedOn);
+            float normalizedSpeed = AnimationPresentationController.ClampNormalizedSpeed(horizontalVelocity.magnitude / sprintSpeed);
+            if (animator != null)
+            {
+                AnimatorSafe.SetFloat(animator, "MoveX", local.x, 0.08f, dt);
+                AnimatorSafe.SetFloat(animator, "MoveZ", local.z, 0.08f, dt);
+                AnimatorSafe.SetFloat(animator, "Speed", normalizedSpeed, 0.08f, dt);
+                AnimatorSafe.SetBool(animator, "Sprint", IsSprinting);
+                AnimatorSafe.SetBool(animator, "LockedOn", IsLockedOn);
+            }
+
+            if (animationPresentation != null)
+                animationPresentation.SetLocomotion(local, normalizedSpeed, IsSprinting, IsLockedOn);
         }
 
         void OnDrawGizmosSelected()

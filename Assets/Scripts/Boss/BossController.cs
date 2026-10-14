@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Events;
@@ -83,6 +84,19 @@ namespace AshenCrown.Boss
     [RequireComponent(typeof(HealthAndDamageSystem))]
     public class BossController : MonoBehaviour, IStaggerable, ITimeSlowable
     {
+        static readonly HashSet<BossController> ActiveBosses = new HashSet<BossController>();
+        public static event Action<BossController> Registered;
+        public static event Action<BossController> Unregistered;
+        public static IEnumerable<BossController> ActiveInstances => ActiveBosses;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetRegistry()
+        {
+            ActiveBosses.Clear();
+            Registered = null;
+            Unregistered = null;
+        }
+
         enum BossState { Idle, Chase, Attack, Transition, Staggered, Dead }
         enum AttackPhase { Windup, Active, Recover }
 
@@ -171,14 +185,26 @@ namespace AshenCrown.Boss
         void OnEnable()
         {
             if (Health == null) Health = GetComponent<HealthAndDamageSystem>();
-            Health.OnPoiseBroken += HandlePoiseBroken;
-            Health.OnDeath += HandleDeath;
+            if (Health != null)
+            {
+                Health.OnPoiseBroken += HandlePoiseBroken;
+                Health.OnDeath += HandleDeath;
+            }
+
+            if (ActiveBosses.Add(this))
+                Registered?.Invoke(this);
         }
 
         void OnDisable()
         {
-            Health.OnPoiseBroken -= HandlePoiseBroken;
-            Health.OnDeath -= HandleDeath;
+            if (Health != null)
+            {
+                Health.OnPoiseBroken -= HandlePoiseBroken;
+                Health.OnDeath -= HandleDeath;
+            }
+
+            if (ActiveBosses.Remove(this))
+                Unregistered?.Invoke(this);
         }
 
         /// <summary>Creates deterministic runtime phases for bosses spawned from RPG data.</summary>

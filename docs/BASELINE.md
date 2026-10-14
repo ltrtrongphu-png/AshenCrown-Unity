@@ -111,7 +111,7 @@ Do không có checkout, **chưa chạy** `node tools/build-web.mjs`, `node --che
 
 ## Design tham chiếu (chưa áp dụng vào code)
 
-Màu do chủ repo chọn cho các đề xuất visual tiếp theo: **`#211B24FF`** (alpha 100%). Chỉ ghi nhận làm màu tham chiếu; Phase 0 không thay đổi CSS, Unity materials hoặc runtime token.
+Màu tham chiếu dùng trong lần rà soát thiết kế này: **`#211B24FF`** (alpha 100%). Đây là lựa chọn thử nghiệm do agent đặt vào công cụ màu, chưa phải lựa chọn được chủ repo xác nhận và chưa áp dụng vào CSS, Unity materials hoặc runtime token.
 
 ## Cổng qua Phase 1
 

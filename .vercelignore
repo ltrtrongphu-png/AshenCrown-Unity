@@ -18,3 +18,14 @@ tools/.gitignore
 !Assets/Models/Bosses/AshenRegent.glb
 !Assets/Models/Characters/
 !Assets/Models/Characters/AshenSentinel.glb
+# Unity Editor/project scaffolding is not deployed to the browser site.
+ProjectSettings/**
+Packages/**
+Assets/Scenes/**
+.github/**
+*.asset
+*.unity
+*.asmdef
+*.meta
+*.csproj
+*.sln

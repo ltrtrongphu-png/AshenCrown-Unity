@@ -113,3 +113,16 @@ nav{gap:clamp(16px,2.1vw,34px)}nav a{font-size:9px;letter-spacing:.16em;color:#b
   .menu { padding:0 2px; }
 }
 @media (prefers-reduced-motion:reduce) { .lang-switch button { transition:none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .cursor-glow { display: none !important; }
+}
+
+:focus-visible { outline: 2px solid #f0b485; outline-offset: 3px; }

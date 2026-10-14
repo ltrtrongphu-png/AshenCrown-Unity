@@ -227,11 +227,12 @@ async function loadCloudSave() {
 async function writeCloudSave(save) {
   const user = await requireUser();
   const encoded = JSON.stringify(save);
-  if (encoded.length > 900000) throw new Error('Save is too large to sync.');
+  // Stay comfortably below the server-side JSONB size constraint in migration 002.
+  if (new TextEncoder().encode(encoded).length > 180000) throw new Error('Save is too large to sync.');
   const { error } = await supabase.from('player_web_saves').upsert({
     user_id: user.id,
     save_json: JSON.parse(encoded),
-    save_text: 'Ashen Crown browser save',
+    version: 5,
     updated_at: new Date().toISOString()
   }, { onConflict: 'user_id' });
   if (error) throw error;

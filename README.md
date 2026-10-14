@@ -1,23 +1,31 @@
 # Ashen Crown: The Last Ember — Source Code (Unity / C#)
 
-Bộ mã nguồn lõi cho 3D Dark Fantasy ARPG (Soulslike), viết cho **Unity 2021.3 LTS trở lên**
-(đã tránh API chỉ có ở bản mới). Input dùng **Input Manager cũ**:
+Bộ mã nguồn cho 3D Dark Fantasy ARPG (Soulslike), mục tiêu **Unity 2021.3 LTS trở lên**.
+Input gameplay dùng **Input Manager cũ**:
 `Project Settings > Player > Active Input Handling = Input Manager (Old)` hoặc `Both`.
 
-Chép thư mục `Assets/Scripts` vào project của bạn là dùng được.
+> **Trạng thái repo (2026-10-14):** Repo có gameplay C#, scaffolding Unity tối thiểu (`ProjectVersion.txt`, `Packages/manifest.json`, runtime/test assembly definitions) và một story demo độc lập chạy trên trình duyệt bằng Three.js. Chưa có scene/prefab gameplay hoàn chỉnh được xác minh trong Unity Editor; mã C# chưa được compile hoặc test trong Editor ở môi trường audit. Hãy xem [hướng dẫn Unity](docs/UNITY_SETUP.md) trước khi tích hợp. Story demo trên web **không phải** bản build Unity.
 
-> **Trạng thái repo:** Có bộ gameplay C# cho Unity và một story demo chạy trên trình duyệt bằng Three.js. Repo hiện chưa có `ProjectSettings/`, `Packages/` hay scene Unity hoàn chỉnh; cần tạo project Unity rồi nhập `Assets/` để tích hợp và kiểm tra trong Unity Editor. Story demo trên web không phải bản build Unity.
+## Quick links to maintenance docs
+
+- [Unity setup and sandbox generator](docs/UNITY_SETUP.md)
+- [Web deployment](docs/DEPLOY_VERCEL.md)
+- [Architecture](docs/ARCHITECTURE.md) and [save format v5](docs/SAVE_FORMAT.md)
+- [Controls](docs/CONTROLS.md), [system status](docs/SYSTEMS_STATUS.md), and [known follow-up work](docs/BACKLOG.md)
+- [Security review](docs/SECURITY_REVIEW.md) and [contributing guide](CONTRIBUTING.md)
+
+**Verification notice:** GitHub Web CI passed on the latest completed run (static reference check, six web utility tests, JS syntax checks and a 21-file deployment artifact). Unity Editor compilation, generated-scene playability, live Supabase migration/RLS, browser soak/performance and Lighthouse are still unverified; see the status docs before treating this source as production-ready.
 
 ## Vercel deployment
 
 Vercel is configured to deploy only the browser experience:
 
-- `node tools/build-web.mjs` creates an allow-listed `dist/` containing the two HTML pages, their CSS/JS, and the site logo.
+- `npm install --ignore-scripts --no-audit --no-fund` installs the pinned Three.js runtime; `node tools/build-web.mjs` creates the allow-listed `dist/` artifact.
 - `vercel.json` skips dependency installation, publishes `dist/`, keeps clean URLs, and sets static caching plus baseline security headers.
 - Unity C# sources, GLB models, texture maps, Supabase migrations, backend code, and documentation remain in GitHub and are excluded from the Vercel CLI upload by `.vercelignore`.
 - No `ignoreCommand` is configured: Vercel marks ignored builds as canceled, and canceled builds still count toward deployment quotas.
 
-Connect the repository root to Vercel and leave the build and output settings to `vercel.json`. The build has no npm dependencies. The site still loads Three.js and Google Fonts from their pinned public CDNs at runtime.
+Connect the repository root to Vercel and leave install/build/output settings to `vercel.json`. The build depends on the pinned `three@0.186.1` npm package to produce same-origin vendor files. The game tries the self-hosted Three.js module first and retains pinned CDN fallbacks; the optional GLTFLoader example module and Google Fonts still use approved external sources under the existing CSP.
 
 ---
 

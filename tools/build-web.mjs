@@ -25,18 +25,18 @@ const webFiles = [
   'campaign.js',
   'model3d.js',
   'play.js',
+  'save-utils.js',
   'vendor/three.module.js',
   'vendor/three.core.js',
   'play-boot.js',
   'auth-config.js',
   'auth.js',
   'sw.js',
-  'Assets/ashen-crown-logo.svg',
+  'assets/ashen-crown-logo.svg',
   'Assets/Models/Bosses/AshenRegent.glb',
   'Assets/Models/Characters/AshenSentinel.glb',
   'resource-pack.json',
 ];
-const optionalAssets = new Set(['Assets/ashen-crown-logo.svg']);
 const generatedFiles = new Set(['resource-pack.json']);
 const npmAssetSources = new Map([
   ['vendor/three.module.js', 'node_modules/three/build/three.module.js'],
@@ -66,7 +66,7 @@ const resourceFiles = [
 for (const file of webFiles) {
   const source = sourcePath(file);
   if (generatedFiles.has(file)) continue;
-  if ((!existsSync(source) || !statSync(source).isFile()) && !optionalAssets.has(file)) {
+  if (!existsSync(source) || !statSync(source).isFile()) {
     throw new Error(`Required web deployment file is missing: ${file}`);
   }
 }
@@ -92,10 +92,10 @@ function checkJavaScriptSyntax(file, module = false) {
     throw new Error(`JavaScript syntax check failed for ${file}: ${result.stderr || result.error?.message || 'unknown error'}`);
   }
 }
-for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js', 'play-boot.js']) {
+for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js', 'play-boot.js', 'auth-config.js']) {
   checkJavaScriptSyntax(file, false);
 }
-for (const file of ['play.js', 'model3d.js', 'vendor/three.module.js', 'vendor/three.core.js']) {
+for (const file of ['play.js', 'save-utils.js', 'model3d.js', 'auth.js', 'vendor/three.module.js', 'vendor/three.core.js']) {
   checkJavaScriptSyntax(file, true);
 }
 
@@ -137,9 +137,6 @@ for (const file of webFiles) {
     } else {
       cpSync(source, destination);
     }
-  } else if (file === 'Assets/ashen-crown-logo.svg') {
-    writeFileSync(destination, `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Ashen Crown emblem"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3c08a"/><stop offset=".5" stop-color="#c96b3d"/><stop offset="1" stop-color="#71331f"/></linearGradient></defs><path d="M128 18 159 69 204 38 194 104c-13 43-38 68-66 81-28-13-53-38-66-81L52 38l45 31z" fill="#0b0908" stroke="url(#g)" stroke-width="6" stroke-linejoin="round"/><path d="M69 104c18 13 38 19 59 19s41-6 59-19M83 105l10-37 35 55 35-55 10 37m-87 40c17 12 30 18 42 22 12-4 25-10 42-22" fill="none" stroke="#d98a58" stroke-width="4"/><path d="m128 91 13 25-13 29-13-29z" fill="#f0a46d"/><circle cx="128" cy="116" r="7" fill="#fff0d8"/></svg>\n`);
-    console.warn('Logo source is absent from the checkout; generated the branded fallback SVG.');
   }
 }
 

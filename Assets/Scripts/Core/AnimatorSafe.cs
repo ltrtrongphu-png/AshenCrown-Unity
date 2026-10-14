@@ -4,46 +4,144 @@ using UnityEngine;
 namespace AshenCrown.Core
 {
     /// <summary>
-    /// Bọc Animator để game vẫn chạy được khi chưa có Animator Controller / thiếu parameter
-    /// (không spam warning "Parameter does not exist"). Rất tiện khi prototype bằng capsule.
+    /// Safe Animator access for prototypes and production assets. Missing controllers,
+    /// parameters, layers, and states are treated as no-ops without warnings.
     /// </summary>
     public static class AnimatorSafe
     {
-        // Cache: ID của controller -> tập hash các parameter. Controller đổi (boss phase) thì key đổi.
-        static readonly Dictionary<int, HashSet<int>> Cache = new Dictionary<int, HashSet<int>>();
+        static readonly Dictionary<int, HashSet<int>> ParameterCache = new Dictionary<int, HashSet<int>>();
+        static readonly Dictionary<int, Dictionary<long, bool>> StateCache = new Dictionary<int, Dictionary<long, bool>>();
 
-        static bool Has(Animator a, int hash)
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetCache()
         {
-            if (a == null || a.runtimeAnimatorController == null) return false;
-            int key = a.runtimeAnimatorController.GetInstanceID();
-            if (!Cache.TryGetValue(key, out var set))
+            ParameterCache.Clear();
+            StateCache.Clear();
+        }
+
+        static bool HasParameter(Animator animator, int hash)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null)
+                return false;
+
+            int controllerId = animator.runtimeAnimatorController.GetInstanceID();
+            if (!ParameterCache.TryGetValue(controllerId, out HashSet<int> parameters))
             {
-                set = new HashSet<int>();
-                foreach (var p in a.parameters) set.Add(p.nameHash);
-                Cache[key] = set;
+                parameters = new HashSet<int>();
+                foreach (AnimatorControllerParameter parameter in animator.parameters)
+                    parameters.Add(parameter.nameHash);
+                ParameterCache[controllerId] = parameters;
             }
-            return set.Contains(hash);
+
+            return parameters.Contains(hash);
         }
 
-        public static void SetFloat(Animator a, string name, float v, float damp = 0f, float dt = 0f)
+        public static bool HasState(Animator animator, int layer, int stateHash)
         {
-            int h = Animator.StringToHash(name);
-            if (!Has(a, h)) return;
-            if (damp > 0f) a.SetFloat(h, v, damp, dt); else a.SetFloat(h, v);
-        }
-        public static void SetBool(Animator a, string name, bool v)
-        { int h = Animator.StringToHash(name); if (Has(a, h)) a.SetBool(h, v); }
-        public static void SetInt(Animator a, string name, int v)
-        { int h = Animator.StringToHash(name); if (Has(a, h)) a.SetInteger(h, v); }
-        public static void Trigger(Animator a, string name)
-        { int h = Animator.StringToHash(name); if (Has(a, h)) a.SetTrigger(h); }
+            if (animator == null || animator.runtimeAnimatorController == null
+                || layer < 0 || layer >= animator.layerCount)
+                return false;
 
-        /// <summary>CrossFade thẳng vào một state theo tên (nếu tồn tại).</summary>
-        public static void Play(Animator a, string stateName, float fade = 0.08f)
+            int controllerId = animator.runtimeAnimatorController.GetInstanceID();
+            if (!StateCache.TryGetValue(controllerId, out Dictionary<long, bool> states))
+            {
+                states = new Dictionary<long, bool>();
+                StateCache[controllerId] = states;
+            }
+
+            long key = ((long)layer << 32) | (uint)stateHash;
+            if (!states.TryGetValue(key, out bool exists))
+            {
+                exists = animator.HasState(layer, stateHash);
+                states[key] = exists;
+            }
+
+            return exists;
+        }
+
+        public static void SetFloat(Animator animator, string name, float value, float damp = 0f, float deltaTime = 0f)
         {
-            if (a == null || string.IsNullOrEmpty(stateName)) return;
-            int h = Animator.StringToHash(stateName);
-            if (a.HasState(0, h)) a.CrossFadeInFixedTime(h, fade);
+            if (string.IsNullOrEmpty(name))
+                return;
+            SetFloat(animator, Animator.StringToHash(name), value, damp, deltaTime);
+        }
+
+        public static void SetFloat(Animator animator, int hash, float value, float damp = 0f, float deltaTime = 0f)
+        {
+            if (!HasParameter(animator, hash))
+                return;
+
+            if (damp > 0f)
+                animator.SetFloat(hash, value, damp, Mathf.Max(0f, deltaTime));
+            else
+                animator.SetFloat(hash, value);
+        }
+
+        public static void SetBool(Animator animator, string name, bool value)
+        {
+            if (!string.IsNullOrEmpty(name))
+                SetBool(animator, Animator.StringToHash(name), value);
+        }
+
+        public static void SetBool(Animator animator, int hash, bool value)
+        {
+            if (HasParameter(animator, hash))
+                animator.SetBool(hash, value);
+        }
+
+        public static void SetInt(Animator animator, string name, int value)
+        {
+            if (!string.IsNullOrEmpty(name))
+                SetInt(animator, Animator.StringToHash(name), value);
+        }
+
+        public static void SetInt(Animator animator, int hash, int value)
+        {
+            if (HasParameter(animator, hash))
+                animator.SetInteger(hash, value);
+        }
+
+        public static void Trigger(Animator animator, string name)
+        {
+            if (!string.IsNullOrEmpty(name))
+                Trigger(animator, Animator.StringToHash(name));
+        }
+
+        public static void Trigger(Animator animator, int hash)
+        {
+            if (HasParameter(animator, hash))
+                animator.SetTrigger(hash);
+        }
+
+        public static void Play(Animator animator, string stateName, float fade = 0.08f)
+        {
+            if (string.IsNullOrEmpty(stateName))
+                return;
+            TryPlay(animator, Animator.StringToHash(stateName), fade);
+        }
+
+        public static bool TryPlay(Animator animator, int stateHash, float fade = 0.08f, int layer = 0)
+        {
+            if (!HasState(animator, layer, stateHash))
+                return false;
+
+            animator.CrossFadeInFixedTime(stateHash, Mathf.Clamp(fade, 0f, 1f), layer);
+            return true;
+        }
+
+        public static void SetPlaybackSpeed(Animator animator, float speed)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null)
+                return;
+            animator.speed = Mathf.Clamp(speed, 0.05f, 3f);
+        }
+
+        public static void SetLayerWeight(Animator animator, int layer, float weight)
+        {
+            if (animator == null || animator.runtimeAnimatorController == null
+                || layer < 0 || layer >= animator.layerCount)
+                return;
+            animator.SetLayerWeight(layer, Mathf.Clamp01(weight));
         }
     }
 }
