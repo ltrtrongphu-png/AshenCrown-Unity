@@ -40,7 +40,7 @@ This file distinguishes code changes completed in this branch from work still re
 - Complete touch/gamepad/remappable controls, focus management, reduced-motion checks, offline update UX, and 10-minute memory soak test.
 
 ### Baseline/CI/release
-- Recheck Web CI, npm audit, Gitleaks and CodeQL on the final PR head immediately before merge; they were green on the most recently completed source revision before the final boss-model fix.
+- Web CI, npm audit, Gitleaks and CodeQL passed on PR head `5d90156ddbf50e33441d694b3df5b0116cd8ba21`. Re-run or inspect the latest workflow status if another commit is pushed before merge. Unity EditMode execution remains skipped without a license.
 - Unity CI requires valid Unity license secrets; the workflow intentionally skips EditMode execution when the license is absent. Several new animation/combat/HUD test sources are authored but have not run in a Unity Editor.
 - Capture real browser performance numbers, gzip/Brotli sizes, 404/console traces, and Lighthouse before/after.
 - Finish `ARCHITECTURE.md`, `SAVE_FORMAT.md`, a full system status review, release checklist, and decision on project LICENSE.
