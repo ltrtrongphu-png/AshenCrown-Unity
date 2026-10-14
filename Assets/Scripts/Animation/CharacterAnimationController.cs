@@ -24,6 +24,7 @@ namespace AshenCrown.Animation
                 presentation = gameObject.AddComponent<AnimationPresentationController>();
 
             presentation.SetAnimator(animator);
+            presentation.SetLocomotionDamp(locomotionDamp);
         }
 
         public void SetLocomotion(Vector3 localVelocity, float speed01)
@@ -47,7 +48,7 @@ namespace AshenCrown.Animation
         public void SetGrounded(bool value)
         {
             if (presentation != null)
-                presentation.SetCombatState(false, value);
+                presentation.SetGrounded(value);
             else
                 AnimatorSafe.SetBool(animator, "Grounded", value);
         }
@@ -55,7 +56,7 @@ namespace AshenCrown.Animation
         public void SetCombat(bool value)
         {
             if (presentation != null)
-                presentation.SetCombatState(value, true);
+                presentation.SetCombat(value);
             else
                 AnimatorSafe.SetBool(animator, "Combat", value);
         }
