@@ -31,7 +31,7 @@ const webFiles = [
   'auth-config.js',
   'auth.js',
   'sw.js',
-  'Assets/ashen-crown-logo.svg',
+  'assets/ashen-crown-logo.svg',
   'Assets/Models/Bosses/AshenRegent.glb',
   'Assets/Models/Characters/AshenSentinel.glb',
   'resource-pack.json',
@@ -66,7 +66,7 @@ const resourceFiles = [
 for (const file of webFiles) {
   const source = sourcePath(file);
   if (generatedFiles.has(file)) continue;
-  if ((!existsSync(source) || !statSync(source).isFile()) && !optionalAssets.has(file)) {
+  if (!existsSync(source) || !statSync(source).isFile()) {
     throw new Error(`Required web deployment file is missing: ${file}`);
   }
 }
