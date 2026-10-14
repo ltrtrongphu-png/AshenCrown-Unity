@@ -4,7 +4,7 @@ Status vocabulary: **Prototype** = code exists but lacks an end-to-end verified 
 
 | System | Code/data | UI | Save | Tests | Initial status |
 |---|---|---|---|---|---|
-| Player movement/camera/combat | Core scripts exist | IMGUI HUDs and camera overlays | Player state captured by save system | Partial EditMode tests only | Prototype; no Unity compile/run |
+| Player movement/camera/combat | Core scripts plus shared animation/feedback controllers and event-driven hit feedback | IMGUI HUDs; feedback toast supports persisted opacity/scale and reduced motion | Player state captured by save system | New animation/combat/HUD lifecycle test sources added; Unity Editor run skipped | Prototype; no Unity compile/run |
 | Enemy FSM/boss phases | FSM, boss phase/attack logic; production GLB attach path added | Boss HUD exists | Relevant player/world state partly saved | No verified PlayMode coverage; Unity lifecycle EditMode test source added | Prototype; Editor behavior unverified |
 | Inventory/equipment/loot/progression | Systems and item data exist; several defaults are code-defined | Equipment/shop/progression HUDs | Capture/restore paths exist | One EditMode test source | Partial; not Editor-tested |
 | Quest/dialogue/NPC | System scripts and dialogue/quest UI exist | Yes, prototype HUD | Some quest state captured | Coverage not verified | Prototype |
