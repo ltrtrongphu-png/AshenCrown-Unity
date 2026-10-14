@@ -44,12 +44,12 @@ namespace AshenCrown.UI
             }
 
             GUILayout.Space(8);
-            GUILayout.Label("HUD Accessibility", GUI.skin.GetStyle("boldLabel"));
-            GUILayout.Label("HUD Opacity");
+            GUILayout.Label("Feedback Toast Accessibility", GUI.skin.GetStyle("boldLabel"));
+            GUILayout.Label("Feedback Toast Opacity");
             float alpha = GUILayout.HorizontalSlider(HUDPresentationSettings.UIAlpha, 0.35f, 1f);
             if (Mathf.Abs(alpha - HUDPresentationSettings.UIAlpha) > 0.02f)
                 HUDPresentationSettings.SetUIAlpha(alpha);
-            GUILayout.Label("HUD Scale");
+            GUILayout.Label("Feedback Toast Scale");
             float uiScale = GUILayout.HorizontalSlider(HUDPresentationSettings.UIScale, 0.8f, 1.25f);
             if (Mathf.Abs(uiScale - HUDPresentationSettings.UIScale) > 0.02f)
                 HUDPresentationSettings.SetUIScale(uiScale);
