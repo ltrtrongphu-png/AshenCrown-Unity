@@ -10,11 +10,12 @@ The repository now includes a minimal project scaffold targeting Unity 2021.3 LT
 2. Clone the repository and open its root folder (the folder containing `Assets/`, `Packages/`, and `ProjectSettings/`) in Unity Hub.
 3. If prompted to resolve packages, allow Unity Package Manager to resolve `com.unity.test-framework`.
 4. In **Edit → Project Settings → Player → Other Settings**, set **Active Input Handling** to **Input Manager (Old)** or **Both**. The gameplay currently uses the legacy Input Manager API.
-5. Open **Window → General → Test Runner** and select EditMode. The test assembly is declared at `Assets/Tests/EditMode/AshenCrown.Tests.EditMode.asmdef`.
+5. Use **Ashen Crown → Create Sandbox Scene** to generate the capsule combat scene and navigation data; inspect the Console and play the scene before relying on it.
+6. Open **Window → General → Test Runner** and select EditMode. The test assembly is declared at `Assets/Tests/EditMode/AshenCrown.Tests.EditMode.asmdef`. It includes progression tests plus new lifecycle, animation-presentation, combat-feedback and HUD-setting test sources.
 
 ## Current limitations
 
-- There is no checked-in `.unity` scene or verified prefab-based play path yet.
+- The editor command generates `Assets/Scenes/Sandbox_Combat.unity` and a NavMesh data asset when run; those generated assets are not checked in. The generator itself has not been run in an actual Unity Editor in this task, and no scene/playability claim is made.
 - GLB assets require a compatible GLB importer. No importer package is added automatically because its Unity-version compatibility and license need to be reviewed.
 - The existing C# assemblies have not been compiled here. Treat editor warnings/errors as open until Unity Editor confirms otherwise.
 - Don't upgrade the save schema, remove systems, or change public gameplay method signatures without migration/shim tests.
