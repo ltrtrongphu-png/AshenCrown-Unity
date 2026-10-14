@@ -5,5 +5,8 @@
   "description": "Static browser demo for Ashen Crown: The Last Ember",
   "dependencies": {
     "three": "0.186.1"
+  },
+  "scripts": {
+    "check:refs": "node tools/check-refs.mjs"
   }
 }
