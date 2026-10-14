@@ -55,7 +55,7 @@ if (packageJson.dependencies?.three !== '0.186.1')
 
 const auth = read('auth.js');
 const playSource = read('play.js');
-for (const match of playSource.matchAll(/(?:from\\s*|import\\()(['"])\\.\\/([^'"]+)\\1/g)) {
+for (const match of playSource.matchAll(/(?:from\s*|import\()(['"])\.\/([^'"]+)\1/g)) {
   const modulePath = match[2].split(/[?#]/, 1)[0];
   if (!allowList.includes(modulePath))
     fail('play.js imports a local module outside the deployment allow-list: ' + modulePath);
