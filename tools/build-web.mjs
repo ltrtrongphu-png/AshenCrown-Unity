@@ -25,6 +25,7 @@ const webFiles = [
   'campaign.js',
   'model3d.js',
   'play.js',
+  'save-utils.js',
   'vendor/three.module.js',
   'vendor/three.core.js',
   'play-boot.js',
@@ -94,7 +95,7 @@ function checkJavaScriptSyntax(file, module = false) {
 for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js', 'play-boot.js', 'auth-config.js']) {
   checkJavaScriptSyntax(file, false);
 }
-for (const file of ['play.js', 'model3d.js', 'auth.js', 'vendor/three.module.js', 'vendor/three.core.js']) {
+for (const file of ['play.js', 'save-utils.js', 'model3d.js', 'auth.js', 'vendor/three.module.js', 'vendor/three.core.js']) {
   checkJavaScriptSyntax(file, true);
 }
 
