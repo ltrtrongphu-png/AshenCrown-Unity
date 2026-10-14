@@ -1,3 +1,4 @@
+import { escapeHtml, sanitizeItemRecord } from './save-utils.js';
 // Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
 // prevent the entire game from starting.
 async function loadThreeEngine() {
@@ -785,13 +786,10 @@ const keys={};
 const CHAPTER_LEVEL_CAPS=[3,5,7,9,11,13,15,17,19,20];
 const EQUIPMENT_RARITIES=['Common','Uncommon','Rare','Epic','Legendary'];
 const EQUIPMENT_TYPES=new Set(['Weapon','Core','Armor','Trinket','Relic','Quest Relic','Chapter Relic']);
-const STORED_ITEM_TYPES=new Set([...EQUIPMENT_TYPES,'Chapter Record','Material','Crafting Material','Quest Item','Consumable']);
 function chapterLevelCap(chapter=state.chapter){return CHAPTER_LEVEL_CAPS[THREE.MathUtils.clamp(Math.floor(Number(chapter)||1),1,10)-1]}
 function xpNeededForLevel(level=state.level){const lv=Math.max(1,Math.floor(Number(level)||1));return Math.round(80+48*lv+7*lv*lv)}
 function skillUnlockLevel(index){return index+1}
 function equipmentSlotFor(gear){if(!gear)return null;if(gear.type==='Weapon'||gear.type==='Core')return 'core';if(gear.type==='Armor')return 'armor';if(gear.type==='Trinket')return 'charm';if(['Relic','Quest Relic','Chapter Relic'].includes(gear.type))return 'relic';return null}
-function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
-function sanitizeItemRecord(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;const name=String(raw.name??'').replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,80);if(!name)return null;const itemId=typeof raw.itemId==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(raw.itemId)?raw.itemId:'';const type=STORED_ITEM_TYPES.has(raw.type)?raw.type:'Material';const rarity=EQUIPMENT_RARITIES.includes(raw.rarity)?raw.rarity:'Common';const stats={};for(const key of ['vitality','focus','ward']){const value=Number(raw.stats?.[key]);if(Number.isFinite(value))stats[key]=THREE.MathUtils.clamp(Math.floor(value),0,5)}return {itemId,name,type,rarity,attrs:(Array.isArray(raw.attrs)?raw.attrs:[]).filter(x=>typeof x==='string').slice(0,8).map(x=>x.replace(/[\u0000-\u001f\u007f]/g,'').slice(0,40)),stats,source:typeof raw.source==='string'?raw.source.slice(0,30):undefined,price:Number.isFinite(Number(raw.price))?THREE.MathUtils.clamp(Math.floor(Number(raw.price)),0,999999):undefined}}
 let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0,legacyMapSave=false;
 const player=new THREE.Group(); player.position.set(0,0,7); characters.add(player);
 
