@@ -8,7 +8,7 @@ namespace AshenCrown.UI
     public sealed class SettingsHUD : MonoBehaviour
     {
         bool open;
-        Rect window = new Rect(24, 24, 430, 560);
+        Rect window = new Rect(24, 24, 430, 620);
 
         void Update()
         {
@@ -42,6 +42,17 @@ namespace AshenCrown.UI
                 float volume = GUILayout.HorizontalSlider(settings.MasterVolume, 0f, 1f);
                 if (Mathf.Abs(volume - settings.MasterVolume) > 0.01f) settings.SetMasterVolume(volume);
             }
+
+            GUILayout.Space(8);
+            GUILayout.Label("HUD Accessibility", GUI.skin.GetStyle("boldLabel"));
+            GUILayout.Label("HUD Opacity");
+            float alpha = GUILayout.HorizontalSlider(HUDPresentationSettings.UIAlpha, 0.35f, 1f);
+            if (Mathf.Abs(alpha - HUDPresentationSettings.UIAlpha) > 0.02f)
+                HUDPresentationSettings.SetUIAlpha(alpha);
+            GUILayout.Label("HUD Scale");
+            float uiScale = GUILayout.HorizontalSlider(HUDPresentationSettings.UIScale, 0.8f, 1.25f);
+            if (Mathf.Abs(uiScale - HUDPresentationSettings.UIScale) > 0.02f)
+                HUDPresentationSettings.SetUIScale(uiScale);
 
             GUILayout.Space(10);
             GUILayout.Label("Graphics");
