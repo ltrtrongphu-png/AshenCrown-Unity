@@ -48,6 +48,7 @@ namespace AshenCrown.Core
             root.AddComponent<CodexSystem>();
             root.AddComponent<SaveLoadSystem>();
             root.AddComponent<GameplayEventBridge>();
+            root.AddComponent<AshenCrown.Combat.CombatPresentationFeedback>();
             root.AddComponent<PlayerRespawnDirector>();
             root.AddComponent<NPCWorldSpawner>();
             root.AddComponent<DialogueOverlay>();
