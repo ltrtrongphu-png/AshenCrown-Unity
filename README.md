@@ -6,6 +6,16 @@ Input gameplay dùng **Input Manager cũ**:
 
 > **Trạng thái repo (2026-10-14):** Repo có gameplay C#, scaffolding Unity tối thiểu (`ProjectVersion.txt`, `Packages/manifest.json`, runtime/test assembly definitions) và một story demo độc lập chạy trên trình duyệt bằng Three.js. Chưa có scene/prefab gameplay hoàn chỉnh được xác minh trong Unity Editor; mã C# chưa được compile hoặc test trong Editor ở môi trường audit. Hãy xem [hướng dẫn Unity](docs/UNITY_SETUP.md) trước khi tích hợp. Story demo trên web **không phải** bản build Unity.
 
+## Quick links to maintenance docs
+
+- [Unity setup and sandbox generator](docs/UNITY_SETUP.md)
+- [Web deployment](docs/DEPLOY_VERCEL.md)
+- [Architecture](docs/ARCHITECTURE.md) and [save format v5](docs/SAVE_FORMAT.md)
+- [Controls](docs/CONTROLS.md), [system status](docs/SYSTEMS_STATUS.md), and [known follow-up work](docs/BACKLOG.md)
+- [Security review](docs/SECURITY_REVIEW.md) and [contributing guide](CONTRIBUTING.md)
+
+**Verification notice:** GitHub Web CI passed on the latest completed run (static reference check, six web utility tests, JS syntax checks and a 21-file deployment artifact). Unity Editor compilation, generated-scene playability, live Supabase migration/RLS, browser soak/performance and Lighthouse are still unverified; see the status docs before treating this source as production-ready.
+
 ## Vercel deployment
 
 Vercel is configured to deploy only the browser experience:
@@ -15,7 +25,7 @@ Vercel is configured to deploy only the browser experience:
 - Unity C# sources, GLB models, texture maps, Supabase migrations, backend code, and documentation remain in GitHub and are excluded from the Vercel CLI upload by `.vercelignore`.
 - No `ignoreCommand` is configured: Vercel marks ignored builds as canceled, and canceled builds still count toward deployment quotas.
 
-Connect the repository root to Vercel and leave the build and output settings to `vercel.json`. The build has no npm dependencies. The site still loads Three.js and Google Fonts from their pinned public CDNs at runtime.
+Connect the repository root to Vercel and leave install/build/output settings to `vercel.json`. The build depends on the pinned `three@0.186.1` npm package to produce same-origin vendor files. The game tries the self-hosted Three.js module first and retains pinned CDN fallbacks; the optional GLTFLoader example module and Google Fonts still use approved external sources under the existing CSP.
 
 ---
 
