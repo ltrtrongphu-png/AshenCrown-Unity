@@ -1,0 +1,268 @@
+{
+  "status": "design_export_generated; not runtime_validated",
+  "counts": {
+    "archetypes": 5,
+    "weapons": 8,
+    "skills": 18,
+    "relics": 20,
+    "affixes": 60,
+    "sets": 6,
+    "recipes": 40,
+    "unique_items": 30,
+    "story_items": 31,
+    "consumables": 15,
+    "achievements": 80,
+    "contracts": 30,
+    "seasons": 4,
+    "expedition_modifiers": 20,
+    "codex_entries": 87,
+    "localization_sample_rows": 20,
+    "bosses": 12,
+    "regional_enemies": 42,
+    "enemy_archetypes": 10,
+    "environment_scenes": 20,
+    "ambient_barks": 40,
+    "endings": 5,
+    "quest_outlines": 70,
+    "dialogue_seed_nodes": 70,
+    "factions": 5,
+    "characters": 14,
+    "mastery_nodes": 60,
+    "world_events": 12,
+    "live_ops_months": 12,
+    "targets": 93,
+    "items_csv_records": 104
+  },
+  "id_checks": {
+    "archetypes": {
+      "count": 5,
+      "duplicate_ids": []
+    },
+    "weapons": {
+      "count": 8,
+      "duplicate_ids": []
+    },
+    "skills": {
+      "count": 18,
+      "duplicate_ids": []
+    },
+    "relics": {
+      "count": 20,
+      "duplicate_ids": []
+    },
+    "enemies": {
+      "count": 42,
+      "duplicate_ids": []
+    },
+    "bosses": {
+      "count": 12,
+      "duplicate_ids": []
+    },
+    "quests": {
+      "count": 70,
+      "duplicate_ids": []
+    },
+    "codex": {
+      "count": 87,
+      "duplicate_ids": []
+    },
+    "contracts": {
+      "count": 30,
+      "duplicate_ids": []
+    },
+    "modifiers": {
+      "count": 20,
+      "duplicate_ids": []
+    },
+    "recipes": {
+      "count": 40,
+      "duplicate_ids": []
+    },
+    "unique_items": {
+      "count": 30,
+      "duplicate_ids": []
+    }
+  },
+  "drop_tables_not_summing_to_100": [],
+  "quest_ids_not_matching_pattern": [],
+  "quest_objective_targets_pending_scene_prefab_binding": 93,
+  "required_manual_checks": [
+    "bind stable symbolic quest target IDs to real Unity/web scene triggers and prefab/entity IDs",
+    "resolve character relationship and Eda Vey/Bell Warden canon decision",
+    "profile 60 FPS at 1080p on target hardware",
+    "validate localization by native reviewers",
+    "check mesh/rig clipping for all Character Creator combinations",
+    "run Monte Carlo economy simulation",
+    "validate every reference graph in engine import test"
+  ],
+  "known_data_caveats": [
+    "quest records preserve design-outline objectives; target IDs are stable symbols awaiting scene/prefab binding",
+    "dialogue export seeds one localized-key node per quest but full branch graph is still authored from choice/world-flag data",
+    "items.csv includes unique gear, story items, weapon families, relic templates and consumables; material instances and final rarity assignment remain production tasks",
+    "regional enemy IDs are design IDs and require mapping to actual prefab IDs"
+  ],
+  "schema_validation": {
+    "quests.json": {
+      "records": 70,
+      "errors": []
+    },
+    "dialogue.json": {
+      "records": 70,
+      "errors": []
+    },
+    "enemies.json": {
+      "records": 42,
+      "errors": []
+    },
+    "bosses.json": {
+      "records": 12,
+      "errors": []
+    },
+    "factions.json": {
+      "records": 5,
+      "errors": []
+    },
+    "items.csv": {
+      "records": 104,
+      "errors": []
+    }
+  },
+  "cross_reference_checks": {
+    "item_ids": 104,
+    "target_ids": 93,
+    "missing_objective_targets": [],
+    "missing_reward_ids": [],
+    "missing_prerequisite_ids": [],
+    "givers_without_character_registry_entry": []
+  },
+  "automated_file_integrity": {
+    "json_files": 35,
+    "csv_files": 8,
+    "parse_errors": [],
+    "csv_row_counts": {
+      "data/achievements.csv": 80,
+      "data/affixes.csv": 60,
+      "data/barks.csv": 40,
+      "data/codex.csv": 87,
+      "data/economy.csv": 6,
+      "data/items.csv": 104,
+      "data/localization_sample.csv": 20,
+      "data/xp_curve.csv": 60
+    }
+  },
+  "duplicate_id_checks": {
+    "archetypes.json": {
+      "records": 5,
+      "duplicate_ids": []
+    },
+    "weapons.json": {
+      "records": 8,
+      "duplicate_ids": []
+    },
+    "skills.json": {
+      "records": 18,
+      "duplicate_ids": []
+    },
+    "relics.json": {
+      "records": 20,
+      "duplicate_ids": []
+    },
+    "sets.json": {
+      "records": 6,
+      "duplicate_ids": []
+    },
+    "recipes.json": {
+      "records": 40,
+      "duplicate_ids": []
+    },
+    "unique_items.json": {
+      "records": 30,
+      "duplicate_ids": []
+    },
+    "story_items.json": {
+      "records": 31,
+      "duplicate_ids": []
+    },
+    "consumables.json": {
+      "records": 15,
+      "duplicate_ids": []
+    },
+    "achievements.csv": {
+      "records": 80,
+      "duplicate_ids": []
+    },
+    "contracts.json": {
+      "records": 30,
+      "duplicate_ids": []
+    },
+    "expedition_modifiers.json": {
+      "records": 20,
+      "duplicate_ids": []
+    },
+    "bosses.json": {
+      "records": 12,
+      "duplicate_ids": []
+    },
+    "enemies.json": {
+      "records": 42,
+      "duplicate_ids": []
+    },
+    "quests.json": {
+      "records": 70,
+      "duplicate_ids": []
+    },
+    "dialogue.json": {
+      "records": 70,
+      "duplicate_ids": []
+    },
+    "factions.json": {
+      "records": 5,
+      "duplicate_ids": []
+    },
+    "characters.json": {
+      "records": 14,
+      "duplicate_ids": []
+    },
+    "mastery_nodes.json": {
+      "records": 60,
+      "duplicate_ids": []
+    },
+    "world_events.json": {
+      "records": 12,
+      "duplicate_ids": []
+    },
+    "live_ops_calendar.json": {
+      "records": 12,
+      "duplicate_ids": []
+    }
+  },
+  "quest_graph_check": {
+    "quest_count": 70,
+    "cycle_count": 0,
+    "cycles": [],
+    "invalid_prerequisites": []
+  },
+  "localization_sample_check": {
+    "rows": 20,
+    "duplicate_keys": [],
+    "rows_missing_any_language": [],
+    "languages": [
+      "en",
+      "vi",
+      "ja",
+      "ko",
+      "zh"
+    ]
+  },
+  "automated_check_status": {
+    "all_json_csv_parse": true,
+    "schema_validation_no_errors": true,
+    "no_duplicate_ids_in_checked_datasets": true,
+    "quest_prerequisite_graph_acyclic": true,
+    "quest_cross_references_resolved": true,
+    "localization_sample_complete_for_5_languages": true,
+    "normalized_drop_tables_sum_to_100": true,
+    "runtime_scene_bindings_pending": true,
+    "unity_web_runtime_profile_pending": true
+  }
+}
