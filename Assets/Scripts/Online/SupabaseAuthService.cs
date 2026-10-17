@@ -274,6 +274,24 @@ namespace AshenCrown.Online
                 }
             }
 
+            if (!succeeded && (responseCode == 0 || responseCode == 429 || responseCode >= 500))
+            {
+                // One bounded realtime backoff for transient network/service failures.
+                yield return new WaitForSecondsRealtime(1f);
+                yield return RefreshSessionIfNeeded();
+                if (CurrentUser != null && !string.IsNullOrWhiteSpace(AccessToken))
+                {
+                    using (var retry = CreateJsonRequest(url, "POST", body))
+                    {
+                        retry.SetRequestHeader("Authorization", "Bearer " + AccessToken);
+                        retry.SetRequestHeader("Prefer", "resolution=merge-duplicates,return=minimal");
+                        yield return retry.SendWebRequest();
+                        succeeded = retry.result == UnityWebRequest.Result.Success;
+                        responseCode = retry.responseCode;
+                    }
+                }
+            }
+
             if (!succeeded)
                 Error?.Invoke(MapRequestError(responseCode, "Cloud save"));
         }
@@ -313,6 +331,26 @@ namespace AshenCrown.Online
             if (!succeeded && responseCode == 401)
             {
                 yield return RefreshSessionIfNeeded(true);
+                if (CurrentUser != null && !string.IsNullOrWhiteSpace(AccessToken))
+                {
+                    using (var retry = UnityWebRequest.Get(url))
+                    {
+                        retry.timeout = RequestTimeoutSeconds;
+                        retry.SetRequestHeader("apikey", Config.publishableKey);
+                        retry.SetRequestHeader("Authorization", "Bearer " + AccessToken);
+                        yield return retry.SendWebRequest();
+                        succeeded = retry.result == UnityWebRequest.Result.Success;
+                        responseCode = retry.responseCode;
+                        responseText = retry.downloadHandler != null ? retry.downloadHandler.text : "";
+                    }
+                }
+            }
+
+            if (!succeeded && (responseCode == 0 || responseCode == 429 || responseCode >= 500))
+            {
+                // Bound retries so offline play cannot hang forever.
+                yield return new WaitForSecondsRealtime(1f);
+                yield return RefreshSessionIfNeeded();
                 if (CurrentUser != null && !string.IsNullOrWhiteSpace(AccessToken))
                 {
                     using (var retry = UnityWebRequest.Get(url))

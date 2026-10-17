@@ -66,3 +66,11 @@ test('local autosave uses a timestamp-free payload comparator without sorting ev
   assert.match(comparator, /delete snapshot\.savedAt;/);
   assert.match(comparator, /return JSON\.stringify\(snapshot\);/);
 });
+
+test('Unity cloud requests use bounded realtime retry for transient failures', () => {
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const authSource = readFileSync(join(repoRoot, 'Assets', 'Scripts', 'Online', 'SupabaseAuthService.cs'), 'utf8');
+  assert.match(authSource, /responseCode == 0 \|\| responseCode == 429 \|\| responseCode >= 500/);
+  assert.match(authSource, /WaitForSecondsRealtime\(1f\)/);
+  assert.match(authSource, /RequestTimeoutSeconds = 15/);
+});
