@@ -16,9 +16,6 @@ namespace AshenCrown.Combat
         [SerializeField, Range(0.01f, 0.25f)] float hitStopScale = 0.08f;
         [SerializeField, Range(0.01f, 0.2f)] float defaultHitStopDuration = 0.045f;
 
-        float restoreAt;
-        float previousTimeScale = 1f;
-        bool hitStopActive;
         bool reducedMotion;
 
         public bool ReducedMotion => reducedMotion;
@@ -56,19 +53,13 @@ namespace AshenCrown.Combat
             if (GameSettingsService.Instance != null)
                 GameSettingsService.Instance.SettingsChanged -= HandleSettingsChanged;
 
-            RestoreTimeScale();
+            TimeScaleService.ReleaseAll(this);
         }
 
         void OnDestroy()
         {
             if (Instance == this)
                 Instance = null;
-        }
-
-        void Update()
-        {
-            if (hitStopActive && Time.unscaledTime >= restoreAt)
-                RestoreTimeScale();
         }
 
         public void SetCameraRig(ThirdPersonCameraRig value)
@@ -103,7 +94,7 @@ namespace AshenCrown.Combat
         {
             reducedMotion = enabled;
             if (reducedMotion)
-                RestoreTimeScale();
+                TimeScaleService.ReleaseAll(this);
         }
 
         public static float ClampStrength(float value)
@@ -122,21 +113,7 @@ namespace AshenCrown.Combat
 
         void BeginHitStop(float duration)
         {
-            if (!hitStopActive)
-                previousTimeScale = Time.timeScale;
-
-            hitStopActive = true;
-            Time.timeScale = Mathf.Clamp(hitStopScale, 0.01f, 0.25f);
-            restoreAt = Mathf.Max(restoreAt, Time.unscaledTime + duration);
-        }
-
-        void RestoreTimeScale()
-        {
-            if (hitStopActive)
-                Time.timeScale = previousTimeScale;
-
-            hitStopActive = false;
-            restoreAt = 0f;
+            TimeScaleService.Request(this, Mathf.Clamp(hitStopScale, 0.01f, 0.25f), duration, 10);
         }
 
         void HandleSettingsChanged()

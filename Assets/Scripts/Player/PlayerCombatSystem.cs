@@ -191,7 +191,6 @@ namespace AshenCrown.Player
 
         readonly HashSet<IDamageable> hitSet = new HashSet<IDamageable>();
         static readonly Collider[] Buffer = new Collider[48];
-        bool hitStopping;
 
         float AttackSpeedMultiplier => SoulHarvestActive ? 1f + soulHarvestAttackSpeedBonus : 1f;
         float DamageBuff => SoulHarvestActive ? 1f + soulHarvestDamageBonus : 1f;
@@ -245,7 +244,7 @@ namespace AshenCrown.Player
             health.OnDamaged -= HandleDamaged;
             health.OnDeath -= HandleDeath;
             PlayerRegistry.Unregister(this);
-            RestoreLocalHitStop();
+            TimeScaleService.ReleaseAll(this);
         }
 
         void Update()
@@ -573,27 +572,13 @@ namespace AshenCrown.Player
             else
             {
                 if (cameraRig != null) cameraRig.Shake(p.cameraShake, 0.15f);
-                if (enableHitStop && p.hitStopDuration > 0f) StartCoroutine(HitStop(p.hitStopDuration));
+                if (enableHitStop && p.hitStopDuration > 0f) HitStop(p.hitStopDuration);
             }
         }
 
-        IEnumerator HitStop(float duration)
+        void HitStop(float duration)
         {
-            if (hitStopping) yield break;
-            hitStopping = true;
-            previousTimeScale = Time.timeScale;
-            Time.timeScale = 0.05f;
-            yield return new WaitForSecondsRealtime(Mathf.Clamp(duration, 0.01f, 0.2f));
-            RestoreLocalHitStop();
-        }
-
-        float previousTimeScale = 1f;
-
-        void RestoreLocalHitStop()
-        {
-            if (!hitStopping) return;
-            Time.timeScale = previousTimeScale;
-            hitStopping = false;
+            TimeScaleService.Request(this, 0.05f, Mathf.Clamp(duration, 0.01f, 0.2f), 10);
         }
 
         // ------------------------- LĂN NÉ -------------------------
@@ -747,7 +732,7 @@ namespace AshenCrown.Player
             if (CombatPresentationFeedback.Instance == null)
             {
                 if (cameraRig != null) cameraRig.Shake(0.18f, 0.2f);
-                if (enableHitStop) StartCoroutine(HitStop(0.1f));
+                if (enableHitStop) HitStop(0.1f);
             }
             AnimatorSafe.Trigger(animator, "Parry");
             OnParry?.Invoke(incoming.source);
