@@ -2883,8 +2883,8 @@ function saveState(force = false) {
     if (!saveWarningShown) {
       saveWarningShown = true;
       toastMsg('Unable to save: browser storage is unavailable.');
+      console.warn('[Ashen Crown] Local save failed:', error?.message || error);
     }
-    console.warn('[Ashen Crown] Local save failed:', error?.message || error);
     return false;
   }
 }

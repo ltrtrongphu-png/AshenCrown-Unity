@@ -27,7 +27,7 @@ jobs:
       - name: Check deployment references and save schema
         run: npm run check:refs
       - name: Run web utility tests
-        run: npm run test:web
+        run: npm test
       - name: Build allow-listed Vercel artifact
         run: node tools/build-web.mjs
       - name: Assert deployment assets exist

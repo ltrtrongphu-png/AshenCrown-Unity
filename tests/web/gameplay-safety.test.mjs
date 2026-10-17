@@ -48,3 +48,11 @@ test('TimeScaleService is the only C# owner that writes Time.timeScale', () => {
   visit(scriptsRoot);
   assert.deepEqual(offenders, [], 'all global time-scale writes must go through TimeScaleService');
 });
+
+test('local save failure diagnostics are shown only once per storage failure episode', () => {
+  const start = gameSource.indexOf('function saveState(');
+  const end = gameSource.indexOf('function scheduleIdleSave()', start);
+  const source = gameSource.slice(start, end);
+  assert.match(source, /if \(!saveWarningShown\)[\s\S]*?console\.warn\('\[Ashen Crown\] Local save failed:/);
+  assert.doesNotMatch(source, /console\.warn\('\[Ashen Crown\] Local save failed:[^\n]*\n\s*return false/);
+});
