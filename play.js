@@ -1969,10 +1969,48 @@ else if(page==='settings'){title.textContent='SETTINGS';content.innerHTML='<p cl
   else{const atSanctuary=activeMapId==='sanctuary';if(atSanctuary){state.hp=state.maxHp;state.stamina=100;scheduleSave()}title.textContent=state.chapter>=10&&state.quest>=5?'SANCTUARY · LEGACY HOME':atSanctuary?'SANCTUARY · CAMP & FORGE':'FIELD CAMP · '+MAPS[activeMapId].name.toUpperCase();const cost=80+state.meta.hubLevel*60,forgeCost=90+(state.weaponRank||0)*75,claimable=Math.floor((state.hunt?.kills||0)/5);content.innerHTML='<p class="system-intro">Build the hearth, improve your weapon, claim hunt contracts, and prepare for the next road.</p><div class="sanctuary-stats"><div><b>CHAPTER</b><span>'+state.chapter+' / 10</span></div><div><b>HEARTH</b><span>LEVEL '+(state.meta.hubLevel+1)+'</span></div><div><b>COMPLETED</b><span>'+state.meta.chaptersComplete+' / 10</span></div><div><b>ASHEN</b><span>'+state.coins+'</span></div></div><div class="system-row"><span>HEARTH UPGRADE · COST '+cost+' ASHEN</span><button data-build="1" '+(state.coins<cost||!atSanctuary?'disabled':'')+'>BUILD</button></div><div class="system-row"><span>WEAPON REINFORCEMENT · +2% DAMAGE · RANK '+(state.weaponRank||0)+' / 12 · SHARDS '+state.shards+'</span><button data-forge="1" '+(state.coins<forgeCost||!state.shards||!atSanctuary||(state.weaponRank||0)>=12?'disabled':'')+'>REINFORCE · '+forgeCost+' ASHEN + 1 SHARD</button></div><div class="system-row"><span>HUNT CONTRACT · '+((state.hunt?.kills||0)%5)+' / 5 DEFEATED</span><button data-claim="1" '+(!claimable?'disabled':'')+'>CLAIM '+(claimable?'· '+(100+state.level*15)+' ASHEN + XP':'REWARD')+'</button></div><div class="system-row"><span>SKILL TRAINING</span><button data-open="skills">OPEN SKILLS</button></div><div class="system-row"><span>EXPEDITION · '+(MAPS[mapIdForChapter(Math.min(10,state.chapter+1))]?.name||'Sanctuary')+'</span><button data-expedition="1" '+(state.quest<5||state.chapter>=10||!atSanctuary?'disabled':'')+'>'+(state.quest<5?'FINISH CHAPTER '+String(state.chapter).padStart(2,'0'):state.chapter>=10?'ALL CHAPTERS COMPLETE':!atSanctuary?'RETURN TO SANCTUARY':'BEGIN CHAPTER '+String(state.chapter+1).padStart(2,'0'))+'</button></div>'+(canFastTravel()?'<h3 class="travel-heading">THE FIVE ROADS · FREE TRAVEL</h3><p class="system-intro">Ten chapters complete. Choose any region to explore its creatures and landmarks; story progress stays complete.</p><div class="travel-grid">'+Object.entries(MAPS).map(([id,map])=>'<button class="travel-choice '+(id===activeMapId?'selected':'')+'" data-travel="'+id+'" '+(id===activeMapId?'disabled':'')+'><b>'+map.name+'</b><small>'+map.hint+'</small></button>').join('')+'</div>':'')+'</div>'}}
 function upgradeSkill(index){if(!Number.isInteger(index)||index<0||index>2)return;if(state.level<skillUnlockLevel(index)){toastMsg('Unlock this skill at level '+skillUnlockLevel(index));return}if(!state.skillPoints||(state.skillRanks[index]||0)>=3)return;state.skillPoints--;state.skillRanks[index]=(state.skillRanks[index]||0)+1;openSystemMenu('skills');saveState();toastMsg(activeRole().skills[index][0]+' upgraded')}
 function recordHuntKill(boss){state.hunt=state.hunt||{kills:0};state.hunt.kills++;state.shards+=boss?3:1;if(state.hunt.kills%5===0)toastMsg('Hunt contract ready · claim it at the Sanctuary');}
+function disposeEncounterVisuals(enemy) {
+  if (!enemy) return;
+  const visuals = Array.isArray(enemy.fallbackVisuals) ? enemy.fallbackVisuals : [];
+  const geometries = new Set();
+  const ownedMaterials = new Set();
+
+  const isSharedWorldMaterial = material => {
+    for (const shared of worldMats.values()) {
+      if (shared === material) return true;
+    }
+    return false;
+  };
+
+  for (const visual of visuals) {
+    if (!visual) continue;
+    visual.traverse(object => {
+      if (object.geometry) geometries.add(object.geometry);
+      if (!object.material) return;
+      const list = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of list) {
+        if (material && !isSharedWorldMaterial(material)) ownedMaterials.add(material);
+      }
+    });
+    visual.removeFromParent();
+  }
+
+  // The production GLB is cached and reused between boss encounters. Detach it, but
+  // never dispose its shared geometry or materials when a single encounter ends.
+  if (productionBossScene && productionBossScene.parent === enemy.root) {
+    productionBossScene.removeFromParent();
+    productionBossScene.visible = false;
+  }
+
+  for (const geometry of geometries) geometry.dispose();
+  for (const material of ownedMaterials) material.dispose();
+  enemy.fallbackVisuals = [];
+}
+
 function finishEncounter(){
   const defeated=encounter;if(!defeated)return;
   const bellWaiting=!defeated.isBoss&&state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated;
-  defeated.root.removeFromParent();enemies=[];recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);
+  disposeEncounterVisuals(defeated);defeated.root.removeFromParent();enemies=[];recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);
   if(defeated.isBoss){
     const ch=window.ASHEN_CAMPAIGN[state.chapter-1]||window.ASHEN_CAMPAIGN[0];state.flags.bellWardenDefeated=true;state.quest=4;
     if(state.chapter===1){item('Eda Vey’s Name','Quest Relic','Legendary',['Memory','Identity'],{focus:2});state.log.unshift('The Bell Warden was Eda Vey, the keeper who refused to let the Crown erase her village.');toastMsg('The Bell Warden falls — Eda Vey is remembered.')}
