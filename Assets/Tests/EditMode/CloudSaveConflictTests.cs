@@ -36,14 +36,12 @@ namespace AshenCrown.Tests.EditMode
         }
 
         [Test]
-        public void InvalidTimestampRequiresExplicitResolution()
+        public void InvalidTimestampWithDifferentPayloadRequiresExplicitResolution()
         {
             Assert.IsTrue(SaveLoadSystem.ShouldPromptCloudConflict(
-                Save("not-a-timestamp"),
-                Save("2026-10-11T12:00:00.0000000Z")));
+                Save("not-a-timestamp", 1),
+                Save("2026-10-11T12:00:00.0000000Z", 2)));
         }
-    }
-}
 
         [Test]
         public void SamePayloadDoesNotPromptForDifferentOrMissingTimestamps()
@@ -55,3 +53,5 @@ namespace AshenCrown.Tests.EditMode
                 Save("2026-10-10T12:00:00.0000000Z", 2),
                 Save("2026-10-11T12:00:00.0000000Z", 2)));
         }
+    }
+}
