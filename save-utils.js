@@ -99,6 +99,7 @@ export function cloudSaveDecision(local, remote, remoteUpdatedAt = '') {
   let action = 'keep-local';
   if (remoteStamp > localStamp) action = 'ask-cloud';
   else if (localStamp > remoteStamp) action = 'ask-local';
+  else if (serializeSaveForComparison(local) !== serializeSaveForComparison(remote)) action = 'ask-local';
   return { action, localStamp, remoteStamp };
 }
 

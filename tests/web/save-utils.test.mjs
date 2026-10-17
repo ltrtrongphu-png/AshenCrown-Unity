@@ -119,3 +119,10 @@ test('local save backups verify raw bytes and rotate old conflict copies', async
   assert.equal(storage.getItem('ashen-crown-3d.backup.400'), '{"level":4}');
   assert.throws(() => backupLocalSave(storage, '', 500), /non-empty local save/);
 });
+
+test('equal save timestamps with different progress still require a user decision', async () => {
+  const { cloudSaveDecision } = await import('../../save-utils.js');
+  const local = { level: 5, savedAt: 100, coins: 100 };
+  const remote = { level: 3, savedAt: 100, coins: 20 };
+  assert.equal(cloudSaveDecision(local, remote).action, 'ask-local');
+});

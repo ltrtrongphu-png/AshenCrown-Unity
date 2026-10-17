@@ -236,7 +236,7 @@ namespace AshenCrown.Save
                     return;
                 }
 
-                if (ShouldPromptCloudConflict(localData.lastSavedUtc, cloudData.lastSavedUtc))
+                if (ShouldPromptCloudConflict(localData, cloudData))
                 {
                     pendingCloudJson = cloudJson;
                     pendingLocalBackupSource = localPath;
@@ -246,7 +246,7 @@ namespace AshenCrown.Save
                     return;
                 }
 
-                // Local wins ties and older-cloud conflicts: do not overwrite progress silently.
+                // Identical timestamps and gameplay payloads: preserve local state and sync it.
                 if (Save("local-save-retained-after-cloud-check"))
                     CloudSaveStatus = "Local progress was kept and queued for cloud sync.";
                 else
@@ -292,19 +292,33 @@ namespace AshenCrown.Save
                 : "unknown time";
         }
 
-        public static bool ShouldPromptCloudConflict(string localTimestamp, string cloudTimestamp)
+        public static bool ShouldPromptCloudConflict(AshenSaveData localData, AshenSaveData cloudData)
         {
+            if (localData == null || cloudData == null) return true;
+
             DateTime local;
             DateTime cloud;
-            bool hasLocalTime = DateTime.TryParse(localTimestamp, CultureInfo.InvariantCulture,
+            bool hasLocalTime = DateTime.TryParse(localData.lastSavedUtc, CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out local);
-            bool hasCloudTime = DateTime.TryParse(cloudTimestamp, CultureInfo.InvariantCulture,
+            bool hasCloudTime = DateTime.TryParse(cloudData.lastSavedUtc, CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out cloud);
 
-            // If timestamps cannot establish that both copies are equivalent, make the
-            // user choose. Never treat an invalid timestamp as permission to overwrite.
+            // Missing/invalid timestamps cannot establish which journey is authoritative.
             if (!hasLocalTime || !hasCloudTime) return true;
-            return local.ToUniversalTime() != cloud.ToUniversalTime();
+            if (local.ToUniversalTime() != cloud.ToUniversalTime()) return true;
+
+            return !string.Equals(ConflictComparableJson(localData), ConflictComparableJson(cloudData),
+                StringComparison.Ordinal);
+        }
+
+        static string ConflictComparableJson(AshenSaveData data)
+        {
+            // Treat save metadata as non-gameplay data, but compare every schema-v5 payload
+            // field so equal millisecond timestamps cannot hide two different journeys.
+            data.lastSavedUtc = "";
+            data.saveReason = "";
+            data.checksum = "";
+            return JsonUtility.ToJson(data, false);
         }
 
         public bool ResolveCloudConflict(bool useCloudSave)
