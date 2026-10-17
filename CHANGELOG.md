@@ -10,6 +10,7 @@
 - Added explicit local/cloud save conflict decisions in browser and Unity clients. Local data is backed up and verified before an overwrite; browser keeps three rolling raw-save backups; equal timestamps with different payloads also prompt.
 - Disposed owned Three.js resources for defeated fallback encounters while retaining shared materials and cached production boss assets.
 - Added finite/non-negative elapsed-time protection to the browser frame loop, rate-limited save failure diagnostics, and gated the F10 contract-refresh debug shortcut to Editor/Development builds.
+- Added a bounded 1-second realtime retry for Unity cloud save/load after transient network, 429 or 5xx failures; 401 continues to trigger a forced refresh and a single retry.
 - Added Node built-in regression tests and wired syntax checking into Web CI without adding runtime dependencies.
 
 
