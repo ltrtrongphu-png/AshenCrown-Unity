@@ -296,6 +296,12 @@ namespace AshenCrown.Save
         {
             if (localData == null || cloudData == null) return true;
 
+            // Identical gameplay payloads need no conflict dialog, even if one backup has
+            // an older/missing timestamp or was serialized by another client.
+            if (string.Equals(ConflictComparableJson(localData), ConflictComparableJson(cloudData),
+                StringComparison.Ordinal))
+                return false;
+
             DateTime local;
             DateTime cloud;
             bool hasLocalTime = DateTime.TryParse(localData.lastSavedUtc, CultureInfo.InvariantCulture,
@@ -303,22 +309,22 @@ namespace AshenCrown.Save
             bool hasCloudTime = DateTime.TryParse(cloudData.lastSavedUtc, CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out cloud);
 
-            // Missing/invalid timestamps cannot establish which journey is authoritative.
+            // Different payloads with missing/invalid timestamps require an explicit choice.
             if (!hasLocalTime || !hasCloudTime) return true;
-            if (local.ToUniversalTime() != cloud.ToUniversalTime()) return true;
-
-            return !string.Equals(ConflictComparableJson(localData), ConflictComparableJson(cloudData),
-                StringComparison.Ordinal);
+            return local.ToUniversalTime() != cloud.ToUniversalTime() ||
+                !string.Equals(ConflictComparableJson(localData), ConflictComparableJson(cloudData),
+                    StringComparison.Ordinal);
         }
 
         static string ConflictComparableJson(AshenSaveData data)
         {
-            // Treat save metadata as non-gameplay data, but compare every schema-v5 payload
-            // field so equal millisecond timestamps cannot hide two different journeys.
-            data.lastSavedUtc = "";
-            data.saveReason = "";
-            data.checksum = "";
-            return JsonUtility.ToJson(data, false);
+            // Clone the data so conflict detection never mutates the parsed source objects.
+            var snapshot = JsonUtility.FromJson<AshenSaveData>(JsonUtility.ToJson(data, false));
+            if (snapshot == null) return "";
+            snapshot.lastSavedUtc = "";
+            snapshot.saveReason = "";
+            snapshot.checksum = "";
+            return JsonUtility.ToJson(snapshot, false);
         }
 
         public bool ResolveCloudConflict(bool useCloudSave)

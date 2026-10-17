@@ -44,3 +44,14 @@ namespace AshenCrown.Tests.EditMode
         }
     }
 }
+
+        [Test]
+        public void SamePayloadDoesNotPromptForDifferentOrMissingTimestamps()
+        {
+            Assert.IsFalse(SaveLoadSystem.ShouldPromptCloudConflict(
+                Save("", 2),
+                Save("2026-10-11T12:00:00.0000000Z", 2)));
+            Assert.IsFalse(SaveLoadSystem.ShouldPromptCloudConflict(
+                Save("2026-10-10T12:00:00.0000000Z", 2),
+                Save("2026-10-11T12:00:00.0000000Z", 2)));
+        }
