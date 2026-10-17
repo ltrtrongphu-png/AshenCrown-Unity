@@ -1,0 +1,43 @@
+name: Regenerate and validate Ashen Crown character assets
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "tools/generate_ashen_production_assets.py"
+      - ".github/workflows/regenerate-ashen-models.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate-character-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install asset generator dependencies
+        run: python -m pip install --disable-pip-version-check --no-cache-dir numpy pillow
+      - name: Generate rigged GLB models and PBR maps
+        run: python tools/generate_ashen_production_assets.py
+      - name: Validate model containers, clips and texture budgets
+        run: python tools/validate_ashen_production_assets.py
+      - name: Commit generated models and textures back to this branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Assets/Models/Characters/AshenSentinel.glb Assets/Models/Bosses/AshenRegent.glb Assets/Models/Textures/*.png
+          if git diff --cached --quiet; then
+            echo "Generated assets are already up to date."
+          else
+            git commit -m "build(assets): regenerate polished character models"
+            git push origin "HEAD:${{ github.ref_name }}"
+          fi
