@@ -65,3 +65,89 @@ export function sanitizeItemRecord(raw) {
 
   return item;
 }
+
+
+/**
+ * Stable save comparison which ignores only the write timestamp. This allows periodic
+ * checkpoint calls to be cheap when gameplay state has not changed.
+ */
+function sortObjectKeys(value) {
+  if (Array.isArray(value)) return value.map(sortObjectKeys);
+  if (!value || typeof value !== 'object') return value;
+  const normalized = {};
+  for (const key of Object.keys(value).sort()) normalized[key] = sortObjectKeys(value[key]);
+  return normalized;
+}
+
+export function serializeSaveForComparison(save) {
+  if (!save || typeof save !== 'object' || Array.isArray(save)) return '';
+  const snapshot = { ...save };
+  delete snapshot.savedAt;
+  return JSON.stringify(sortObjectKeys(snapshot));
+}
+
+
+/**
+ * Decide whether a remote browser save may replace the local one. A newer cloud
+ * save is a conflict, not an implicit overwrite; callers must ask and back up first.
+ */
+export function cloudSaveDecision(local, remote, remoteUpdatedAt = '') {
+  const localValid = Boolean(local && typeof local === 'object' && !Array.isArray(local));
+  const remoteValid = Boolean(
+    remote &&
+    typeof remote === 'object' &&
+    !Array.isArray(remote) &&
+    Number.isFinite(Number(remote.level)) &&
+    Number(remote.level) >= 1
+  );
+  if (!remoteValid) return { action: 'invalid-cloud', localStamp: Number(local?.savedAt) || 0, remoteStamp: 0 };
+  if (!localValid) return { action: 'use-cloud', localStamp: 0, remoteStamp: Number(remote.savedAt) || Date.parse(remoteUpdatedAt) || 0 };
+  const localStamp = Number(local.savedAt) || 0;
+  const remoteStamp = Number(remote.savedAt) || Date.parse(remoteUpdatedAt) || 0;
+  const samePayload = serializeSaveForComparison(local) === serializeSaveForComparison(remote);
+  let action = 'keep-local';
+  if (!samePayload && remoteStamp > localStamp) action = 'ask-cloud';
+  else if (!samePayload) action = 'ask-local';
+  return { action, localStamp, remoteStamp };
+}
+
+
+/**
+ * Back up raw local-save bytes before a cloud conflict may replace them.
+ * Keeps a small rolling set to avoid unbounded localStorage growth.
+ */
+export function backupLocalSave(storage, rawSave, timestamp = Date.now(), keep = 3) {
+  if (!storage || typeof storage.setItem !== 'function' || typeof storage.getItem !== 'function') {
+    throw new TypeError('A writable storage object is required.');
+  }
+  if (typeof rawSave !== 'string' || rawSave.length === 0) {
+    throw new TypeError('A non-empty local save is required for backup.');
+  }
+
+  const prefix = 'ashen-crown-3d.backup.';
+  const stamp = Number.isFinite(Number(timestamp)) ? Math.max(0, Math.floor(Number(timestamp))) : Date.now();
+  let key = prefix + stamp;
+  let suffix = 1;
+  while (storage.getItem(key) !== null) key = prefix + stamp + '-' + suffix++;
+
+  storage.setItem(key, rawSave);
+  if (storage.getItem(key) !== rawSave) {
+    storage.removeItem(key);
+    throw new Error('Local save backup verification failed.');
+  }
+
+  const backups = [];
+  for (let index = 0; index < storage.length; index++) {
+    const candidate = storage.key(index);
+    if (typeof candidate === 'string' && candidate.startsWith(prefix)) backups.push(candidate);
+  }
+  backups.sort((left, right) => {
+    const leftStamp = Number(left.slice(prefix.length).split('-')[0]) || 0;
+    const rightStamp = Number(right.slice(prefix.length).split('-')[0]) || 0;
+    return leftStamp - rightStamp || left.localeCompare(right);
+  });
+
+  const limit = Number.isFinite(Number(keep)) ? Math.max(1, Math.floor(Number(keep))) : 3;
+  while (backups.length > limit) storage.removeItem(backups.shift());
+  return key;
+}

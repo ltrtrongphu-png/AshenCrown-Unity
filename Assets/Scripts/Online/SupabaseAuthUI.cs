@@ -1,4 +1,5 @@
 using UnityEngine;
+using AshenCrown.Save;
 
 namespace AshenCrown.Online
 {
@@ -81,7 +82,10 @@ namespace AshenCrown.Online
             if (auth == null)
                 return;
 
-            GUILayout.BeginArea(new Rect(Screen.width - 330, 20, 300, 260), GUI.skin.box);
+            var saves = SaveLoadSystem.Instance;
+            bool showConflict = saves != null && saves.HasCloudConflict;
+            float panelHeight = showConflict ? 420f : 330f;
+            GUILayout.BeginArea(new Rect(Screen.width - 330, 20, 300, panelHeight), GUI.skin.box);
             GUILayout.Label("ASHEN CROWN • ACCOUNT");
 
             if (auth.CurrentUser == null)
@@ -105,6 +109,21 @@ namespace AshenCrown.Online
                     auth.Logout();
             }
 
+            if (showConflict)
+            {
+                GUILayout.Space(8);
+                GUILayout.Label("CLOUD SAVE CONFLICT");
+                GUILayout.Label("Local: " + saves.PendingLocalSaveTime);
+                GUILayout.Label("Cloud: " + saves.PendingCloudSaveTime);
+                GUILayout.Label("Choose which journey to keep. The local journey is backed up before cloud restore.");
+                if (GUILayout.Button("USE CLOUD (BACK UP LOCAL)"))
+                    saves.ResolveCloudConflict(true);
+                if (GUILayout.Button("KEEP LOCAL"))
+                    saves.ResolveCloudConflict(false);
+            }
+
+            if (saves != null && !string.IsNullOrWhiteSpace(saves.CloudSaveStatus))
+                GUILayout.Label(saves.CloudSaveStatus);
             if (!string.IsNullOrWhiteSpace(status))
                 GUILayout.Label(status);
 

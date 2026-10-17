@@ -117,6 +117,11 @@ namespace AshenCrown.Online
                     AccessToken = null;
                     refreshToken = null;
                     tokenExpiresAtUtc = DateTime.MinValue;
+                    if (CurrentUser == null)
+                    {
+                        Error?.Invoke("The registration response did not include a user. Please retry.");
+                        yield break;
+                    }
                     EmailConfirmationRequired?.Invoke(CurrentUser);
                     yield break;
                 }
@@ -146,14 +151,14 @@ namespace AshenCrown.Online
             SignedOut?.Invoke(previousUser);
         }
 
-        IEnumerator RefreshSessionIfNeeded()
+        IEnumerator RefreshSessionIfNeeded(bool forceRefresh = false)
         {
             if (string.IsNullOrWhiteSpace(AccessToken))
                 yield break;
 
             // Refresh shortly before expiry. The refresh token remains in memory only;
             // a secure cross-platform persistence adapter is still required for restart recovery.
-            if (DateTime.UtcNow < tokenExpiresAtUtc.AddSeconds(-60))
+            if (!forceRefresh && DateTime.UtcNow < tokenExpiresAtUtc.AddSeconds(-60))
                 yield break;
 
             if (string.IsNullOrWhiteSpace(refreshToken))
@@ -238,19 +243,57 @@ namespace AshenCrown.Online
                 save_text = json
             };
             string body = JsonUtility.ToJson(payload);
+            string url = Config.projectUrl.TrimEnd('/') + "/rest/v1/player_saves?on_conflict=user_id";
+            bool succeeded;
+            long responseCode;
 
-            using (var req = CreateJsonRequest(
-                Config.projectUrl.TrimEnd('/') + "/rest/v1/player_saves?on_conflict=user_id",
-                "POST",
-                body))
+            using (var req = CreateJsonRequest(url, "POST", body))
             {
                 req.SetRequestHeader("Authorization", "Bearer " + AccessToken);
                 req.SetRequestHeader("Prefer", "resolution=merge-duplicates,return=minimal");
                 yield return req.SendWebRequest();
-
-                if (req.result != UnityWebRequest.Result.Success)
-                    Error?.Invoke(MapRequestError(req.responseCode, "Cloud save"));
+                succeeded = req.result == UnityWebRequest.Result.Success;
+                responseCode = req.responseCode;
             }
+
+            // A server-side 401 may arrive before the local expiry clock. Refresh once,
+            // then retry exactly once to avoid both silent loss and unbounded retry loops.
+            if (!succeeded && responseCode == 401)
+            {
+                yield return RefreshSessionIfNeeded(true);
+                if (CurrentUser != null && !string.IsNullOrWhiteSpace(AccessToken))
+                {
+                    using (var retry = CreateJsonRequest(url, "POST", body))
+                    {
+                        retry.SetRequestHeader("Authorization", "Bearer " + AccessToken);
+                        retry.SetRequestHeader("Prefer", "resolution=merge-duplicates,return=minimal");
+                        yield return retry.SendWebRequest();
+                        succeeded = retry.result == UnityWebRequest.Result.Success;
+                        responseCode = retry.responseCode;
+                    }
+                }
+            }
+
+            if (!succeeded && (responseCode == 0 || responseCode == 429 || responseCode >= 500))
+            {
+                // One bounded realtime backoff for transient network/service failures.
+                yield return new WaitForSecondsRealtime(1f);
+                yield return RefreshSessionIfNeeded();
+                if (CurrentUser != null && !string.IsNullOrWhiteSpace(AccessToken))
+                {
+                    using (var retry = CreateJsonRequest(url, "POST", body))
+                    {
+                        retry.SetRequestHeader("Authorization", "Bearer " + AccessToken);
+                        retry.SetRequestHeader("Prefer", "resolution=merge-duplicates,return=minimal");
+                        yield return retry.SendWebRequest();
+                        succeeded = retry.result == UnityWebRequest.Result.Success;
+                        responseCode = retry.responseCode;
+                    }
+                }
+            }
+
+            if (!succeeded)
+                Error?.Invoke(MapRequestError(responseCode, "Cloud save"));
         }
 
         public IEnumerator LoadCloud(Action<string> onLoaded)
@@ -270,6 +313,9 @@ namespace AshenCrown.Online
 
             string url = Config.projectUrl.TrimEnd('/') + "/rest/v1/player_saves?select=save_text&user_id=eq."
                 + UnityWebRequest.EscapeURL(CurrentUser.id) + "&limit=1";
+            string responseText;
+            long responseCode;
+            bool succeeded;
 
             using (var req = UnityWebRequest.Get(url))
             {
@@ -277,28 +323,69 @@ namespace AshenCrown.Online
                 req.SetRequestHeader("apikey", Config.publishableKey);
                 req.SetRequestHeader("Authorization", "Bearer " + AccessToken);
                 yield return req.SendWebRequest();
-
-                if (req.result != UnityWebRequest.Result.Success)
-                {
-                    Error?.Invoke(MapRequestError(req.responseCode, "Cloud load"));
-                    onLoaded?.Invoke(null);
-                    yield break;
-                }
-
-                CloudRows rows;
-                try
-                {
-                    rows = JsonUtility.FromJson<CloudRows>("{\"rows\":" + req.downloadHandler.text + "}");
-                }
-                catch (ArgumentException)
-                {
-                    rows = null;
-                }
-
-                onLoaded?.Invoke(rows != null && rows.rows != null && rows.rows.Length > 0
-                    ? rows.rows[0].save_text
-                    : null);
+                succeeded = req.result == UnityWebRequest.Result.Success;
+                responseCode = req.responseCode;
+                responseText = req.downloadHandler != null ? req.downloadHandler.text : "";
             }
+
+            if (!succeeded && responseCode == 401)
+            {
+                yield return RefreshSessionIfNeeded(true);
+                if (CurrentUser != null && !string.IsNullOrWhiteSpace(AccessToken))
+                {
+                    using (var retry = UnityWebRequest.Get(url))
+                    {
+                        retry.timeout = RequestTimeoutSeconds;
+                        retry.SetRequestHeader("apikey", Config.publishableKey);
+                        retry.SetRequestHeader("Authorization", "Bearer " + AccessToken);
+                        yield return retry.SendWebRequest();
+                        succeeded = retry.result == UnityWebRequest.Result.Success;
+                        responseCode = retry.responseCode;
+                        responseText = retry.downloadHandler != null ? retry.downloadHandler.text : "";
+                    }
+                }
+            }
+
+            if (!succeeded && (responseCode == 0 || responseCode == 429 || responseCode >= 500))
+            {
+                // Bound retries so offline play cannot hang forever.
+                yield return new WaitForSecondsRealtime(1f);
+                yield return RefreshSessionIfNeeded();
+                if (CurrentUser != null && !string.IsNullOrWhiteSpace(AccessToken))
+                {
+                    using (var retry = UnityWebRequest.Get(url))
+                    {
+                        retry.timeout = RequestTimeoutSeconds;
+                        retry.SetRequestHeader("apikey", Config.publishableKey);
+                        retry.SetRequestHeader("Authorization", "Bearer " + AccessToken);
+                        yield return retry.SendWebRequest();
+                        succeeded = retry.result == UnityWebRequest.Result.Success;
+                        responseCode = retry.responseCode;
+                        responseText = retry.downloadHandler != null ? retry.downloadHandler.text : "";
+                    }
+                }
+            }
+
+            if (!succeeded)
+            {
+                Error?.Invoke(MapRequestError(responseCode, "Cloud load"));
+                onLoaded?.Invoke(null);
+                yield break;
+            }
+
+            CloudRows rows;
+            try
+            {
+                rows = JsonUtility.FromJson<CloudRows>("{\"rows\":" + responseText + "}");
+            }
+            catch (ArgumentException)
+            {
+                rows = null;
+            }
+
+            onLoaded?.Invoke(rows != null && rows.rows != null && rows.rows.Length > 0
+                ? rows.rows[0].save_text
+                : null);
         }
 
         bool HasValidConfig()

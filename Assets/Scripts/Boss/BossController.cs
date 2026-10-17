@@ -154,12 +154,36 @@ namespace AshenCrown.Boss
         bool inExecute;
         float slowTimer, slowFactor = 1f;
 
-        float SpeedMult => (CurrentPhase != null ? CurrentPhase.speedMultiplier : 1f) * (IsEnraged ? enrageSpeedMultiplier : 1f);
+        float SpeedMult
+        {
+            get
+            {
+                float value = (CurrentPhase != null ? CurrentPhase.speedMultiplier : 1f)
+                    * (IsEnraged ? enrageSpeedMultiplier : 1f);
+                return float.IsNaN(value) || float.IsInfinity(value) ? 1f : Mathf.Max(0.05f, value);
+            }
+        }
         float AoeMult => (CurrentPhase != null ? CurrentPhase.aoeMultiplier : 1f) * (IsEnraged ? enrageAoeMultiplier : 1f);
         float LocalTime => slowTimer > 0f ? slowFactor : 1f;
 
+        void OnValidate()
+        {
+            if (float.IsNaN(enrageSpeedMultiplier) || float.IsInfinity(enrageSpeedMultiplier))
+                enrageSpeedMultiplier = 1.25f;
+            enrageSpeedMultiplier = Mathf.Max(0.05f, enrageSpeedMultiplier);
+            if (phases == null) return;
+            foreach (var phase in phases)
+            {
+                if (phase == null) continue;
+                if (float.IsNaN(phase.speedMultiplier) || float.IsInfinity(phase.speedMultiplier))
+                    phase.speedMultiplier = 1f;
+                phase.speedMultiplier = Mathf.Max(0.05f, phase.speedMultiplier);
+            }
+        }
+
         void Awake()
         {
+            OnValidate();
             agent = GetComponent<NavMeshAgent>();
             Health = GetComponent<HealthAndDamageSystem>();
             if (animator == null) animator = GetComponentInChildren<Animator>();

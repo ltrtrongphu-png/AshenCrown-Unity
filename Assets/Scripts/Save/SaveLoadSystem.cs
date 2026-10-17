@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
@@ -46,6 +47,15 @@ namespace AshenCrown.Save
     public sealed class SaveLoadSystem : MonoBehaviour
     {
         public static SaveLoadSystem Instance { get; private set; }
+
+        string pendingCloudJson;
+        string pendingLocalBackupSource;
+
+        public bool HasCloudConflict => !string.IsNullOrWhiteSpace(pendingCloudJson);
+        public string PendingLocalSaveTime { get; private set; } = "";
+        public string PendingCloudSaveTime { get; private set; } = "";
+        public string CloudSaveStatus { get; private set; } = "";
+
         public string SavePath => Path.Combine(Application.persistentDataPath, "ashen_crown_save.json");
         public string BackupPath => SavePath + ".bak";
         public string TempPath => SavePath + ".tmp";
@@ -169,11 +179,210 @@ namespace AshenCrown.Save
 
         void OnSignedIn(AshenCrown.Online.AuthUser user)
         {
-            StartCoroutine(AshenCrown.Online.SupabaseAuthService.Instance.LoadCloud(json =>
+            StartCoroutine(AshenCrown.Online.SupabaseAuthService.Instance.LoadCloud(HandleCloudSaveLoaded));
+        }
+
+        void HandleCloudSaveLoaded(string cloudJson)
+        {
+            if (string.IsNullOrWhiteSpace(cloudJson))
             {
-                if (!string.IsNullOrWhiteSpace(json))
-                    ApplyJson(json);
-            }));
+                CloudSaveStatus = "No cloud save found. Existing local progress was kept.";
+                return;
+            }
+
+            if (!ValidateChecksum(cloudJson))
+            {
+                CloudSaveStatus = "Cloud save failed validation. It was not imported.";
+                Debug.LogWarning("[SaveLoadSystem] Cloud save failed checksum/JSON validation; local progress was preserved.");
+                return;
+            }
+
+            AshenSaveData cloudData;
+            try
+            {
+                cloudData = JsonUtility.FromJson<AshenSaveData>(cloudJson);
+            }
+            catch (Exception e)
+            {
+                CloudSaveStatus = "Cloud save could not be parsed. Local progress was kept.";
+                Debug.LogWarning("[SaveLoadSystem] Cloud save parse failed: " + e.GetType().Name);
+                return;
+            }
+
+            if (cloudData == null)
+            {
+                CloudSaveStatus = "Cloud save was empty or invalid. Local progress was kept.";
+                return;
+            }
+
+            string localPath = ReadBestLocalSavePath();
+            if (!string.IsNullOrEmpty(localPath))
+            {
+                AshenSaveData localData;
+                try
+                {
+                    localData = JsonUtility.FromJson<AshenSaveData>(File.ReadAllText(localPath));
+                }
+                catch (Exception e)
+                {
+                    CloudSaveStatus = "Local save could not be read. Cloud restore was stopped.";
+                    Debug.LogWarning("[SaveLoadSystem] Local save comparison failed: " + e.GetType().Name);
+                    return;
+                }
+
+                if (localData == null)
+                {
+                    CloudSaveStatus = "Local save is invalid. Cloud restore was stopped to preserve its files.";
+                    return;
+                }
+
+                if (ShouldPromptCloudConflict(localData, cloudData))
+                {
+                    pendingCloudJson = cloudJson;
+                    pendingLocalBackupSource = localPath;
+                    PendingLocalSaveTime = FormatSaveTime(localData.lastSavedUtc);
+                    PendingCloudSaveTime = FormatSaveTime(cloudData.lastSavedUtc);
+                    CloudSaveStatus = "Local and cloud saves differ. Choose which journey to keep.";
+                    return;
+                }
+
+                // Identical timestamps and gameplay payloads: preserve local state and sync it.
+                if (Save("local-save-retained-after-cloud-check"))
+                    CloudSaveStatus = "Local progress was kept and queued for cloud sync.";
+                else
+                    CloudSaveStatus = "Local progress was kept, but cloud sync could not be queued.";
+                return;
+            }
+
+            // Existing but invalid save files are evidence to preserve, not permission to overwrite.
+            if (File.Exists(SavePath) || File.Exists(BackupPath) || File.Exists(TempPath))
+            {
+                CloudSaveStatus = "Local save files need recovery. Cloud restore was stopped to preserve them.";
+                Debug.LogWarning("[SaveLoadSystem] Cloud restore skipped because local save artifacts exist but none validated.");
+                return;
+            }
+
+            if (ApplyJson(cloudJson))
+            {
+                HasValidSave = true;
+                if (Save("cloud-restore-no-local"))
+                    CloudSaveStatus = "Cloud journey restored on this device.";
+                else
+                    CloudSaveStatus = "Cloud journey loaded, but local persistence failed.";
+            }
+            else
+            {
+                CloudSaveStatus = "Cloud save could not be applied. Local progress was kept.";
+            }
+        }
+
+        string ReadBestLocalSavePath()
+        {
+            if (IsValidSaveFile(SavePath)) return SavePath;
+            if (IsValidSaveFile(BackupPath)) return BackupPath;
+            return null;
+        }
+
+        static string FormatSaveTime(string value)
+        {
+            DateTime parsed;
+            return DateTime.TryParse(value, CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out parsed)
+                ? parsed.ToUniversalTime().ToString("u")
+                : "unknown time";
+        }
+
+        public static bool ShouldPromptCloudConflict(AshenSaveData localData, AshenSaveData cloudData)
+        {
+            if (localData == null || cloudData == null) return true;
+
+            // Identical gameplay payloads need no conflict dialog, even if one backup has
+            // an older/missing timestamp or was serialized by another client.
+            if (string.Equals(ConflictComparableJson(localData), ConflictComparableJson(cloudData),
+                StringComparison.Ordinal))
+                return false;
+
+            DateTime local;
+            DateTime cloud;
+            bool hasLocalTime = DateTime.TryParse(localData.lastSavedUtc, CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out local);
+            bool hasCloudTime = DateTime.TryParse(cloudData.lastSavedUtc, CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out cloud);
+
+            // Different payloads with missing/invalid timestamps require an explicit choice.
+            if (!hasLocalTime || !hasCloudTime) return true;
+            return local.ToUniversalTime() != cloud.ToUniversalTime() ||
+                !string.Equals(ConflictComparableJson(localData), ConflictComparableJson(cloudData),
+                    StringComparison.Ordinal);
+        }
+
+        static string ConflictComparableJson(AshenSaveData data)
+        {
+            // Clone the data so conflict detection never mutates the parsed source objects.
+            var snapshot = JsonUtility.FromJson<AshenSaveData>(JsonUtility.ToJson(data, false));
+            if (snapshot == null) return "";
+            snapshot.lastSavedUtc = "";
+            snapshot.saveReason = "";
+            snapshot.checksum = "";
+            return JsonUtility.ToJson(snapshot, false);
+        }
+
+        public bool ResolveCloudConflict(bool useCloudSave)
+        {
+            if (!HasCloudConflict || string.IsNullOrWhiteSpace(pendingLocalBackupSource))
+                return false;
+
+            if (!useCloudSave)
+            {
+                ClearPendingCloudConflict();
+                bool saved = Save("local-save-kept-after-cloud-conflict");
+                CloudSaveStatus = saved
+                    ? "Local journey kept and queued for cloud sync."
+                    : "Local journey kept, but cloud sync could not be queued.";
+                return saved;
+            }
+
+            string backupPath = SavePath + ".conflict-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + ".bak";
+            try
+            {
+                if (!File.Exists(pendingLocalBackupSource))
+                    throw new FileNotFoundException("Local conflict source disappeared.", pendingLocalBackupSource);
+                File.Copy(pendingLocalBackupSource, backupPath, false);
+                if (!IsValidSaveFile(backupPath))
+                    throw new IOException("Conflict backup did not pass validation.");
+            }
+            catch (Exception e)
+            {
+                CloudSaveStatus = "Local backup failed; cloud restore was cancelled.";
+                Debug.LogError("[SaveLoadSystem] Conflict backup failed: " + e.GetType().Name);
+                return false;
+            }
+
+            if (!ApplyJson(pendingCloudJson))
+            {
+                CloudSaveStatus = "Cloud data could not be applied. The local backup was preserved.";
+                return false;
+            }
+
+            HasValidSave = true;
+            bool persisted = Save("cloud-save-accepted-after-conflict");
+            if (!persisted)
+            {
+                CloudSaveStatus = "Cloud journey loaded but local save failed; the previous journey is backed up.";
+                return false;
+            }
+
+            ClearPendingCloudConflict();
+            CloudSaveStatus = "Cloud journey restored. The previous local save remains in a separate backup file.";
+            return true;
+        }
+
+        void ClearPendingCloudConflict()
+        {
+            pendingCloudJson = null;
+            pendingLocalBackupSource = null;
+            PendingLocalSaveTime = "";
+            PendingCloudSaveTime = "";
         }
 
         public bool Load()

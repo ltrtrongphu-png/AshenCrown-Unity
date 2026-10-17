@@ -1,4 +1,4 @@
-import { escapeHtml, sanitizeItemRecord } from './save-utils.js';
+import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision, backupLocalSave } from './save-utils.js';
 // Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
 // prevent the entire game from starting.
 async function loadThreeEngine() {
@@ -1969,10 +1969,48 @@ else if(page==='settings'){title.textContent='SETTINGS';content.innerHTML='<p cl
   else{const atSanctuary=activeMapId==='sanctuary';if(atSanctuary){state.hp=state.maxHp;state.stamina=100;scheduleSave()}title.textContent=state.chapter>=10&&state.quest>=5?'SANCTUARY · LEGACY HOME':atSanctuary?'SANCTUARY · CAMP & FORGE':'FIELD CAMP · '+MAPS[activeMapId].name.toUpperCase();const cost=80+state.meta.hubLevel*60,forgeCost=90+(state.weaponRank||0)*75,claimable=Math.floor((state.hunt?.kills||0)/5);content.innerHTML='<p class="system-intro">Build the hearth, improve your weapon, claim hunt contracts, and prepare for the next road.</p><div class="sanctuary-stats"><div><b>CHAPTER</b><span>'+state.chapter+' / 10</span></div><div><b>HEARTH</b><span>LEVEL '+(state.meta.hubLevel+1)+'</span></div><div><b>COMPLETED</b><span>'+state.meta.chaptersComplete+' / 10</span></div><div><b>ASHEN</b><span>'+state.coins+'</span></div></div><div class="system-row"><span>HEARTH UPGRADE · COST '+cost+' ASHEN</span><button data-build="1" '+(state.coins<cost||!atSanctuary?'disabled':'')+'>BUILD</button></div><div class="system-row"><span>WEAPON REINFORCEMENT · +2% DAMAGE · RANK '+(state.weaponRank||0)+' / 12 · SHARDS '+state.shards+'</span><button data-forge="1" '+(state.coins<forgeCost||!state.shards||!atSanctuary||(state.weaponRank||0)>=12?'disabled':'')+'>REINFORCE · '+forgeCost+' ASHEN + 1 SHARD</button></div><div class="system-row"><span>HUNT CONTRACT · '+((state.hunt?.kills||0)%5)+' / 5 DEFEATED</span><button data-claim="1" '+(!claimable?'disabled':'')+'>CLAIM '+(claimable?'· '+(100+state.level*15)+' ASHEN + XP':'REWARD')+'</button></div><div class="system-row"><span>SKILL TRAINING</span><button data-open="skills">OPEN SKILLS</button></div><div class="system-row"><span>EXPEDITION · '+(MAPS[mapIdForChapter(Math.min(10,state.chapter+1))]?.name||'Sanctuary')+'</span><button data-expedition="1" '+(state.quest<5||state.chapter>=10||!atSanctuary?'disabled':'')+'>'+(state.quest<5?'FINISH CHAPTER '+String(state.chapter).padStart(2,'0'):state.chapter>=10?'ALL CHAPTERS COMPLETE':!atSanctuary?'RETURN TO SANCTUARY':'BEGIN CHAPTER '+String(state.chapter+1).padStart(2,'0'))+'</button></div>'+(canFastTravel()?'<h3 class="travel-heading">THE FIVE ROADS · FREE TRAVEL</h3><p class="system-intro">Ten chapters complete. Choose any region to explore its creatures and landmarks; story progress stays complete.</p><div class="travel-grid">'+Object.entries(MAPS).map(([id,map])=>'<button class="travel-choice '+(id===activeMapId?'selected':'')+'" data-travel="'+id+'" '+(id===activeMapId?'disabled':'')+'><b>'+map.name+'</b><small>'+map.hint+'</small></button>').join('')+'</div>':'')+'</div>'}}
 function upgradeSkill(index){if(!Number.isInteger(index)||index<0||index>2)return;if(state.level<skillUnlockLevel(index)){toastMsg('Unlock this skill at level '+skillUnlockLevel(index));return}if(!state.skillPoints||(state.skillRanks[index]||0)>=3)return;state.skillPoints--;state.skillRanks[index]=(state.skillRanks[index]||0)+1;openSystemMenu('skills');saveState();toastMsg(activeRole().skills[index][0]+' upgraded')}
 function recordHuntKill(boss){state.hunt=state.hunt||{kills:0};state.hunt.kills++;state.shards+=boss?3:1;if(state.hunt.kills%5===0)toastMsg('Hunt contract ready · claim it at the Sanctuary');}
+function disposeEncounterVisuals(enemy) {
+  if (!enemy) return;
+  const visuals = Array.isArray(enemy.fallbackVisuals) ? enemy.fallbackVisuals : [];
+  const geometries = new Set();
+  const ownedMaterials = new Set();
+
+  const isSharedWorldMaterial = material => {
+    for (const shared of worldMats.values()) {
+      if (shared === material) return true;
+    }
+    return false;
+  };
+
+  for (const visual of visuals) {
+    if (!visual) continue;
+    visual.traverse(object => {
+      if (object.geometry) geometries.add(object.geometry);
+      if (!object.material) return;
+      const list = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of list) {
+        if (material && !isSharedWorldMaterial(material)) ownedMaterials.add(material);
+      }
+    });
+    visual.removeFromParent();
+  }
+
+  // The production GLB is cached and reused between boss encounters. Detach it, but
+  // never dispose its shared geometry or materials when a single encounter ends.
+  if (productionBossScene && productionBossScene.parent === enemy.root) {
+    productionBossScene.removeFromParent();
+    productionBossScene.visible = false;
+  }
+
+  for (const geometry of geometries) geometry.dispose();
+  for (const material of ownedMaterials) material.dispose();
+  enemy.fallbackVisuals = [];
+}
+
 function finishEncounter(){
   const defeated=encounter;if(!defeated)return;
   const bellWaiting=!defeated.isBoss&&state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated;
-  defeated.root.removeFromParent();enemies=[];recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);
+  disposeEncounterVisuals(defeated);defeated.root.removeFromParent();enemies=[];recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);
   if(defeated.isBoss){
     const ch=window.ASHEN_CAMPAIGN[state.chapter-1]||window.ASHEN_CAMPAIGN[0];state.flags.bellWardenDefeated=true;state.quest=4;
     if(state.chapter===1){item('Eda Vey’s Name','Quest Relic','Legendary',['Memory','Identity'],{focus:2});state.log.unshift('The Bell Warden was Eda Vey, the keeper who refused to let the Crown erase her village.');toastMsg('The Bell Warden falls — Eda Vey is remembered.')}
@@ -2799,7 +2837,77 @@ function loadState(){
 }
 function nodeKey(n){return n.type+':'+n.x+':'+n.z}
 function restoreCollectedNodes(){const collected=new Set(Array.isArray(state.collectedNodes)?state.collectedNodes:[]);for(const n of nodes){n.collected=collected.has(nodeKey(n));n.root.visible=!n.collected}}
-function saveState(){try{state.saveVersion=5;state.mapVersion=1;state.inventory=state.inventory.slice(-500);state.level=Math.min(Math.max(1,Math.floor(Number(state.level)||1)),chapterLevelCap());state.xp=state.level>=chapterLevelCap()?0:THREE.MathUtils.clamp(Math.floor(Number(state.xp)||0),0,xpNeededForLevel(state.level)-1);state.currentMap=activeMapId;state.playerPosition={x:player.position.x,z:player.position.z};state.savedAt=Date.now();const serialized=JSON.stringify(state);localStorage.setItem('ashen-crown-3d',serialized);window.AshenAuth?.queueSave?.(state);const status=$('saveStatus');if(status){status.textContent='SAVED LOCALLY';status.dataset.state='saved'}}catch{const status=$('saveStatus');if(status){status.textContent='SAVE UNAVAILABLE';status.dataset.state='error'}if(!saveWarningShown){saveWarningShown=true;toastMsg('Unable to save: browser storage is unavailable.')}}}
+let lastSavedComparable = null;
+let idleSavePending = false;
+
+function localSaveComparable(save) {
+  const snapshot = { ...save };
+  delete snapshot.savedAt;
+  return JSON.stringify(snapshot);
+}
+
+function saveState(force = false) {
+  try {
+    state.saveVersion = 5;
+    state.mapVersion = 1;
+    state.inventory = state.inventory.slice(-500);
+    state.level = Math.min(Math.max(1, Math.floor(Number(state.level) || 1)), chapterLevelCap());
+    state.xp = state.level >= chapterLevelCap()
+      ? 0
+      : THREE.MathUtils.clamp(Math.floor(Number(state.xp) || 0), 0, xpNeededForLevel(state.level) - 1);
+    state.currentMap = activeMapId;
+    state.playerPosition = { x: player.position.x, z: player.position.z };
+
+    const comparable = localSaveComparable(state);
+    if (!force && comparable === lastSavedComparable) {
+      const status = $('saveStatus');
+      if (status) {
+        status.textContent = 'SAVED LOCALLY';
+        status.dataset.state = 'saved';
+      }
+      return false;
+    }
+
+    state.savedAt = Date.now();
+    const serialized = JSON.stringify(state);
+    localStorage.setItem('ashen-crown-3d', serialized);
+    lastSavedComparable = comparable;
+    window.AshenAuth?.queueSave?.(state);
+
+    const status = $('saveStatus');
+    if (status) {
+      status.textContent = 'SAVED LOCALLY';
+      status.dataset.state = 'saved';
+    }
+    return true;
+  } catch (error) {
+    const status = $('saveStatus');
+    if (status) {
+      status.textContent = 'SAVE UNAVAILABLE';
+      status.dataset.state = 'error';
+    }
+    if (!saveWarningShown) {
+      saveWarningShown = true;
+      toastMsg('Unable to save: browser storage is unavailable.');
+      console.warn('[Ashen Crown] Local save failed:', error?.message || error);
+    }
+    return false;
+  }
+}
+
+function scheduleIdleSave() {
+  if (idleSavePending) return;
+  idleSavePending = true;
+  const run = () => {
+    idleSavePending = false;
+    saveState();
+  };
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(run, { timeout: 3000 });
+  } else {
+    window.setTimeout(run, 500);
+  }
+}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveState,180)}
 function refreshEquipment(){
   document.querySelectorAll('.equip-slot').forEach(button=>{const equipped=state.equipment[button.dataset.slot],label=equipped?equipped.name:'Empty';button.innerHTML=escapeHtml(button.dataset.slot.toUpperCase())+'<span>'+escapeHtml(label)+'</span>';button.title=equipped?'Click to unequip '+equipped.name:'Open inventory to choose equipment'})
@@ -2886,25 +2994,87 @@ function setupTouchControls(){
   function moveStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,42/len),nx=dx*scale,ny=dy*scale;knob.style.transform='translate('+nx+'px,'+ny+'px)';keys.KeyD=nx>17;keys.KeyA=nx< -17;keys.KeyS=ny>17;keys.KeyW=ny< -17}
   controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='inventory')openInventory();else if(action==='skill')useSkill(Number(button.dataset.skill))}));
 }
-async function syncCloudSaveFromAccount(){
-  const auth=window.AshenAuth;if(!auth?.loadCloudSave)return;
-  try{
+async function syncCloudSaveFromAccount() {
+  const auth = window.AshenAuth;
+  if (!auth?.loadCloudSave) return;
+
+  try {
     await auth.ready;
-    const session=await auth.getSession();if(!session?.user)return;
-    const cloud=await auth.loadCloudSave(),remote=cloud?.save_json;
-    let local=null;try{local=JSON.parse(localStorage.getItem('ashen-crown-3d')||'null')}catch{}
-    const validRemote=remote&&typeof remote==='object'&&!Array.isArray(remote)&&Number(remote.level)>=1;
-    if(validRemote){
-      const remoteStamp=Number(remote.savedAt)||Date.parse(cloud.updated_at||'')||0;
-      const localStamp=Number(local?.savedAt)||0;
-      if(!local||remoteStamp>localStamp){
-        remote.savedAt=remoteStamp||Date.now();
-        localStorage.setItem('ashen-crown-3d',JSON.stringify(remote));
-        location.reload();return;
+    const session = await auth.getSession();
+    if (!session?.user) return;
+
+    const cloud = await auth.loadCloudSave();
+    const remote = cloud?.save_json;
+    const localRaw = localStorage.getItem('ashen-crown-3d');
+    let local = null;
+
+    if (localRaw) {
+      try {
+        local = JSON.parse(localRaw);
+      } catch {
+        toastMsg('Local save is unreadable; cloud sync was stopped to preserve the original data.');
+        return;
       }
     }
-    if(local)auth.queueSave?.(local);
-  }catch(error){console.warn('[Ashen Crown] Cloud save sync unavailable:',error?.message||error)}
+
+    const decision = cloudSaveDecision(local, remote, cloud?.updated_at || '');
+    if (decision.action === 'invalid-cloud') {
+      if (local) auth.queueSave?.(local);
+      else toastMsg('Cloud save is invalid; it was not imported.');
+      return;
+    }
+
+    if (decision.action === 'use-cloud') {
+      // An empty local slot may safely restore from the account.
+      if (localRaw) {
+        toastMsg('Local save data exists but could not be safely parsed; cloud restore was stopped.');
+        return;
+      }
+      localStorage.setItem('ashen-crown-3d', JSON.stringify({
+        ...remote,
+        savedAt: decision.remoteStamp || Date.now()
+      }));
+      location.reload();
+      return;
+    }
+
+    if (decision.action === 'ask-cloud' || decision.action === 'ask-local') {
+      const conflictMessage = decision.action === 'ask-cloud'
+        ? 'Your account has a newer Ashen Crown save.'
+        : 'Your local Ashen Crown save is newer than the cloud copy.';
+      const useCloud = window.confirm(
+        conflictMessage + '\n\n' +
+        'OK: use the cloud save (your current local save will be backed up on this device).\n' +
+        'Cancel: keep this local save and sync it to your account.'
+      );
+      if (!useCloud) {
+        auth.queueSave?.(local);
+        toastMsg('Kept your local journey. It will sync to your account.');
+        return;
+      }
+
+      // Never overwrite local progress until the byte-for-byte original is backed up.
+      if (typeof localRaw !== 'string' || !localRaw) {
+        toastMsg('Could not back up the local save; cloud restore was cancelled.');
+        return;
+      }
+      const backupKey = backupLocalSave(localStorage, localRaw);
+
+      localStorage.setItem('ashen-crown-3d', JSON.stringify({
+        ...remote,
+        savedAt: decision.remoteStamp || Date.now()
+      }));
+      toastMsg('Cloud journey restored. Your previous local save is backed up on this device.');
+      location.reload();
+      return;
+    }
+
+    // Equal timestamps and older cloud saves default to local, never the reverse.
+    if (local) auth.queueSave?.(local);
+  } catch (error) {
+    console.warn('[Ashen Crown] Cloud save sync unavailable:', error?.message || error);
+    toastMsg('Cloud sync is unavailable. Your local journey was kept.');
+  }
 }
 window.addEventListener('ashen:auth',event=>{if(event.detail?.session?.user&&event.detail?.event!=='PASSWORD_RECOVERY')void syncCloudSaveFromAccount()});
 window.AshenAuth?.ready?.then(()=>syncCloudSaveFromAccount()).catch(()=>{});
@@ -2919,12 +3089,14 @@ setInterval(()=>{
   if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!(state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated))spawnEnemy();
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
-setInterval(()=>{if(!document.hidden)saveState()},15000);
+setInterval(()=>{if(!document.hidden)scheduleIdleSave()},15000);
 window.addEventListener('pagehide',saveState);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState()});
 let last=performance.now(),gameRenderReady=false;
 function frame(t){
-  const rawDt=Math.min(.05,(t-last)/1000);last=t;
+  const elapsed=(t-last)/1000;
+  const rawDt=Number.isFinite(elapsed)?Math.max(0,Math.min(.05,elapsed)):0;
+  last=t;
   fpsAccumulator+=rawDt;fpsFrames++;
   if(fpsAccumulator>=1){
     const avgFrame=fpsAccumulator/Math.max(1,fpsFrames);
