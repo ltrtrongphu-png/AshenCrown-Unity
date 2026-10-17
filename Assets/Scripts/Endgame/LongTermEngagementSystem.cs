@@ -50,7 +50,13 @@ namespace AshenCrown.Endgame
         void OnBossDefeated(string bossId){RecordAction(EngagementAction.BossDefeated);AddCollection("boss:"+bossId);}
         void OnCrafted(string recipeId){RecordAction(EngagementAction.CraftCompleted);AddMastery("crafting",50);}
         void Start(){RefreshRotations();EnsureJourneyRewards();}
-        void Update(){if(Input.GetKeyDown(KeyCode.F10))RefreshRotations();}
+        void Update()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (Input.GetKeyDown(KeyCode.F10))
+                RefreshRotations();
+#endif
+        }
 
         public int GetCounter(EngagementAction action)=>GetCounter(action.ToString());
         public int GetCounter(string id)=>counters.TryGetValue(id,out var v)?v:0;
