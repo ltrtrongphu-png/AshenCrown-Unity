@@ -354,12 +354,14 @@ const PLAY_LOCALE_ROWS = [
 ['Season record','Kỷ lục mùa','シーズン記録','시즌 기록','赛季记录'],
 ];
 const PLAY_LOCALES = ['en','vi','ja','ko','zh'];
-const PLAY_TRANSLATION_MAP = new Map(PLAY_LOCALE_ROWS.map(row=>[row[0],row]));
+// Ignore malformed translation entries so one incomplete row cannot prevent the game from booting.
+const VALID_PLAY_LOCALE_ROWS = PLAY_LOCALE_ROWS.filter(row => Array.isArray(row) && typeof row[0] === 'string' && row[0].length > 0);
+const PLAY_TRANSLATION_MAP = new Map(VALID_PLAY_LOCALE_ROWS.map(row=>[row[0],row]));
 let playLanguage = PLAY_LOCALES.includes(localStorage.getItem('ashen.language'))
   ? localStorage.getItem('ashen.language')
   : (PLAY_LOCALES.includes((navigator.language||'en').slice(0,2).toLowerCase())?(navigator.language||'en').slice(0,2).toLowerCase():'en');
 const translatedTextNodes = new WeakMap();
-const PLAY_TRANSLATION_ROWS_SORTED=[...PLAY_LOCALE_ROWS].sort((a,b)=>b[0].length-a[0].length);
+const PLAY_TRANSLATION_ROWS_SORTED=[...VALID_PLAY_LOCALE_ROWS].sort((a,b)=>b[0].length-a[0].length);
 function isAsciiWordChar(char){return !!char&&/[A-Za-z0-9_]/.test(char)}
 function replaceIgnoreCase(source,search,replacement){
   const lower=source.toLowerCase(),needle=search.toLowerCase();
