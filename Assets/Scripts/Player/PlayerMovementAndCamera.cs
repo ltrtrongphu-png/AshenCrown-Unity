@@ -80,8 +80,20 @@ namespace AshenCrown.Player
 
         static readonly Collider[] Buffer = new Collider[48];
 
+        void OnValidate()
+        {
+            if (float.IsNaN(moveSpeed) || float.IsInfinity(moveSpeed)) moveSpeed = 4.2f;
+            if (float.IsNaN(sprintSpeed) || float.IsInfinity(sprintSpeed)) sprintSpeed = 7.2f;
+            moveSpeed = Mathf.Max(0f, moveSpeed);
+            sprintSpeed = Mathf.Max(0.01f, sprintSpeed);
+            acceleration = Mathf.Max(0f, acceleration);
+            deceleration = Mathf.Max(0f, deceleration);
+            gravity = float.IsNaN(gravity) || float.IsInfinity(gravity) ? -30f : gravity;
+        }
+
         void Awake()
         {
+            OnValidate();
             controller = GetComponent<CharacterController>();
             stamina = GetComponent<PlayerStamina>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
@@ -202,6 +214,8 @@ namespace AshenCrown.Player
             direction.Normalize();
             duration = Mathf.Max(0.01f, duration);
 
+            if (float.IsNaN(distance) || float.IsInfinity(distance)) distance = 0f;
+            if (float.IsNaN(duration) || float.IsInfinity(duration)) duration = 0.01f;
             forcedVelocity = direction * (distance / duration);
             forcedTimer = duration;
             IsSprinting = false;
@@ -336,8 +350,9 @@ namespace AshenCrown.Player
         void UpdateAnimator(float dt)
         {
             // Preserve legacy parameter names while also updating the newer shared blend-tree contract.
-            Vector3 local = transform.InverseTransformDirection(horizontalVelocity) / sprintSpeed;
-            float normalizedSpeed = AnimationPresentationController.ClampNormalizedSpeed(horizontalVelocity.magnitude / sprintSpeed);
+            float safeSprintSpeed = Mathf.Max(0.01f, sprintSpeed);
+            Vector3 local = transform.InverseTransformDirection(horizontalVelocity) / safeSprintSpeed;
+            float normalizedSpeed = AnimationPresentationController.ClampNormalizedSpeed(horizontalVelocity.magnitude / safeSprintSpeed);
             if (animator != null)
             {
                 AnimatorSafe.SetFloat(animator, "MoveX", local.x, 0.08f, dt);

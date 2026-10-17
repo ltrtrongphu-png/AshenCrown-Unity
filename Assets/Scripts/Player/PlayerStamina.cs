@@ -16,7 +16,7 @@ namespace AshenCrown.Player
 
         public float Current { get; private set; }
         public float Max => maxStamina;
-        public float Normalized => Current / maxStamina;
+        public float Normalized => IsFinite(Current) && IsFinite(maxStamina) && maxStamina > 0.0001f ? Mathf.Clamp01(Current / maxStamina) : 0f;
         public bool IsExhausted { get; private set; }
         public bool CanSprint => !IsExhausted && Current > 1f;
 
@@ -25,7 +25,24 @@ namespace AshenCrown.Player
 
         float regenTimer;
 
-        void Awake() { Current = maxStamina; }
+        void Awake()
+        {
+            ValidateTuning();
+            Current = maxStamina;
+        }
+
+        void OnValidate() => ValidateTuning();
+
+        void ValidateTuning()
+        {
+            if (!IsFinite(maxStamina) || maxStamina < 0.01f) maxStamina = 0.01f;
+            if (!IsFinite(regenPerSecond) || regenPerSecond < 0f) regenPerSecond = 0f;
+            if (!IsFinite(regenDelay) || regenDelay < 0f) regenDelay = 0f;
+            if (!IsFinite(exhaustRecoverThreshold)) exhaustRecoverThreshold = 20f;
+            exhaustRecoverThreshold = Mathf.Clamp(exhaustRecoverThreshold, 0f, maxStamina);
+        }
+
+        static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         void Update()
         {
@@ -56,6 +73,7 @@ namespace AshenCrown.Player
 
         void Set(float v)
         {
+            if (!IsFinite(v)) v = 0f;
             Current = Mathf.Clamp(v, 0f, maxStamina);
             OnChanged?.Invoke(Current, maxStamina);
         }

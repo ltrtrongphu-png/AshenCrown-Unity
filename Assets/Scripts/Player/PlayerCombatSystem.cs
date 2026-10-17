@@ -150,7 +150,7 @@ namespace AshenCrown.Player
         public event Action<AttackProfile> OnAttackStarted;
         public event Action<AttackProfile> OnAttackActive;     // bật VFX/SFX lưỡi chém tại khung này
         public event Action<int> OnSkillCast;                  // 0 = Q, 1 = E, 2 = R
-        public float UltimateGauge01 => ultimateGauge / ultimateMax;
+        public float UltimateGauge01 => IsFinite(ultimateGauge) && IsFinite(ultimateMax) && ultimateMax > 0.0001f ? Mathf.Clamp01(ultimateGauge / ultimateMax) : 0f;
         public bool UltimateReady => ultimateGauge >= ultimateMax && !SoulHarvestActive;
         public bool SoulHarvestActive => soulHarvestRemaining > 0f;
         public float SoulHarvestRemaining => soulHarvestRemaining;
@@ -213,8 +213,18 @@ namespace AshenCrown.Player
             ashenEruption = new AttackProfile { name = "AshenEruption", animState = "AshenEruption", shape = AttackShape.Aoe, damageMultiplier = 2.2f, poiseDamage = 50f, staminaCost = 0f, windup = 0.45f, active = 0.15f, recover = 0.55f, aoeRadius = 6.5f, lungeDistance = 0f, knockback = 9f, hitStopDuration = 0.08f, cameraShake = 0.35f };
         }
 
+        void OnValidate()
+        {
+            if (!IsFinite(ultimateMax) || ultimateMax < 0.01f) ultimateMax = 0.01f;
+            if (!IsFinite(ultimateGainPerHit) || ultimateGainPerHit < 0f) ultimateGainPerHit = 0f;
+            if (!IsFinite(soulHarvestDuration) || soulHarvestDuration < 0f) soulHarvestDuration = 0f;
+        }
+
+        static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+
         void Awake()
         {
+            OnValidate();
             movement = GetComponent<PlayerMovementAndCamera>();
             stamina = GetComponent<PlayerStamina>();
             health = GetComponent<HealthAndDamageSystem>();
