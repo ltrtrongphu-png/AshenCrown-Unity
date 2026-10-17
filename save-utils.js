@@ -71,11 +71,19 @@ export function sanitizeItemRecord(raw) {
  * Stable save comparison which ignores only the write timestamp. This allows periodic
  * checkpoint calls to be cheap when gameplay state has not changed.
  */
+function sortObjectKeys(value) {
+  if (Array.isArray(value)) return value.map(sortObjectKeys);
+  if (!value || typeof value !== 'object') return value;
+  const normalized = {};
+  for (const key of Object.keys(value).sort()) normalized[key] = sortObjectKeys(value[key]);
+  return normalized;
+}
+
 export function serializeSaveForComparison(save) {
   if (!save || typeof save !== 'object' || Array.isArray(save)) return '';
   const snapshot = { ...save };
   delete snapshot.savedAt;
-  return JSON.stringify(snapshot);
+  return JSON.stringify(sortObjectKeys(snapshot));
 }
 
 
@@ -96,10 +104,10 @@ export function cloudSaveDecision(local, remote, remoteUpdatedAt = '') {
   if (!localValid) return { action: 'use-cloud', localStamp: 0, remoteStamp: Number(remote.savedAt) || Date.parse(remoteUpdatedAt) || 0 };
   const localStamp = Number(local.savedAt) || 0;
   const remoteStamp = Number(remote.savedAt) || Date.parse(remoteUpdatedAt) || 0;
+  const samePayload = serializeSaveForComparison(local) === serializeSaveForComparison(remote);
   let action = 'keep-local';
-  if (remoteStamp > localStamp) action = 'ask-cloud';
-  else if (localStamp > remoteStamp) action = 'ask-local';
-  else if (serializeSaveForComparison(local) !== serializeSaveForComparison(remote)) action = 'ask-local';
+  if (!samePayload && remoteStamp > localStamp) action = 'ask-cloud';
+  else if (!samePayload) action = 'ask-local';
   return { action, localStamp, remoteStamp };
 }
 

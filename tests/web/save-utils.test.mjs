@@ -126,3 +126,18 @@ test('equal save timestamps with different progress still require a user decisio
   const remote = { level: 3, savedAt: 100, coins: 20 };
   assert.equal(cloudSaveDecision(local, remote).action, 'ask-local');
 });
+
+test('save comparison is insensitive to object key order across JSONB round trips', async () => {
+  const { serializeSaveForComparison } = await import('../../save-utils.js');
+  const local = { savedAt: 200, level: 4, settings: { volume: 0.5, quality: 'high' }, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] };
+  const cloud = { inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], settings: { quality: 'high', volume: 0.5 }, level: 4, savedAt: 900 };
+  assert.equal(serializeSaveForComparison(local), serializeSaveForComparison(cloud));
+});
+
+test('equivalent local and cloud payloads do not prompt solely because timestamps differ', async () => {
+  const { cloudSaveDecision } = await import('../../save-utils.js');
+  assert.equal(cloudSaveDecision(
+    { savedAt: 100, level: 4, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] },
+    { savedAt: 300, inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], level: 4 }
+  ).action, 'keep-local');
+});
