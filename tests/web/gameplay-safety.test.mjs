@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const gameSource = readFileSync(new URL('../../play.js', import.meta.url), 'utf8');
 
@@ -26,12 +28,14 @@ test('web frame loop rejects negative and non-finite elapsed time', () => {
 });
 
 test('TimeScaleService is the only C# owner that writes Time.timeScale', () => {
-  const scriptsRoot = new URL('../../Assets/Scripts/', import.meta.url);
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const scriptsRoot = join(repoRoot, 'Assets', 'Scripts');
   const offenders = [];
+
   const visit = (directory, prefix = '') => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const relativePath = prefix ? prefix + '/' + entry.name : entry.name;
-      const fullPath = new URL(relativePath, directory.href.endsWith('/') ? directory : new URL(directory.href + '/'));
+      const fullPath = join(directory, entry.name);
       if (entry.isDirectory()) {
         visit(fullPath, relativePath);
       } else if (entry.isFile() && entry.name.endsWith('.cs') && entry.name !== 'TimeScaleService.cs') {
@@ -40,6 +44,7 @@ test('TimeScaleService is the only C# owner that writes Time.timeScale', () => {
       }
     }
   };
+
   visit(scriptsRoot);
   assert.deepEqual(offenders, [], 'all global time-scale writes must go through TimeScaleService');
 });
