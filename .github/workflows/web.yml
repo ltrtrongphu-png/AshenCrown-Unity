@@ -32,6 +32,8 @@ jobs:
         run: npm test
       - name: Build allow-listed Vercel artifact
         run: node tools/build-web.mjs
+      - name: Verify versioned gameplay cache keys
+        run: npm run check:build-cache
       - name: Assert deployment assets exist
         run: |
           test -s dist/index.html

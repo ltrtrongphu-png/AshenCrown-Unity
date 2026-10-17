@@ -6,7 +6,7 @@ const APP_FILES = [
   './styles.css',
   './play.css',
   './campaign.js',
-  './play.js',
+  './play.js?v=__ASHEN_BUILD_ID__',
   './save-utils.js',
   './vendor/three.module.js',
   './vendor/three.core.js',

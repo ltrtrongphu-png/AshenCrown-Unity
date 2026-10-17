@@ -128,12 +128,12 @@ for (const file of webFiles) {
     };
     writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`);
   } else if (existsSync(source)) {
-    if (file === 'sw.js') {
-      const worker = readFileSync(source, 'utf8');
-      if (!worker.includes('__ASHEN_BUILD_ID__')) {
-        throw new Error('sw.js is missing the __ASHEN_BUILD_ID__ cache-version placeholder.');
+    if (file === 'sw.js' || file === 'play.html') {
+      const template = readFileSync(source, 'utf8');
+      if (!template.includes('__ASHEN_BUILD_ID__')) {
+        throw new Error(`${file} is missing the __ASHEN_BUILD_ID__ cache-version placeholder.`);
       }
-      writeFileSync(destination, worker.replaceAll('__ASHEN_BUILD_ID__', buildId));
+      writeFileSync(destination, template.replaceAll('__ASHEN_BUILD_ID__', buildId));
     } else {
       cpSync(source, destination);
     }
