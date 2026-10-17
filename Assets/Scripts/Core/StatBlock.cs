@@ -40,8 +40,22 @@ namespace AshenCrown.Core
         public IReadOnlyList<StatModifier> Modifiers => modifiers;
         public event Action Changed;
 
+        bool initialized;
+        EquipmentSystem subscribedEquipment;
+        SkillTreeSystem subscribedSkills;
+
         void Start()
         {
+            initialized = true;
+            SubscribeSources();
+            Rebuild();
+        }
+
+        void OnEnable()
+        {
+            // Start runs only once. If this component is disabled and enabled again,
+            // restore its event subscriptions instead of silently losing stat updates.
+            if (!initialized) return;
             SubscribeSources();
             Rebuild();
         }
@@ -50,18 +64,35 @@ namespace AshenCrown.Core
 
         void SubscribeSources()
         {
-            if (EquipmentSystem.Instance != null)
-                EquipmentSystem.Instance.EquipmentChanged += Rebuild;
-            if (SkillTreeSystem.Instance != null)
-                SkillTreeSystem.Instance.SkillUnlocked += HandleSkillUnlocked;
+            EquipmentSystem equipment = EquipmentSystem.Instance;
+            if (subscribedEquipment != equipment)
+            {
+                if (subscribedEquipment != null)
+                    subscribedEquipment.EquipmentChanged -= Rebuild;
+                subscribedEquipment = equipment;
+                if (subscribedEquipment != null)
+                    subscribedEquipment.EquipmentChanged += Rebuild;
+            }
+
+            SkillTreeSystem skills = SkillTreeSystem.Instance;
+            if (subscribedSkills != skills)
+            {
+                if (subscribedSkills != null)
+                    subscribedSkills.SkillUnlocked -= HandleSkillUnlocked;
+                subscribedSkills = skills;
+                if (subscribedSkills != null)
+                    subscribedSkills.SkillUnlocked += HandleSkillUnlocked;
+            }
         }
 
         void UnsubscribeSources()
         {
-            if (EquipmentSystem.Instance != null)
-                EquipmentSystem.Instance.EquipmentChanged -= Rebuild;
-            if (SkillTreeSystem.Instance != null)
-                SkillTreeSystem.Instance.SkillUnlocked -= HandleSkillUnlocked;
+            if (subscribedEquipment != null)
+                subscribedEquipment.EquipmentChanged -= Rebuild;
+            if (subscribedSkills != null)
+                subscribedSkills.SkillUnlocked -= HandleSkillUnlocked;
+            subscribedEquipment = null;
+            subscribedSkills = null;
         }
 
         void HandleSkillUnlocked(string skillId) => Rebuild();
