@@ -3090,7 +3090,9 @@ window.addEventListener('pagehide',saveState);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState()});
 let last=performance.now(),gameRenderReady=false;
 function frame(t){
-  const rawDt=Math.min(.05,(t-last)/1000);last=t;
+  const elapsed=(t-last)/1000;
+  const rawDt=Number.isFinite(elapsed)?Math.max(0,Math.min(.05,elapsed)):0;
+  last=t;
   fpsAccumulator+=rawDt;fpsFrames++;
   if(fpsAccumulator>=1){
     const avgFrame=fpsAccumulator/Math.max(1,fpsFrames);

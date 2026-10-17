@@ -17,3 +17,10 @@ test('ending an encounter disposes only encounter-owned fallback GPU resources',
   const finishEnd = gameSource.indexOf('function advanceChapter()', finishStart);
   assert.match(gameSource.slice(finishStart, finishEnd), /disposeEncounterVisuals\(defeated\)/);
 });
+
+
+test('web frame loop rejects negative and non-finite elapsed time', () => {
+  assert.match(gameSource, /const elapsed=\(t-last\)\/1000;/);
+  assert.match(gameSource, /Number\.isFinite\(elapsed\)\?Math\.max\(0,Math\.min\(\.05,elapsed\)\):0/);
+  assert.match(gameSource, /const dt=Math\.min\(\.033,rawDt\)/);
+});
