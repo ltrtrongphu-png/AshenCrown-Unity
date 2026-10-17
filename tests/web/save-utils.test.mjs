@@ -84,3 +84,16 @@ test('save comparison ignores write timestamps but detects gameplay changes', as
   assert.notEqual(serializeSaveForComparison(first), serializeSaveForComparison(changedState));
   assert.equal(serializeSaveForComparison(null), '');
 });
+
+
+test('cloud save conflict never silently selects a newer cloud save over local progress', async () => {
+  const { cloudSaveDecision } = await import('../../save-utils.js');
+  const local = { saveVersion: 5, level: 12, savedAt: 200 };
+  const newerCloud = { saveVersion: 5, level: 8, savedAt: 300 };
+  const olderCloud = { saveVersion: 5, level: 8, savedAt: 100 };
+
+  assert.equal(cloudSaveDecision(local, newerCloud).action, 'ask');
+  assert.equal(cloudSaveDecision(local, olderCloud).action, 'keep-local');
+  assert.equal(cloudSaveDecision(null, newerCloud).action, 'use-cloud');
+  assert.equal(cloudSaveDecision(local, { level: 'invalid' }).action, 'invalid-cloud');
+});

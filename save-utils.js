@@ -77,3 +77,28 @@ export function serializeSaveForComparison(save) {
   delete snapshot.savedAt;
   return JSON.stringify(snapshot);
 }
+
+
+/**
+ * Decide whether a remote browser save may replace the local one. A newer cloud
+ * save is a conflict, not an implicit overwrite; callers must ask and back up first.
+ */
+export function cloudSaveDecision(local, remote, remoteUpdatedAt = '') {
+  const localValid = Boolean(local && typeof local === 'object' && !Array.isArray(local));
+  const remoteValid = Boolean(
+    remote &&
+    typeof remote === 'object' &&
+    !Array.isArray(remote) &&
+    Number.isFinite(Number(remote.level)) &&
+    Number(remote.level) >= 1
+  );
+  if (!remoteValid) return { action: 'invalid-cloud', localStamp: Number(local?.savedAt) || 0, remoteStamp: 0 };
+  if (!localValid) return { action: 'use-cloud', localStamp: 0, remoteStamp: Number(remote.savedAt) || Date.parse(remoteUpdatedAt) || 0 };
+  const localStamp = Number(local.savedAt) || 0;
+  const remoteStamp = Number(remote.savedAt) || Date.parse(remoteUpdatedAt) || 0;
+  return {
+    action: remoteStamp > localStamp ? 'ask' : 'keep-local',
+    localStamp,
+    remoteStamp
+  };
+}

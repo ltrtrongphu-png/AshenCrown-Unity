@@ -1,4 +1,4 @@
-import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison } from './save-utils.js';
+import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision } from './save-utils.js';
 // Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
 // prevent the entire game from starting.
 async function loadThreeEngine() {
@@ -2950,25 +2950,89 @@ function setupTouchControls(){
   function moveStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,42/len),nx=dx*scale,ny=dy*scale;knob.style.transform='translate('+nx+'px,'+ny+'px)';keys.KeyD=nx>17;keys.KeyA=nx< -17;keys.KeyS=ny>17;keys.KeyW=ny< -17}
   controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='inventory')openInventory();else if(action==='skill')useSkill(Number(button.dataset.skill))}));
 }
-async function syncCloudSaveFromAccount(){
-  const auth=window.AshenAuth;if(!auth?.loadCloudSave)return;
-  try{
+async function syncCloudSaveFromAccount() {
+  const auth = window.AshenAuth;
+  if (!auth?.loadCloudSave) return;
+
+  try {
     await auth.ready;
-    const session=await auth.getSession();if(!session?.user)return;
-    const cloud=await auth.loadCloudSave(),remote=cloud?.save_json;
-    let local=null;try{local=JSON.parse(localStorage.getItem('ashen-crown-3d')||'null')}catch{}
-    const validRemote=remote&&typeof remote==='object'&&!Array.isArray(remote)&&Number(remote.level)>=1;
-    if(validRemote){
-      const remoteStamp=Number(remote.savedAt)||Date.parse(cloud.updated_at||'')||0;
-      const localStamp=Number(local?.savedAt)||0;
-      if(!local||remoteStamp>localStamp){
-        remote.savedAt=remoteStamp||Date.now();
-        localStorage.setItem('ashen-crown-3d',JSON.stringify(remote));
-        location.reload();return;
+    const session = await auth.getSession();
+    if (!session?.user) return;
+
+    const cloud = await auth.loadCloudSave();
+    const remote = cloud?.save_json;
+    const localRaw = localStorage.getItem('ashen-crown-3d');
+    let local = null;
+
+    if (localRaw) {
+      try {
+        local = JSON.parse(localRaw);
+      } catch {
+        toastMsg('Local save is unreadable; cloud sync was stopped to preserve the original data.');
+        return;
       }
     }
-    if(local)auth.queueSave?.(local);
-  }catch(error){console.warn('[Ashen Crown] Cloud save sync unavailable:',error?.message||error)}
+
+    const decision = cloudSaveDecision(local, remote, cloud?.updated_at || '');
+    if (decision.action === 'invalid-cloud') {
+      if (local) auth.queueSave?.(local);
+      else toastMsg('Cloud save is invalid; it was not imported.');
+      return;
+    }
+
+    if (decision.action === 'use-cloud') {
+      // An empty local slot may safely restore from the account.
+      if (localRaw) {
+        toastMsg('Local save data exists but could not be safely parsed; cloud restore was stopped.');
+        return;
+      }
+      localStorage.setItem('ashen-crown-3d', JSON.stringify({
+        ...remote,
+        savedAt: decision.remoteStamp || Date.now()
+      }));
+      location.reload();
+      return;
+    }
+
+    if (decision.action === 'ask') {
+      const useCloud = window.confirm(
+        'Your account has a newer Ashen Crown save.\n\n' +
+        'OK: use the cloud save (your current local save will be backed up on this device).\n' +
+        'Cancel: keep this local save and sync it to your account.'
+      );
+      if (!useCloud) {
+        auth.queueSave?.(local);
+        toastMsg('Kept your local journey. It will sync to your account.');
+        return;
+      }
+
+      // Never overwrite local progress until the byte-for-byte original is backed up.
+      if (typeof localRaw !== 'string' || !localRaw) {
+        toastMsg('Could not back up the local save; cloud restore was cancelled.');
+        return;
+      }
+      const backupKey = 'ashen-crown-3d.backup.' + Date.now();
+      localStorage.setItem(backupKey, localRaw);
+      if (localStorage.getItem(backupKey) !== localRaw) {
+        localStorage.removeItem(backupKey);
+        toastMsg('Local backup verification failed; cloud restore was cancelled.');
+        return;
+      }
+      localStorage.setItem('ashen-crown-3d', JSON.stringify({
+        ...remote,
+        savedAt: decision.remoteStamp || Date.now()
+      }));
+      toastMsg('Cloud journey restored. Your previous local save is backed up on this device.');
+      location.reload();
+      return;
+    }
+
+    // Equal timestamps and older cloud saves default to local, never the reverse.
+    if (local) auth.queueSave?.(local);
+  } catch (error) {
+    console.warn('[Ashen Crown] Cloud save sync unavailable:', error?.message || error);
+    toastMsg('Cloud sync is unavailable. Your local journey was kept.');
+  }
 }
 window.addEventListener('ashen:auth',event=>{if(event.detail?.session?.user&&event.detail?.event!=='PASSWORD_RECOVERY')void syncCloudSaveFromAccount()});
 window.AshenAuth?.ready?.then(()=>syncCloudSaveFromAccount()).catch(()=>{});
