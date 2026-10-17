@@ -47,10 +47,10 @@ if (!read('play.html').includes('./play.js?v=__ASHEN_BUILD_ID__'))
   fail('play.html must use a build-versioned URL for play.js.');
 if (!worker.includes('./play.js?v=__ASHEN_BUILD_ID__'))
   fail('The service worker must precache the same build-versioned play.js URL.');
-for (const [, rawReference] of worker.matchAll(/'\\.\\/([^']+)'/g)) {
+for (const [, rawReference] of worker.matchAll(/'\.\/([^']+)'/g)) {
   const reference = rawReference.split(/[?#]/, 1)[0];
   if (/^(?:https?:|data:)/i.test(reference)) continue;
-  if (/\\.[a-z0-9]{2,8}$/i.test(reference) && !allowList.includes(reference))
+  if (/\.[a-z0-9]{2,8}$/i.test(reference) && !allowList.includes(reference))
     fail('Service worker precaches an asset outside the allow-list: ' + reference);
 }
 
