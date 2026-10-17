@@ -2840,6 +2840,12 @@ function restoreCollectedNodes(){const collected=new Set(Array.isArray(state.col
 let lastSavedComparable = null;
 let idleSavePending = false;
 
+function localSaveComparable(save) {
+  const snapshot = { ...save };
+  delete snapshot.savedAt;
+  return JSON.stringify(snapshot);
+}
+
 function saveState(force = false) {
   try {
     state.saveVersion = 5;
@@ -2852,7 +2858,7 @@ function saveState(force = false) {
     state.currentMap = activeMapId;
     state.playerPosition = { x: player.position.x, z: player.position.z };
 
-    const comparable = serializeSaveForComparison(state);
+    const comparable = localSaveComparable(state);
     if (!force && comparable === lastSavedComparable) {
       const status = $('saveStatus');
       if (status) {
@@ -2865,7 +2871,7 @@ function saveState(force = false) {
     state.savedAt = Date.now();
     const serialized = JSON.stringify(state);
     localStorage.setItem('ashen-crown-3d', serialized);
-    lastSavedComparable = serializeSaveForComparison(state);
+    lastSavedComparable = comparable;
     window.AshenAuth?.queueSave?.(state);
 
     const status = $('saveStatus');

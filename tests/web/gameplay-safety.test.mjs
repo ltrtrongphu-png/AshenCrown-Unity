@@ -56,3 +56,13 @@ test('local save failure diagnostics are shown only once per storage failure epi
   assert.match(source, /if \(!saveWarningShown\)[\s\S]*?console\.warn\('\[Ashen Crown\] Local save failed:/);
   assert.doesNotMatch(source, /console\.warn\('\[Ashen Crown\] Local save failed:[^\n]*\n\s*return false/);
 });
+
+test('local autosave uses a timestamp-free payload comparator without sorting every nested object', () => {
+  const start = gameSource.indexOf('function localSaveComparable(save)');
+  const end = gameSource.indexOf('function saveState(', start);
+  assert.ok(start >= 0 && end > start);
+  const comparator = gameSource.slice(start, end);
+  assert.match(comparator, /const snapshot = \{ \.\.\.save \};/);
+  assert.match(comparator, /delete snapshot\.savedAt;/);
+  assert.match(comparator, /return JSON\.stringify\(snapshot\);/);
+});
