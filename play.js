@@ -1,4 +1,4 @@
-import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision } from './save-utils.js';
+import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision, backupLocalSave } from './save-utils.js';
 // Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
 // prevent the entire game from starting.
 async function loadThreeEngine() {
@@ -3049,13 +3049,8 @@ async function syncCloudSaveFromAccount() {
         toastMsg('Could not back up the local save; cloud restore was cancelled.');
         return;
       }
-      const backupKey = 'ashen-crown-3d.backup.' + Date.now();
-      localStorage.setItem(backupKey, localRaw);
-      if (localStorage.getItem(backupKey) !== localRaw) {
-        localStorage.removeItem(backupKey);
-        toastMsg('Local backup verification failed; cloud restore was cancelled.');
-        return;
-      }
+      const backupKey = backupLocalSave(localStorage, localRaw);
+
       localStorage.setItem('ashen-crown-3d', JSON.stringify({
         ...remote,
         savedAt: decision.remoteStamp || Date.now()

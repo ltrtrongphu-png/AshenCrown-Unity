@@ -97,3 +97,25 @@ test('cloud save conflict never silently selects a newer cloud save over local p
   assert.equal(cloudSaveDecision(null, newerCloud).action, 'use-cloud');
   assert.equal(cloudSaveDecision(local, { level: 'invalid' }).action, 'invalid-cloud');
 });
+
+
+test('local save backups verify raw bytes and rotate old conflict copies', async () => {
+  const { backupLocalSave } = await import('../../save-utils.js');
+  const values = new Map();
+  const storage = {
+    get length() { return values.size; },
+    key(index) { return [...values.keys()][index] ?? null; },
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(String(key), String(value)); },
+    removeItem(key) { values.delete(key); }
+  };
+
+  assert.equal(backupLocalSave(storage, '{"level":1}', 100), 'ashen-crown-3d.backup.100');
+  assert.equal(backupLocalSave(storage, '{"level":2}', 200), 'ashen-crown-3d.backup.200');
+  assert.equal(backupLocalSave(storage, '{"level":3}', 300), 'ashen-crown-3d.backup.300');
+  assert.equal(backupLocalSave(storage, '{"level":4}', 400), 'ashen-crown-3d.backup.400');
+  assert.equal(storage.getItem('ashen-crown-3d.backup.100'), null);
+  assert.equal(storage.getItem('ashen-crown-3d.backup.200'), '{"level":2}');
+  assert.equal(storage.getItem('ashen-crown-3d.backup.400'), '{"level":4}');
+  assert.throws(() => backupLocalSave(storage, '', 500), /non-empty local save/);
+});

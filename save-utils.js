@@ -102,3 +102,44 @@ export function cloudSaveDecision(local, remote, remoteUpdatedAt = '') {
     remoteStamp
   };
 }
+
+
+/**
+ * Back up raw local-save bytes before a cloud conflict may replace them.
+ * Keeps a small rolling set to avoid unbounded localStorage growth.
+ */
+export function backupLocalSave(storage, rawSave, timestamp = Date.now(), keep = 3) {
+  if (!storage || typeof storage.setItem !== 'function' || typeof storage.getItem !== 'function') {
+    throw new TypeError('A writable storage object is required.');
+  }
+  if (typeof rawSave !== 'string' || rawSave.length === 0) {
+    throw new TypeError('A non-empty local save is required for backup.');
+  }
+
+  const prefix = 'ashen-crown-3d.backup.';
+  const stamp = Number.isFinite(Number(timestamp)) ? Math.max(0, Math.floor(Number(timestamp))) : Date.now();
+  let key = prefix + stamp;
+  let suffix = 1;
+  while (storage.getItem(key) !== null) key = prefix + stamp + '-' + suffix++;
+
+  storage.setItem(key, rawSave);
+  if (storage.getItem(key) !== rawSave) {
+    storage.removeItem(key);
+    throw new Error('Local save backup verification failed.');
+  }
+
+  const backups = [];
+  for (let index = 0; index < storage.length; index++) {
+    const candidate = storage.key(index);
+    if (typeof candidate === 'string' && candidate.startsWith(prefix)) backups.push(candidate);
+  }
+  backups.sort((left, right) => {
+    const leftStamp = Number(left.slice(prefix.length).split('-')[0]) || 0;
+    const rightStamp = Number(right.slice(prefix.length).split('-')[0]) || 0;
+    return leftStamp - rightStamp || left.localeCompare(right);
+  });
+
+  const limit = Number.isFinite(Number(keep)) ? Math.max(1, Math.floor(Number(keep))) : 3;
+  while (backups.length > limit) storage.removeItem(backups.shift());
+  return key;
+}
