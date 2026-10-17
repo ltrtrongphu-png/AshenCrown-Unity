@@ -236,13 +236,13 @@ namespace AshenCrown.Save
                     return;
                 }
 
-                if (IsCloudSaveNewer(localData.lastSavedUtc, cloudData.lastSavedUtc))
+                if (ShouldPromptCloudConflict(localData.lastSavedUtc, cloudData.lastSavedUtc))
                 {
                     pendingCloudJson = cloudJson;
                     pendingLocalBackupSource = localPath;
                     PendingLocalSaveTime = FormatSaveTime(localData.lastSavedUtc);
                     PendingCloudSaveTime = FormatSaveTime(cloudData.lastSavedUtc);
-                    CloudSaveStatus = "A newer cloud save is available. Choose which journey to keep.";
+                    CloudSaveStatus = "Local and cloud saves differ. Choose which journey to keep.";
                     return;
                 }
 
@@ -292,7 +292,7 @@ namespace AshenCrown.Save
                 : "unknown time";
         }
 
-        public static bool IsCloudSaveNewer(string localTimestamp, string cloudTimestamp)
+        public static bool ShouldPromptCloudConflict(string localTimestamp, string cloudTimestamp)
         {
             DateTime local;
             DateTime cloud;
@@ -300,9 +300,11 @@ namespace AshenCrown.Save
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out local);
             bool hasCloudTime = DateTime.TryParse(cloudTimestamp, CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out cloud);
-            if (!hasCloudTime) return false;
-            if (!hasLocalTime) local = DateTime.MinValue;
-            return cloud > local;
+
+            // If timestamps cannot establish that both copies are equivalent, make the
+            // user choose. Never treat an invalid timestamp as permission to overwrite.
+            if (!hasLocalTime || !hasCloudTime) return true;
+            return local.ToUniversalTime() != cloud.ToUniversalTime();
         }
 
         public bool ResolveCloudConflict(bool useCloudSave)

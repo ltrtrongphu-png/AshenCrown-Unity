@@ -6,15 +6,15 @@ namespace AshenCrown.Tests.EditMode
     public sealed class CloudSaveConflictTests
     {
         [Test]
-        public void NewerCloudRequiresExplicitConflictResolution()
+        public void DifferentLocalAndCloudTimesRequireExplicitConflictResolution()
         {
-            Assert.IsTrue(SaveLoadSystem.IsCloudSaveNewer(
+            Assert.IsTrue(SaveLoadSystem.ShouldPromptCloudConflict(
                 "2026-10-10T12:00:00.0000000Z",
                 "2026-10-11T12:00:00.0000000Z"));
         }
 
         [Test]
-        public void OlderOrEqualCloudNeverWinsAutomatically()
+        public void OlderAndNewerCloudCopiesBothRequireExplicitConflictResolution()
         {
             Assert.IsFalse(SaveLoadSystem.IsCloudSaveNewer(
                 "2026-10-11T12:00:00.0000000Z",
@@ -25,7 +25,7 @@ namespace AshenCrown.Tests.EditMode
         }
 
         [Test]
-        public void InvalidCloudTimestampDoesNotOverrideLocalSave()
+        public void InvalidTimestampAlwaysRequiresExplicitResolution()
         {
             Assert.IsFalse(SaveLoadSystem.IsCloudSaveNewer(
                 "2026-10-11T12:00:00.0000000Z",

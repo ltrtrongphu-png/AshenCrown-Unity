@@ -96,11 +96,10 @@ export function cloudSaveDecision(local, remote, remoteUpdatedAt = '') {
   if (!localValid) return { action: 'use-cloud', localStamp: 0, remoteStamp: Number(remote.savedAt) || Date.parse(remoteUpdatedAt) || 0 };
   const localStamp = Number(local.savedAt) || 0;
   const remoteStamp = Number(remote.savedAt) || Date.parse(remoteUpdatedAt) || 0;
-  return {
-    action: remoteStamp > localStamp ? 'ask' : 'keep-local',
-    localStamp,
-    remoteStamp
-  };
+  let action = 'keep-local';
+  if (remoteStamp > localStamp) action = 'ask-cloud';
+  else if (localStamp > remoteStamp) action = 'ask-local';
+  return { action, localStamp, remoteStamp };
 }
 
 

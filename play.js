@@ -3032,9 +3032,12 @@ async function syncCloudSaveFromAccount() {
       return;
     }
 
-    if (decision.action === 'ask') {
+    if (decision.action === 'ask-cloud' || decision.action === 'ask-local') {
+      const conflictMessage = decision.action === 'ask-cloud'
+        ? 'Your account has a newer Ashen Crown save.'
+        : 'Your local Ashen Crown save is newer than the cloud copy.';
       const useCloud = window.confirm(
-        'Your account has a newer Ashen Crown save.\n\n' +
+        conflictMessage + '\n\n' +
         'OK: use the cloud save (your current local save will be backed up on this device).\n' +
         'Cancel: keep this local save and sync it to your account.'
       );

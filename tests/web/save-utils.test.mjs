@@ -92,8 +92,8 @@ test('cloud save conflict never silently selects a newer cloud save over local p
   const newerCloud = { saveVersion: 5, level: 8, savedAt: 300 };
   const olderCloud = { saveVersion: 5, level: 8, savedAt: 100 };
 
-  assert.equal(cloudSaveDecision(local, newerCloud).action, 'ask');
-  assert.equal(cloudSaveDecision(local, olderCloud).action, 'keep-local');
+  assert.equal(cloudSaveDecision(local, newerCloud).action, 'ask-cloud');
+  assert.equal(cloudSaveDecision(local, olderCloud).action, 'ask-local');
   assert.equal(cloudSaveDecision(null, newerCloud).action, 'use-cloud');
   assert.equal(cloudSaveDecision(local, { level: 'invalid' }).action, 'invalid-cloud');
 });
