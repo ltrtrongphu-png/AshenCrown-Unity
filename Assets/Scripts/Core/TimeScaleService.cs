@@ -5,9 +5,9 @@ using UnityEngine;
 namespace AshenCrown.Core
 {
     /// <summary>
-    /// Single owner of global time scaling. Temporary effects compose by choosing the
-    /// slowest active scale; an explicit pause always wins over hit-stop or slow motion.
-    /// Durations use unscaled realtime so requests expire while the simulation is slowed.
+    /// Single owner of global time scaling. Active temporary effects compose by choosing
+    /// the slowest scale; an explicit pause always wins. Expiry uses unscaled realtime.
+    /// The steady-state driver path reuses its removal buffer and allocates no per-frame lists.
     /// </summary>
     public static class TimeScaleService
     {
@@ -17,21 +17,33 @@ namespace AshenCrown.Core
             public object Owner;
             public float Scale;
             public float ExpiresAt;
-            public int Priority;
         }
 
         static readonly Dictionary<int, ScaleRequest> Requests = new Dictionary<int, ScaleRequest>();
+        static readonly List<int> PendingRemoval = new List<int>();
         static int nextId = 1;
         static bool paused;
-        static Driver driver;
+        static TimeScaleServiceDriver driver;
 
-        public static float Effective => paused ? 0f : CalculateEffectiveScale(GetActiveScales(), false);
+        public static float Effective
+        {
+            get
+            {
+                if (paused) return 0f;
+                float effective = 1f;
+                foreach (var request in Requests.Values)
+                    effective = Mathf.Min(effective, request.Scale);
+                return effective;
+            }
+        }
+
         public static bool IsPaused => paused;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
             Requests.Clear();
+            PendingRemoval.Clear();
             nextId = 1;
             paused = false;
             driver = null;
@@ -44,10 +56,8 @@ namespace AshenCrown.Core
             if (owner == null) throw new ArgumentNullException(nameof(owner));
             EnsureDriver();
 
-            if (float.IsNaN(scale) || float.IsInfinity(scale))
-                scale = 1f;
-            if (float.IsNaN(durationRealtime) || float.IsInfinity(durationRealtime))
-                durationRealtime = 0.01f;
+            if (!IsFinite(scale)) scale = 1f;
+            if (!IsFinite(durationRealtime)) durationRealtime = 0.01f;
 
             int id = nextId++;
             if (nextId <= 0) nextId = 1;
@@ -62,8 +72,7 @@ namespace AshenCrown.Core
                 Id = id,
                 Owner = owner,
                 Scale = Mathf.Clamp(scale, 0f, 1f),
-                ExpiresAt = Time.unscaledTime + Mathf.Max(0.01f, durationRealtime),
-                Priority = priority
+                ExpiresAt = Time.unscaledTime + Mathf.Max(0.01f, durationRealtime)
             };
             ApplyEffectiveScale();
             return id;
@@ -78,22 +87,23 @@ namespace AshenCrown.Core
         public static void ReleaseAll(object owner)
         {
             if (owner == null) return;
-            bool changed = false;
-            var expired = new List<int>();
+            PendingRemoval.Clear();
             foreach (var pair in Requests)
             {
                 if (ReferenceEquals(pair.Value.Owner, owner))
-                    expired.Add(pair.Key);
+                    PendingRemoval.Add(pair.Key);
             }
-            for (int i = 0; i < expired.Count; i++)
-                changed |= Requests.Remove(expired[i]);
-            if (changed) ApplyEffectiveScale();
+            for (int i = 0; i < PendingRemoval.Count; i++)
+                Requests.Remove(PendingRemoval[i]);
+            if (PendingRemoval.Count > 0)
+                ApplyEffectiveScale();
+            PendingRemoval.Clear();
         }
 
         public static void SetPaused(bool value)
         {
             if (paused == value) return;
-            EnsureDriver();
+            if (value) EnsureDriver();
             paused = value;
             ApplyEffectiveScale();
         }
@@ -106,39 +116,54 @@ namespace AshenCrown.Core
             if (scales == null) return effective;
             foreach (float value in scales)
             {
-                if (float.IsNaN(value) || float.IsInfinity(value)) continue;
+                if (!IsFinite(value)) continue;
                 effective = Mathf.Min(effective, Mathf.Clamp(value, 0f, 1f));
             }
             return effective;
         }
 
-        static List<float> GetActiveScales()
+        internal static void RegisterDriver(TimeScaleServiceDriver instance)
         {
-            var scales = new List<float>(Requests.Count);
-            foreach (var request in Requests.Values)
-                scales.Add(request.Scale);
-            return scales;
+            if (instance == null) return;
+            if (driver == null) driver = instance;
+            ApplyEffectiveScale();
         }
 
-        static void Tick(float now)
+        internal static void TickDriver(TimeScaleServiceDriver instance, float now)
         {
-            bool changed = false;
-            var expired = new List<int>();
+            if (instance == null || driver != instance) return;
+
+            PendingRemoval.Clear();
             foreach (var pair in Requests)
             {
                 if (now >= pair.Value.ExpiresAt || IsDestroyedUnityOwner(pair.Value.Owner))
-                    expired.Add(pair.Key);
+                    PendingRemoval.Add(pair.Key);
             }
-            for (int i = 0; i < expired.Count; i++)
-                changed |= Requests.Remove(expired[i]);
-            if (changed || driver != null)
-                ApplyEffectiveScale();
+            for (int i = 0; i < PendingRemoval.Count; i++)
+                Requests.Remove(PendingRemoval[i]);
+            PendingRemoval.Clear();
+
+            ApplyEffectiveScale();
+        }
+
+        internal static void UnregisterDriver(TimeScaleServiceDriver instance)
+        {
+            if (driver != instance) return;
+            driver = null;
+            if (!Application.isPlaying) return;
+            Requests.Clear();
+            PendingRemoval.Clear();
+            paused = false;
+            if (!Mathf.Approximately(Time.timeScale, 1f))
+                Time.timeScale = 1f;
         }
 
         static bool IsDestroyedUnityOwner(object owner)
         {
             return owner is UnityEngine.Object unityObject && unityObject == null;
         }
+
+        static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         static void ApplyEffectiveScale()
         {
@@ -150,25 +175,14 @@ namespace AshenCrown.Core
         static void EnsureDriver()
         {
             if (driver != null) return;
+
+            // Also reuse an existing driver when Enter Play Mode has domain reload disabled.
+            driver = UnityEngine.Object.FindObjectOfType<TimeScaleServiceDriver>();
+            if (driver != null) return;
+
             var root = new GameObject("AshenCrown_TimeScaleService");
             UnityEngine.Object.DontDestroyOnLoad(root);
-            driver = root.AddComponent<Driver>();
-        }
-
-        sealed class Driver : MonoBehaviour
-        {
-            void Awake() { driver = this; }
-            void Update() { Tick(Time.unscaledTime); }
-            void OnDestroy()
-            {
-                if (driver == this) driver = null;
-                if (!Application.isPlaying)
-                    return;
-                Requests.Clear();
-                paused = false;
-                if (!Mathf.Approximately(Time.timeScale, 1f))
-                    Time.timeScale = 1f;
-            }
+            driver = root.AddComponent<TimeScaleServiceDriver>();
         }
     }
 }

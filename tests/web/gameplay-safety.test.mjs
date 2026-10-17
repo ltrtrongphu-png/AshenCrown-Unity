@@ -40,7 +40,7 @@ test('TimeScaleService is the only C# owner that writes Time.timeScale', () => {
         visit(fullPath, relativePath);
       } else if (entry.isFile() && entry.name.endsWith('.cs') && entry.name !== 'TimeScaleService.cs') {
         const source = readFileSync(fullPath, 'utf8');
-        if (/Time\\.timeScale\\s*=/.test(source)) offenders.push(relativePath);
+        if (/Time\.timeScale\s*=/.test(source)) offenders.push(relativePath);
       }
     }
   };
