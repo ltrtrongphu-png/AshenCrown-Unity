@@ -33,20 +33,35 @@ JOINT_INDEX = {name: i for i, name in enumerate(JOINT_NAMES)}
 
 def make_textures() -> list[Path]:
     TEXTURE_ROOT.mkdir(parents=True, exist_ok=True)
-    rng = np.random.default_rng(28051)
+    rng = np.random.default_rng(17102026)
     size = 1024
     y, x = np.mgrid[0:size, 0:size].astype(np.float32)
     noise = rng.normal(0, 1, (size, size)).astype(np.float32)
     coarse = Image.fromarray(np.uint8(rng.integers(0, 256, (128, 128)))).resize((size, size), Image.Resampling.BICUBIC)
     coarse_np = np.asarray(coarse, dtype=np.float32) / 255.0 - 0.5
-    grain = noise * 2.7 + coarse_np * 22 + 4 * np.sin(x * 0.04 + np.sin(y * 0.012))
+    grain = (
+        noise * 3.15
+        + coarse_np * 18.5
+        + 4.2 * np.sin(x * 0.04 + np.sin(y * 0.012))
+        + 1.65 * np.sin(x * 0.31 + np.sin(y * 0.023))
+        + 1.1 * np.sin(y * 0.73 + x * 0.047)
+    )
     scratches = np.zeros((size, size), dtype=np.float32)
-    for _ in range(260):
+    # Fine directional abrasion gives steel and leather a readable surface.
+    for _ in range(540):
         sx = int(rng.integers(0, size)); sy = int(rng.integers(0, size))
-        length = int(rng.integers(5, 48)); width = int(rng.integers(1, 3))
+        length = int(rng.integers(7, 68)); width = int(rng.integers(1, 3))
         ex = min(size - 1, sx + length)
-        scratches[sy:min(size, sy + width), sx:ex] -= float(rng.uniform(12, 48))
-    height = np.clip(176 + grain + scratches, 0, 255).astype(np.uint8)
+        scratches[sy:min(size, sy + width), sx:ex] -= float(rng.uniform(12, 54))
+    pits = Image.new("L", (size, size), 0)
+    pit_draw = ImageDraw.Draw(pits)
+    for _ in range(620):
+        px = int(rng.integers(0, size)); py = int(rng.integers(0, size))
+        radius = int(rng.integers(1, 3))
+        value = int(rng.integers(65, 210))
+        pit_draw.ellipse((px-radius, py-radius, px+radius, py+radius), fill=value)
+    pit_np = np.asarray(pits, dtype=np.float32) / 255.0
+    height = np.clip(170 + grain + scratches - pit_np * 19, 0, 255).astype(np.uint8)
     h = height.astype(np.float32) / 255.0
     dx = np.gradient(h, axis=1) * 7.0
     dy = np.gradient(h, axis=0) * 7.0
@@ -55,14 +70,14 @@ def make_textures() -> list[Path]:
     normal_png = np.uint8(np.clip((normals * 0.5 + 0.5) * 255, 0, 255))
     base = np.stack((height, height, height), axis=2)
     mr = np.zeros((size, size, 3), dtype=np.uint8)
-    mr[:, :, 0] = np.uint8(np.clip(218 + grain * 0.25, 0, 255))  # ambient occlusion
-    mr[:, :, 1] = np.uint8(np.clip(164 + grain * 0.45, 0, 255))  # roughness
-    mr[:, :, 2] = np.uint8(np.clip(205 + grain * 0.30, 0, 255))  # metallic
+    mr[:, :, 0] = np.uint8(np.clip(220 + grain * 0.24 - pit_np * 42, 0, 255))  # ambient occlusion
+    mr[:, :, 1] = np.uint8(np.clip(158 + grain * 0.52 + np.abs(scratches) * 0.22 + pit_np * 26, 0, 255))  # roughness
+    mr[:, :, 2] = np.uint8(np.clip(208 + grain * 0.28 - pit_np * 12, 0, 255))  # metallic
     emissive = np.zeros((size, size, 3), dtype=np.uint8)
     # Fine, branching ember fissures used by the emissive glass material.
     crack = Image.new("L", (size, size), 0)
     draw = ImageDraw.Draw(crack)
-    for _ in range(70):
+    for _ in range(96):
         px = int(rng.integers(0, size)); py = int(rng.integers(0, size))
         points = [(px, py)]
         for _step in range(int(rng.integers(4, 12))):
@@ -99,7 +114,7 @@ class Character:
         j = JOINT_INDEX[joint]
         self.parts[MAT_INDEX[material]].append((positions, normals, uv, indices, [j] * len(positions)))
 
-    def ellipsoid(self, material: str, joint: str, center, radii, seg=20, rings=12):
+    def ellipsoid(self, material: str, joint: str, center, radii, seg=24, rings=14):
         cx, cy, cz = (v * self.scale for v in center)
         rx, ry, rz = (v * self.scale for v in radii)
         p, n, uv, ix = [], [], [], []
@@ -119,7 +134,7 @@ class Character:
                 ix.extend((a, b, a + 1, b, b + 1, a + 1))
         self.add(material, joint, p, n, uv, ix)
 
-    def torso_profile(self, material: str, joint: str, profile, segments=20):
+    def torso_profile(self, material: str, joint: str, profile, segments=24):
         """Build a tapered, faceted ribcage/waist shell from elliptical cross-sections."""
         p=[]; n=[]; uv=[]; ix=[]
         profile=[(y*self.scale,rx*self.scale,rz*self.scale) for y,rx,rz in profile]
@@ -146,7 +161,7 @@ class Character:
             ix.extend((start,start+1,start+2,start,start+2,start+3))
         self.add(material,joint,p,n,uv,ix)
 
-    def torus(self, material: str, joint: str, center, radius, tube, axis="y", seg=24, sides=8):
+    def torus(self, material: str, joint: str, center, radius, tube, axis="y", seg=28, sides=10):
         cx,cy,cz=(v*self.scale for v in center); radius*=self.scale; tube*=self.scale
         p=[]; n=[]; uv=[]; ix=[]
         for i in range(seg+1):
@@ -198,16 +213,24 @@ class Character:
         self.add(material,joint,p,n,uv,ix)
 
     def cape(self):
-        cols, rows = 8, 10; p=[]; n=[]; uv=[]; ix=[]
-        width=0.40*(1.22 if self.boss else 1.0)
-        length=1.24 if self.boss else 0.88
+        # Fold detail is geometry-based; the player and boss both use the mantle.
+        cols, rows = 12, 16; p=[]; n=[]; uv=[]; ix=[]
+        width=0.43*(1.12 if self.boss else 1.0)
+        length=1.24 if self.boss else 0.92
         for r in range(rows+1):
-            v=r/rows; y=(1.72-v*length)*self.scale
-            w=width*(0.72+0.28*v)
+            v=r/rows; y=(1.73-v*length)*self.scale
+            w=width*(0.70+0.30*v)
             for c in range(cols+1):
-                u=c/cols; x=(u*2-1)*w
-                z=(-0.28-0.08*math.sin(v*math.pi)+0.025*abs(u-.5))*self.scale
-                p.append([x,y,z]); n.append([0,0,1]); uv.append([u,v])
+                u=c/cols
+                x=(u*2-1)*w
+                phase=u*math.tau*3+v*math.pi*1.4
+                fold=0.026*math.sin(phase)*math.sin(v*math.pi)
+                z=(-0.28-0.08*math.sin(v*math.pi)+0.025*abs(u-.5)+fold)*self.scale
+                dz_du=0.026*math.tau*3*math.cos(phase)*math.sin(v*math.pi)
+                dz_dv=-0.08*math.pi*math.cos(v*math.pi)+0.026*math.pi*1.4*math.cos(phase)*math.sin(v*math.pi)+0.026*math.pi*math.sin(phase)*math.cos(v*math.pi)
+                nx=-dz_du/max(2*w,1e-5); ny=dz_dv/max(length,1e-5); nz=1.0
+                nl=math.sqrt(nx*nx+ny*ny+nz*nz); n.append([nx/nl,ny/nl,nz/nl])
+                p.append([x,y,z]); uv.append([u,v])
         for r in range(rows):
             for c in range(cols):
                 a=r*(cols+1)+c; b=a+cols+1; ix.extend((a,b,a+1,a+1,b,b+1))
@@ -232,6 +255,16 @@ class Character:
         self.ellipsoid("ObsidianSteel","Head",(0,1.87,.14),(.13,.095,.08),16,10)
         self.torus("AntiqueBrass","Hips",(0,1.10,0),.27,.025)
         self.torus("AntiqueBrass","Neck",(0,1.80,0),.13,.018)
+        self.torus("ObsidianSteel","Neck",(0,1.79,0),.145,.024)
+        self.torus("AntiqueBrass","Neck",(0,1.805,0),.138,.009)
+        self.plate("AntiqueBrass","Hips",[(-.075,1.145),(.075,1.145),(.09,1.075),(0,1.045),(-.09,1.075)],.245,.025)
+        self.ellipsoid("Emberglass","Hips",(0,1.095,.267),(.028,.034,.014),14,10)
+        for side in (-1,1):
+            self.ellipsoid("AntiqueBrass","Chest",(side*.205,1.60,.292),(.014,.014,.012),10,8)
+            self.ellipsoid("AntiqueBrass","Chest",(side*.225,1.48,.287),(.012,.012,.010),10,8)
+            self.plate("AntiqueBrass","Chest",
+                [(side*.035,1.70),(side*.055,1.64),(side*.11,1.55),(side*.12,1.49),(side*.095,1.47)],
+                .292,.008)
         for center_x,width in ((-.18,.19),(0,.21),(.18,.19)):
             self.plate("AshenCloth","Hips",[(center_x-width/2,1.02),(center_x+width/2,1.02),(center_x+width*.40,.80),(center_x,.68),(center_x-width*.40,.80)],.255,.05)
             self.plate("AntiqueBrass","Hips",[(center_x-.012,.96),(center_x+.012,.96),(center_x+.008,.77),(center_x,.72),(center_x-.008,.77)],.286,.012)
@@ -247,6 +280,29 @@ class Character:
             self.torus("AntiqueBrass",lower,(side*.70,1.01,0),.13,.018,axis="x")
             self.ellipsoid("ObsidianSteel",hand,(side*.79,.99,.015),(.13,.14,.13),16,10)
             self.ellipsoid("AshenCloth",upper,(side*.50,1.48,-.01),(.11,.24,.12),16,10)
+        # Layered shoulder plates, thin brass trim and visible rivet heads.
+        for side, label in [(-1,"Left"),(1,"Right")]:
+            shoulder_joint=label+"Shoulder"
+            outer=[(side*.20,1.82),(side*.29,1.94),(side*.46,1.91),
+                   (side*.56,1.78),(side*.43,1.64),(side*.27,1.66)]
+            self.plate("ObsidianSteel",shoulder_joint,outer,.215,.045)
+            band=[(side*.28,1.88),(side*.34,1.91),(side*.47,1.85),(side*.44,1.81)]
+            self.plate("AntiqueBrass",shoulder_joint,band,.247,.012)
+            self.ellipsoid("AntiqueBrass",shoulder_joint,(side*.39,1.77,.266),(.018,.018,.012),10,8)
+            lower=label+"LowerArm"
+            cuff=[(side*.57,1.34),(side*.79,1.34),(side*.81,1.22),(side*.75,1.13),(side*.61,1.17)]
+            self.plate("ObsidianSteel",lower,cuff,.16,.035)
+            for y_mark in (1.29,1.22):
+                self.ellipsoid("AntiqueBrass",lower,(side*.70,y_mark,.187),(.014,.014,.011),10,8)
+
+        for side in (-1,1):
+            upper_leg="LeftUpperLeg" if side < 0 else "RightUpperLeg"
+            lower_leg="LeftLowerLeg" if side < 0 else "RightLowerLeg"
+            self.ellipsoid("AntiqueBrass",upper_leg,(side*.16,.88,.185),(.018,.018,.012),10,8)
+            self.ellipsoid("AntiqueBrass",lower_leg,(side*.16,.53,.164),(.018,.018,.012),10,8)
+            self.plate("ObsidianSteel",lower_leg,
+                [(side*.07,.66),(side*.25,.66),(side*.27,.45),(side*.16,.39),(side*.05,.45)],.145,.035)
+
         # Skirt panels and legs.
         for side, label in [(-1,"Left"),(1,"Right")]:
             upper=label+"UpperLeg"; lower=label+"LowerLeg"; foot=label+"Foot"; x=side*.16
@@ -271,8 +327,7 @@ class Character:
         self.box("AntiqueBrass","Head",(0,2.13,.255),(.075,.04,.025))
         for side in (-1,1):
             self.cone("Emberglass","Chest",(side*.10,1.75,.19),.25,.035,7)
-        if self.boss:
-            self.cape()
+        self.cape()
         # A long, beveled greatsword rides on the right hand and follows its rig.
         self.box("AshenCloth","RightHand",(.91,1.17,.045),(.055,.22,.055))
         self.box("AntiqueBrass","RightHand",(.91,1.045,.045),(.24,.055,.10))
@@ -340,7 +395,7 @@ def pack_glb(character: Character, texture_paths: list[Path], target: Path):
     texture_rows=[{"sampler":0,"source":i} for i in range(len(images))]
     pbr_base={"index":0}; pbr_normal={"index":1}; pbr_mr={"index":2}; pbr_em={"index":3}
     materials=[]
-    factors=[([.58,.64,.72,1],.82,.34,[0,0,0]),([.48,.075,.09,1],.03,.82,[0,0,0]),([.80,.58,.25,1],.70,.31,[0,0,0]),([1,.34,.045,1],.32,.24,[1.0,.20,.025]),([1,.36,.04,1],.08,.28,[2.0,.34,.025])]
+    factors=[([.31,.35,.42,1],.88,.30,[0,0,0]),([.16,.045,.055,1],.025,.88,[0,0,0]),([.66,.43,.19,1],.76,.36,[0,0,0]),([.78,.22,.035,1],.16,.22,[.85,.12,.015]),([1,.25,.018,1],.045,.16,[2.0,.30,.015])]
     for i,(color,metal,rough,emissive) in enumerate(factors):
         mat={"name":MATERIALS[i],"pbrMetallicRoughness":{"baseColorFactor":color,"baseColorTexture":pbr_base,
                 "metallicFactor":metal,"roughnessFactor":rough,"metallicRoughnessTexture":pbr_mr},
