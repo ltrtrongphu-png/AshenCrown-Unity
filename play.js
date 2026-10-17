@@ -1,4 +1,4 @@
-import { escapeHtml, sanitizeItemRecord } from './save-utils.js';
+import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison } from './save-utils.js';
 // Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
 // prevent the entire game from starting.
 async function loadThreeEngine() {
@@ -2799,7 +2799,71 @@ function loadState(){
 }
 function nodeKey(n){return n.type+':'+n.x+':'+n.z}
 function restoreCollectedNodes(){const collected=new Set(Array.isArray(state.collectedNodes)?state.collectedNodes:[]);for(const n of nodes){n.collected=collected.has(nodeKey(n));n.root.visible=!n.collected}}
-function saveState(){try{state.saveVersion=5;state.mapVersion=1;state.inventory=state.inventory.slice(-500);state.level=Math.min(Math.max(1,Math.floor(Number(state.level)||1)),chapterLevelCap());state.xp=state.level>=chapterLevelCap()?0:THREE.MathUtils.clamp(Math.floor(Number(state.xp)||0),0,xpNeededForLevel(state.level)-1);state.currentMap=activeMapId;state.playerPosition={x:player.position.x,z:player.position.z};state.savedAt=Date.now();const serialized=JSON.stringify(state);localStorage.setItem('ashen-crown-3d',serialized);window.AshenAuth?.queueSave?.(state);const status=$('saveStatus');if(status){status.textContent='SAVED LOCALLY';status.dataset.state='saved'}}catch{const status=$('saveStatus');if(status){status.textContent='SAVE UNAVAILABLE';status.dataset.state='error'}if(!saveWarningShown){saveWarningShown=true;toastMsg('Unable to save: browser storage is unavailable.')}}}
+let lastSavedComparable = null;
+let idleSavePending = false;
+
+function saveState(force = false) {
+  try {
+    state.saveVersion = 5;
+    state.mapVersion = 1;
+    state.inventory = state.inventory.slice(-500);
+    state.level = Math.min(Math.max(1, Math.floor(Number(state.level) || 1)), chapterLevelCap());
+    state.xp = state.level >= chapterLevelCap()
+      ? 0
+      : THREE.MathUtils.clamp(Math.floor(Number(state.xp) || 0), 0, xpNeededForLevel(state.level) - 1);
+    state.currentMap = activeMapId;
+    state.playerPosition = { x: player.position.x, z: player.position.z };
+
+    const comparable = serializeSaveForComparison(state);
+    if (!force && comparable === lastSavedComparable) {
+      const status = $('saveStatus');
+      if (status) {
+        status.textContent = 'SAVED LOCALLY';
+        status.dataset.state = 'saved';
+      }
+      return false;
+    }
+
+    state.savedAt = Date.now();
+    const serialized = JSON.stringify(state);
+    localStorage.setItem('ashen-crown-3d', serialized);
+    lastSavedComparable = serializeSaveForComparison(state);
+    window.AshenAuth?.queueSave?.(state);
+
+    const status = $('saveStatus');
+    if (status) {
+      status.textContent = 'SAVED LOCALLY';
+      status.dataset.state = 'saved';
+    }
+    return true;
+  } catch (error) {
+    const status = $('saveStatus');
+    if (status) {
+      status.textContent = 'SAVE UNAVAILABLE';
+      status.dataset.state = 'error';
+    }
+    if (!saveWarningShown) {
+      saveWarningShown = true;
+      toastMsg('Unable to save: browser storage is unavailable.');
+    }
+    console.warn('[Ashen Crown] Local save failed:', error?.message || error);
+    return false;
+  }
+}
+
+function scheduleIdleSave() {
+  if (idleSavePending) return;
+  idleSavePending = true;
+  const run = () => {
+    idleSavePending = false;
+    saveState();
+  };
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(run, { timeout: 3000 });
+  } else {
+    window.setTimeout(run, 500);
+  }
+}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveState,180)}
 function refreshEquipment(){
   document.querySelectorAll('.equip-slot').forEach(button=>{const equipped=state.equipment[button.dataset.slot],label=equipped?equipped.name:'Empty';button.innerHTML=escapeHtml(button.dataset.slot.toUpperCase())+'<span>'+escapeHtml(label)+'</span>';button.title=equipped?'Click to unequip '+equipped.name:'Open inventory to choose equipment'})
@@ -2919,7 +2983,7 @@ setInterval(()=>{
   if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!(state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated))spawnEnemy();
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
-setInterval(()=>{if(!document.hidden)saveState()},15000);
+setInterval(()=>{if(!document.hidden)scheduleIdleSave()},15000);
 window.addEventListener('pagehide',saveState);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState()});
 let last=performance.now(),gameRenderReady=false;

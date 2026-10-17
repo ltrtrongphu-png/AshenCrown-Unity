@@ -65,3 +65,15 @@ export function sanitizeItemRecord(raw) {
 
   return item;
 }
+
+
+/**
+ * Stable save comparison which ignores only the write timestamp. This allows periodic
+ * checkpoint calls to be cheap when gameplay state has not changed.
+ */
+export function serializeSaveForComparison(save) {
+  if (!save || typeof save !== 'object' || Array.isArray(save)) return '';
+  const snapshot = { ...save };
+  delete snapshot.savedAt;
+  return JSON.stringify(snapshot);
+}

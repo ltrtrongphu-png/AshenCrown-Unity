@@ -72,3 +72,15 @@ test('sanitizeItemRecord rejects unsafe ids and ignores non-string attributes', 
   assert.deepEqual(item.attrs, ['safe', 'linefeed']);
   assert.equal('price' in item, false);
 });
+
+
+test('save comparison ignores write timestamps but detects gameplay changes', async () => {
+  const { serializeSaveForComparison } = await import('../../save-utils.js');
+  const first = { saveVersion: 5, level: 3, coins: 20, savedAt: 100 };
+  const sameState = { saveVersion: 5, level: 3, coins: 20, savedAt: 200 };
+  const changedState = { saveVersion: 5, level: 3, coins: 21, savedAt: 200 };
+
+  assert.equal(serializeSaveForComparison(first), serializeSaveForComparison(sameState));
+  assert.notEqual(serializeSaveForComparison(first), serializeSaveForComparison(changedState));
+  assert.equal(serializeSaveForComparison(null), '');
+});
