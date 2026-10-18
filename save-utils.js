@@ -206,8 +206,8 @@ export async function decryptSavePayload(envelope, key, cryptoApi = globalThis.c
   return value;
 }
 
-function removeLocalSaveAndBackups(storage, keyName) {
-  const remove = new Set([keyName]);
+function removeLocalSaveBackups(storage, keyName) {
+  const remove = new Set();
   const backupPrefix = keyName + '.backup.';
   for (let index = 0; index < storage.length; index++) {
     const key = storage.key(index);
@@ -215,7 +215,14 @@ function removeLocalSaveAndBackups(storage, keyName) {
       remove.add(key);
     }
   }
+  // Collect keys before deleting so an index shift cannot skip a backup.
   for (const key of remove) storage.removeItem(key);
+  return remove.size;
+}
+
+function removeLocalSaveAndBackups(storage, keyName) {
+  storage.removeItem(keyName);
+  removeLocalSaveBackups(storage, keyName);
 }
 
 /**
@@ -227,22 +234,25 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
   if (!storage || typeof storage.getItem !== 'function' || typeof storage.removeItem !== 'function') {
     throw new TypeError('A readable and writable local storage object is required.');
   }
+  // Backups are from the previous plaintext implementation. Remove them on
+  // every boot, even if the primary record is missing or already encrypted.
+  const removedBackups = removeLocalSaveBackups(storage, keyName);
   const raw = storage.getItem(keyName);
   if (raw === null || raw === undefined || raw === '') {
-    return { value: null, wipedLegacy: false, corrupt: false };
+    return { value: null, wipedLegacy: false, corrupt: false, removedBackups };
   }
   if (!isEncryptedSaveEnvelope(raw)) {
-    removeLocalSaveAndBackups(storage, keyName);
-    return { value: null, wipedLegacy: true, corrupt: false, reason: 'plaintext' };
+    storage.removeItem(keyName);
+    return { value: null, wipedLegacy: true, corrupt: false, reason: 'plaintext', removedBackups };
   }
   try {
     if (typeof getKey !== 'function') throw new Error('The local save key provider is unavailable.');
     const key = await getKey();
     const value = await decryptSavePayload(raw, key, cryptoApi);
-    return { value, wipedLegacy: false, corrupt: false };
+    return { value, wipedLegacy: false, corrupt: false, removedBackups };
   } catch (error) {
     removeLocalSaveAndBackups(storage, keyName);
-    return { value: null, wipedLegacy: true, corrupt: true, reason: 'corrupt', error };
+    return { value: null, wipedLegacy: true, corrupt: true, reason: 'corrupt', error, removedBackups };
   }
 }
 
