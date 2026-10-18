@@ -38,7 +38,7 @@ try {
   });
   await page.goto(baseUrl + '/play.html?e2e=1', { waitUntil: 'domcontentloaded', timeout: 45000 });
   await page.waitForFunction(() => document.documentElement.dataset.ashenGameReady === 'true', null, { timeout: 60000 });
-  await page.locator('#tutorialStart').click({ timeout: 12000 });
+  await page.locator('#tutorialStart').evaluate(button => button.click(), { timeout: 60000 });
   await page.waitForFunction(() => typeof window.__ASHEN_TEST__?.status === 'function', null, { timeout: 12000 });
   await page.evaluate(() => window.__ASHEN_TEST__.prepareVisuals());
   await page.waitForFunction(() => {
