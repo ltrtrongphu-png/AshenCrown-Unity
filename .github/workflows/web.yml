@@ -41,6 +41,7 @@ jobs:
           test -s dist/assets/ashen-crown-logo.svg
           test -s dist/vendor/three.module.js
           test -s dist/vendor/three.core.js
+          test -s dist/Assets/Models/NPC/AshenNPCRoster.glb
           test -s dist/resource-pack.json
       - name: Check patch whitespace
         run: git diff --check origin/main...HEAD
