@@ -7,6 +7,7 @@ const APP_FILES = [
   './styles.css?v=__ASHEN_BUILD_ID__',
   './play.css?v=__ASHEN_BUILD_ID__',
   './campaign.js?v=__ASHEN_BUILD_ID__',
+  './story-progression.js',
   './play.js?v=__ASHEN_BUILD_ID__',
   './save-utils.js',
   './vendor/three.module.js',

@@ -1,4 +1,5 @@
 import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision, backupLocalSave } from './save-utils.js';
+import { getChapterRequirements, chapterRecordKey, hasChapterRecord, isChapterWardenReady, canAdvanceChapter } from './story-progression.js';
 // Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
 // prevent the entire game from starting.
 async function loadThreeEngine() {
@@ -1644,7 +1645,7 @@ for(let i=0;i<16;i++){
 }
 
 const nodes=[];function node(type,x,z,c,label,parent=props,mapId='sanctuary'){const g=new THREE.Group();g.position.set(x,0,z);const o=orb(.32,c,true);o.position.y=.5;g.add(o);const r=new THREE.Mesh(new THREE.TorusGeometry(.55,.035,8,24),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.5}));r.rotation.x=Math.PI/2;g.add(r);parent.add(g);nodes.push({type,x,z,label,root:g,collected:false,mapId})}
-node('ember',-10,-6,0xff7040,'Emberleaf');node('ember',-14,2,0xff7040,'Emberleaf');node('echo',48,-18,0x9b78dc,'Memory Echo');node('echo',65,-18,0x9b78dc,'Memory Echo');node('relic',3,-13,0xd7b36a,'Ancient Relic');
+node('ember',-10,-6,0xff7040,'Emberleaf');node('ember',-14,2,0xff7040,'Emberleaf');node('ember',-27,-12,0xff7040,'Emberleaf');node('ember',22,-19,0xff7040,'Emberleaf');node('ember',34,20,0xff7040,'Emberleaf');node('echo',48,-18,0x9b78dc,'Memory Echo');node('echo',65,-18,0x9b78dc,'Memory Echo');node('echo',-42,18,0x9b78dc,'Memory Echo');node('echo',-47,-25,0x9b78dc,'Memory Echo');node('echo',25,29,0x9b78dc,'Memory Echo');node('relic',3,-13,0xd7b36a,'Ancient Relic');node('record',34,-27,0xe4bd78,'Chapter Record');
 
 const MAPS={
   sanctuary:{name:'Sanctuary',hint:'The home that opens and closes every road.',chapters:[1,10],fog:0xc0aa98,ground:0x30281e,stone:0x665340,accent:0xd88b55,sky:0x4c8dca},
@@ -1692,9 +1693,9 @@ function makeExpeditionMap(id){
     const tip=new THREE.Mesh(new THREE.OctahedronGeometry(.16,0),detailMat);tip.position.set(x,1.35,z);g.add(tip);
   }
   // Compact resource loops keep chapter objectives close while optional materials sit farther out.
-  node('ember',-8,2,def.accent,'Wild Ember',g,id);node('ember',8,2,def.accent,'Wild Ember',g,id);
-  node('echo',-8,-12,0xa8a5ed,'Lost Trace',g,id);node('echo',8,-12,0xa8a5ed,'Lost Trace',g,id);
-  node('relic',0,29,0xf0cf83,'Buried Cache',g,id);
+  node('ember',-8,2,def.accent,'Wild Ember',g,id);node('ember',8,2,def.accent,'Wild Ember',g,id);node('ember',-23,18,def.accent,'Wild Ember',g,id);node('ember',23,18,def.accent,'Wild Ember',g,id);node('ember',0,-36,def.accent,'Wild Ember',g,id);
+  node('echo',-8,-12,0xa8a5ed,'Lost Trace',g,id);node('echo',8,-12,0xa8a5ed,'Lost Trace',g,id);node('echo',-23,26,0xa8a5ed,'Lost Trace',g,id);node('echo',23,26,0xa8a5ed,'Lost Trace',g,id);node('echo',0,-43,0xa8a5ed,'Lost Trace',g,id);
+  node('relic',0,29,0xf0cf83,'Buried Cache',g,id);node('record',14,29,def.accent,'Chapter Record',g,id);
   mapGroups[id]=g;return g;
 }
 for(const id of Object.keys(MAPS))if(id!=='sanctuary')makeExpeditionMap(id);
@@ -1708,7 +1709,7 @@ function setActiveMap(id,teleport=true){
   const home=activeMapId==='sanctuary';
   villagers.forEach(v=>v.root.visible=home);
   npcs.forEach((n,i)=>{const p=home?n.homePosition:[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1]);n.root.visible=true});
-  for(const n of nodes)n.root.visible=n.mapId===activeMapId&&!n.collected;
+  for(const n of nodes){if(n.type==='record')n.label=window.ASHEN_CAMPAIGN?.[state.chapter-1]?.recordName||'Chapter Record';n.root.visible=n.mapId===activeMapId&&!n.collected;}
   wildlife.forEach(w=>w.root.visible=home);
   if(teleport)player.position.set(0,0,home?7:14);
   const def=MAPS[activeMapId];scene.fog.color.setHex(def.fog);scene.fog.near=activeMapId==='sanctuary'?58:30;scene.fog.far=activeMapId==='sanctuary'?245:105;
@@ -1853,7 +1854,7 @@ let encounterHud;
 function setEncounterHud(enemy){
   if(!encounterHud){encounterHud=document.createElement('div');encounterHud.className='encounter-hud';encounterHud.innerHTML='<span>WANDERING SHADE</span><b>45 / 45</b><i><em></em></i>';document.querySelector('.stage').appendChild(encounterHud)}
   encounterHud.classList.toggle('visible',!!enemy);
-  if(enemy){encounterHud.querySelector('span').textContent=enemy.isBoss?(state.chapter===1?'THE BELL WARDEN':'CHAPTER '+String(state.chapter).padStart(2,'0')+' WARDEN · SKILL '+(enemy.attackSkill||1)):'WANDERING SHADE';encounterHud.querySelector('b').textContent=Math.ceil(enemy.hp)+' / '+enemy.maxHp;encounterHud.querySelector('em').style.width=Math.max(0,enemy.hp/enemy.maxHp*100)+'%';encounterHud.classList.toggle('warning',enemy.state==='windup')}
+  if(enemy){encounterHud.querySelector('span').textContent=enemy.isBoss?((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.wardenName||'CHAPTER WARDEN').toUpperCase()+' · SKILL '+(enemy.attackSkill||1)):'WANDERING SHADE';encounterHud.querySelector('b').textContent=Math.ceil(enemy.hp)+' / '+enemy.maxHp;encounterHud.querySelector('em').style.width=Math.max(0,enemy.hp/enemy.maxHp*100)+'%';encounterHud.classList.toggle('warning',enemy.state==='windup')}
 }
 let enemies=[];
 let worldSimAccumulator=0;
@@ -1886,7 +1887,7 @@ function attachProductionBoss(enemy){
 function spawnEnemy(){
   if(enemies.length)return;
   if(activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
-  const isBoss=state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated;
+  const isBoss=isChapterWardenReady(state);
   const angle=Math.random()*Math.PI*2;
   const radius=isBoss?10+Math.random()*3:12+Math.random()*15;
   const mapBound=activeMapId==='sanctuary'?92:50;
@@ -1936,7 +1937,7 @@ function spawnEnemy(){
     else void ensureProductionBossLoaded().then(()=>{if(encounter?.isBoss)attachProductionBoss(encounter)}).catch(error=>console.warn('[Ashen Crown] Boss model stays on fallback:',error));
   }
   setEncounterHud(encounter);
-  toastMsg(isBoss?'The bell answers. The Warden has found you.':'A wandering shade has entered the wilds.');
+  toastMsg(isBoss?((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.wardenName||'The Chapter Warden')+' has answered the evidence.'): 'A wandering shade has entered the wilds.');
 }
 function dodge(){
   if(anyOverlayOpen()||dodgeCooldown>0||state.stamina<18)return;
@@ -2011,12 +2012,12 @@ function disposeEncounterVisuals(enemy) {
 
 function finishEncounter(){
   const defeated=encounter;if(!defeated)return;
-  const bellWaiting=!defeated.isBoss&&state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated;
+  const bellWaiting=!defeated.isBoss&&isChapterWardenReady(state);
   disposeEncounterVisuals(defeated);defeated.root.removeFromParent();enemies=[];recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);
   if(defeated.isBoss){
     const ch=window.ASHEN_CAMPAIGN[state.chapter-1]||window.ASHEN_CAMPAIGN[0];state.flags.bellWardenDefeated=true;state.quest=4;
-    if(state.chapter===1){item('Eda Vey’s Name','Quest Relic','Legendary',['Memory','Identity'],{focus:2});state.log.unshift('The Bell Warden was Eda Vey, the keeper who refused to let the Crown erase her village.');toastMsg('The Bell Warden falls — Eda Vey is remembered.')}
-    else{item(ch.items[ch.items.length-1]||ch.title,'Chapter Relic','Legendary',['Chapter '+state.chapter,'Boss Drop'],{focus:2});state.log.unshift('The chapter warden fell. '+ch.title+' can no longer keep its record hidden.');toastMsg(ch.title+' warden defeated · chapter relic recovered')}
+    if(state.chapter===1){item('Eda Vey’s Name','Quest Relic','Legendary',['Memory','Identity'],{focus:2});state.log.unshift(ch.wardenReveal||'The Bell Warden was Eda Vey, the keeper who refused to let the Crown erase her village.');toastMsg((ch.wardenName||'The Bell Warden')+' falls — a forgotten name returns.')}
+    else{item(ch.items[ch.items.length-1]||ch.title,'Chapter Relic','Legendary',['Chapter '+state.chapter,'Boss Drop'],{focus:2});state.log.unshift(ch.wardenReveal||('The chapter warden fell. '+ch.title+' can no longer keep its record hidden.'));toastMsg((ch.wardenName||ch.title+' warden')+' defeated · chapter relic recovered')}
     dropEquipment(true);setQuest()
   }else{
     item('Ashen Wisp Fragment','Material','Common',['Crafting']);
@@ -2027,7 +2028,37 @@ function finishEncounter(){
   }
   encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy()}saveState()
 }
-function advanceChapter(){if(state.quest<5||state.chapter>=10)return;state.meta.chaptersComplete=Math.max(state.meta.chaptersComplete,state.chapter);updateSanctuaryBuild();state.chapter++;state.quest=0;state.chapterGathered=0;state.echoes=0;state.flags.bellAwakened=false;state.flags.bellWardenDefeated=false;state.flags.gate=false;state.flags.truth=false;state.flags.sanctuaryOpen=false;state.flags.protectedSanctuary=false;state.collectedNodes=[];restoreCollectedNodes();state.hp=state.maxHp;state.stamina=100;setActiveMap(mapIdForChapter(state.chapter));const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];state.log.unshift('Expedition '+state.chapter+' begins: '+(chapter?.title||'The next road')+'.');saveState();$('systemMenu').classList.remove('show');setQuest();showChapterTitle(chapter?.title||'NEW EXPEDITION','Explore '+MAPS[activeMapId].name+' · gather · hunt · shape this chapter');toastMsg('Chapter '+String(state.chapter).padStart(2,'0')+' · '+MAPS[activeMapId].name)}
+function advanceChapter(){
+  if(!canAdvanceChapter(state,activeMapId)){
+    if(state.quest<5)toastMsg('Finish the current chapter and make its choice first.');
+    else if(activeMapId!=='sanctuary')toastMsg('Return to the Sanctuary before opening the next road.');
+    return;
+  }
+  state.meta.chaptersComplete=Math.max(state.meta.chaptersComplete,state.chapter);
+  updateSanctuaryBuild();
+  state.chapter++;
+  state.quest=0;
+  state.chapterGathered=0;
+  state.echoes=0;
+  state.flags.bellAwakened=false;
+  state.flags.bellWardenDefeated=false;
+  state.flags.gate=false;
+  state.flags.truth=false;
+  state.flags.sanctuaryOpen=false;
+  state.flags.protectedSanctuary=false;
+  state.collectedNodes=[];
+  restoreCollectedNodes();
+  state.hp=state.maxHp;
+  state.stamina=100;
+  setActiveMap(mapIdForChapter(state.chapter));
+  const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];
+  state.log.unshift('Expedition '+state.chapter+' begins: '+(chapter?.title||'The next road')+'.');
+  saveState();
+  $('systemMenu').classList.remove('show');
+  setQuest();
+  showChapterTitle(chapter?.title||'NEW EXPEDITION',chapter?.summary||'Explore '+MAPS[activeMapId].name+' · gather · hunt · shape this chapter');
+  toastMsg('Chapter '+String(state.chapter).padStart(2,'0')+' · '+MAPS[activeMapId].name);
+}
 function syncRenderQuality(){
   const quality=state.settings.quality||'auto';
   const shadowsAllowed=state.settings.visualEffects!==false&&(
@@ -2376,19 +2407,27 @@ function getQuestTarget(){
   const activeNpc=id=>npcs.find(n=>n.id===id&&n.root.visible)||npcs.find(n=>n.id===id);
   const nextNode=type=>nodes.find(n=>n.type===type&&!n.collected&&n.mapId===activeMapId)
     ||nodes.find(n=>n.type===type&&!n.collected);
+  const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];
+  const requirements=getChapterRequirements(state.chapter);
   if(state.quest===0)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   if(state.quest===1){
     const target=nextNode('ember');
     if(target)return {kind:'node',label:'Emberleaf',entity:target};
     return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   }
-  if(state.quest===2)return {kind:'npc',label:'Orren',entity:activeNpc('orren')};
-  if(state.quest===3&&state.echoes<2){
+  if(state.quest===2){
+    if(!hasChapterRecord(state.flags,state.chapter)){
+      const target=nextNode('record');
+      if(target)return {kind:'node',label:chapter?.recordName||target.label,entity:target};
+    }
+    return {kind:'npc',label:'Orren',entity:activeNpc('orren')};
+  }
+  if(state.quest===3&&state.echoes<requirements.echoes){
     const target=nextNode('echo');
     if(target)return {kind:'node',label:'Memory Echo',entity:target};
-    return {kind:'gate',label:'Hollow Gate',entity:gates?.find(g=>g.name==='Hollow Ruins')};
+    return {kind:'gate',label:chapter?.wardenName||'Chapter Warden',entity:gates?.find(g=>g.name==='Hollow Ruins')};
   }
-  if(state.quest===3&&encounter)return {kind:'enemy',label:encounter.isBoss?'Bell Warden':'Wandering Shade',entity:encounter};
+  if(state.quest===3&&encounter)return {kind:'enemy',label:encounter.isBoss?(chapter?.wardenName||'Chapter Warden'):'Wandering Shade',entity:encounter};
   if(state.quest===4)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   if(state.quest>=5){
     if(activeMapId!=='sanctuary')return {kind:'home',label:'Sanctuary',position:new THREE.Vector3(0,0,7)};
@@ -2398,44 +2437,52 @@ function getQuestTarget(){
 }
 function getQuestSteps(){
   const q=state.quest;
+  const requirements=getChapterRequirements(state.chapter);
+  const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
+  const recordFound=hasChapterRecord(state.flags,state.chapter);
   if(q===0)return [
-    ['Go to Lyra at Sanctuary (-5, -3).',false],
-    ['Press E to talk to the character.',false],
-    ['Choose whether to protect the Sanctuary or seek the truth.',false]
+    ['Go to Lyra at Sanctuary.',false],
+    ['Press E to hear what this chapter is hiding.',false],
+    ['Choose how you will investigate the road ahead.',false]
   ];
   if(q===1)return [
-    ['Collect 2 Emberleaf',state.chapterGathered>=2],
-    ['Reach the glowing orange orb, then press E to gather the item.',false],
-    ['Progress: '+state.chapterGathered+' / 2',state.chapterGathered>=2]
+    ['Collect '+requirements.embers+' Emberleaf traces',state.chapterGathered>=requirements.embers],
+    ['Search for orange glowing traces in this region.',false],
+    ['Progress: '+state.chapterGathered+' / '+requirements.embers,state.chapterGathered>=requirements.embers]
   ];
-  if(q===2)return [
-    ['Go to Orren at Sanctuary (7, -1).',false],
-    ['Press E to talk to the character.',false],
-    ['Choose a route in the dialogue to continue.',false]
+  if(q===2&&!recordFound)return [
+    ['Find '+(chapter.recordName||'the chapter record'),false],
+    ['Search for the gold record marker in this region.',false],
+    ['The record must be recovered before Orren will verify the route.',false]
   ];
-  if(q===3&&state.echoes<2)return [
-    ['Collect 2 Memory Echoes',state.echoes>=2],
-    ['Look for purple glowing objects and their ground rings.',false],
-    ['Press E near each Echo to collect it.',false],
-    ['Progress: '+state.echoes+' / 2',state.echoes>=2]
+  if(q===2&&recordFound)return [
+    ['Recovered: '+(chapter.recordName||'Chapter Record'),true],
+    ['Go to Orren and compare the evidence with his map.',false],
+    ['Choose a route based on what the record reveals.',false]
+  ];
+  if(q===3&&state.echoes<requirements.echoes)return [
+    ['Collect '+requirements.echoes+' Memory Echoes',state.echoes>=requirements.echoes],
+    ['Look for violet traces scattered across the region.',false],
+    ['Press E near each echo to recover its memory.',false],
+    ['Progress: '+state.echoes+' / '+requirements.echoes,state.echoes>=requirements.echoes]
   ];
   if(q===3)return [
-    ['Dodge when the Warden telegraphs, then attack during recovery.',false],
-    ['Use LMB for Ember Pulse or keys 1 / 2 / 3 for role skills.',false],
-    ['Watch the colored ring: a larger ring signals a wider attack.',false]
+    ['Face '+(chapter.wardenName||'the Chapter Warden'),false],
+    ['Dodge the telegraphed strike, then attack during recovery.',false],
+    ['Use Ember Pulse or role skills when the Warden is exposed.',false]
   ];
   if(q===4)return [
-    ['Return to Lyra at Sanctuary.',false],
-    ['Press E to speak and choose one of the story options.',false],
-    ['Your choice changes the Sanctuary ending.',false]
+    ['Return to Lyra at the Sanctuary.',false],
+    ['Hear what the recovered record means for the people involved.',false],
+    ['Choose the consequence you are willing to carry.',false]
   ];
   if(activeMapId!=='sanctuary')return [
     ['Return to the Sanctuary.',false],
-    ['Travel back, then speak with Lyra.',false]
+    ['Speak with Lyra to close this chapter before the next road opens.',false]
   ];
   return [
     ['Speak with Lyra at the Sanctuary.',false],
-    [state.chapter<10?'Prepare to begin the next chapter.':'Found your legacy at the Sanctuary.',false]
+    [state.chapter<10?'Choose when to begin the next expedition.':'Found your legacy at the Sanctuary.',false]
   ];
 }
 function updateQuestGuide(force=false){
@@ -2479,15 +2526,53 @@ function updateQuestGuide(force=false){
   questWaypointGem.position.y=2.75+Math.sin(time*2.5)*.12;
 }
 function setQuest(){
-  const q=state.quest,title=$('questTitle'),desc=$('questDesc'),obj=$('objective'),count=$('questCount'),chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
-  $('chapterNumber').textContent='CHAPTER '+String(state.chapter).padStart(2,'0');$('chapterTitle').textContent=(chapter?.title||'THE LAST EMBER').toUpperCase();
-  if(q===0){title.textContent=chapter?.title||'A Stranger at the Gate';desc.textContent=state.chapter===1?'Meet Lyra. The ember carries the last unburned name of a village erased by the Crown.':(chapter?.summary||'A new road opens from the Sanctuary.');obj.textContent='◈ Speak with Lyra';count.textContent='01'}
-  else if(q===1){title.textContent=state.chapter===1?'Embers in the Grove':chapter.title;desc.textContent=state.chapter===1?'Find two living embers before the bell beneath Hollow can be heard.':chapter.activities[0]+'. Search the wilds and bring back two traces.';obj.textContent='◈ Gather chapter traces';count.textContent=state.chapterGathered+' / 2'}
-  else if(q===2){title.textContent=state.chapter===1?'Orren’s Unfinished Map':chapter.title;desc.textContent=state.chapter===1?'Ask the gatekeeper why one road on his map has been cut away.':chapter.activities[1]+'. Orren has a lead for you.';obj.textContent='◈ Speak with Orren';count.textContent='02'}
-  else if(q===3&&state.echoes<2){title.textContent=state.chapter===1?'The Bell Beneath Hollow':chapter.title;desc.textContent=state.chapter===1?'Recover the two memories the Crown tried to erase.':chapter.activities[2]+'. Recover two traces to draw out the chapter warden.';obj.textContent='◈ Recover memory traces';count.textContent=state.echoes+' / 2'}
-  else if(q===3){title.textContent=state.chapter===1?'The Bell Beneath Hollow':chapter.title;desc.textContent=state.chapter===1?'The name inside the bell has a guardian. Silence the Bell Warden.':'The chapter warden is drawn to the traces. Read its tell, dodge its three skills, then strike.';obj.textContent='◈ Defeat the chapter warden';count.textContent=encounter?'WARDEN PRESENT':'WARDEN APPROACHING'}
-  else if(q===4){title.textContent=state.chapter===1?'A Choice in the Ash':chapter.title;desc.textContent=state.chapter===1?'Return the stolen name to Lyra. Decide what the sanctuary is for.':chapter.summary+' Return to Lyra and make the chapter choice.';obj.textContent='◈ Return to Lyra';count.textContent='03'}
-  else{title.textContent=chapter?.title||'The Hearthbound Vow';desc.textContent=state.chapter===10?'All ten roads lead home. Found your legacy at the Sanctuary.':state.chapter>1?'The choice in '+chapter.title+' is remembered. Return to the Sanctuary and prepare for the next expedition.':state.flags.sanctuaryOpen?'The lost village has a name again. Its people can begin to return.':'One name remains to guard the last refuge; the others are free.';obj.textContent=state.chapter===10?'◈ Return to Lyra · Found your home':'◈ Chapter '+String(state.chapter).padStart(2,'0')+' complete · Return to Sanctuary';count.textContent='COMPLETE'}
+  const q=state.quest,title=$('questTitle'),desc=$('questDesc'),obj=$('objective'),count=$('questCount');
+  const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
+  const requirements=getChapterRequirements(state.chapter);
+  const recordFound=hasChapterRecord(state.flags,state.chapter);
+  $('chapterNumber').textContent='CHAPTER '+String(state.chapter).padStart(2,'0');
+  $('chapterTitle').textContent=(chapter?.title||'THE LAST EMBER').toUpperCase();
+  if(q===0){
+    title.textContent=chapter?.title||'A Stranger at the Gate';
+    desc.textContent=chapter?.summary||'A new road opens from the Sanctuary.';
+    obj.textContent='◈ Speak with Lyra';
+    count.textContent='01';
+  }else if(q===1){
+    title.textContent=state.chapter===1?'Embers in the Grove':(chapter.activities?.[0]||chapter.title);
+    desc.textContent=(chapter.activities?.[0]||'Follow the evidence')+'. Gather '+requirements.embers+' ember traces before the route can be confirmed.';
+    obj.textContent='◈ Gather chapter traces';
+    count.textContent=state.chapterGathered+' / '+requirements.embers;
+  }else if(q===2&&!recordFound){
+    title.textContent=chapter.recordName||'Chapter Record';
+    desc.textContent=(chapter.activities?.[1]||'Search the region')+'. Find the sealed record before Orren will commit to a route.';
+    obj.textContent='◈ Recover '+(chapter.recordName||'the chapter record');
+    count.textContent='RECORD MISSING';
+  }else if(q===2&&recordFound){
+    title.textContent=state.chapter===1?'Orren’s Unfinished Map':chapter.title;
+    desc.textContent=(chapter.recordClue||chapter.summary)+' Orren can confirm where the evidence leads.';
+    obj.textContent='◈ Speak with Orren';
+    count.textContent='RECORD FOUND';
+  }else if(q===3&&state.echoes<requirements.echoes){
+    title.textContent=chapter.activities?.[2]||chapter.title;
+    desc.textContent=(chapter.activities?.[2]||'Recover the lost memories')+'. Recover '+requirements.echoes+' echoes to draw out '+(chapter.wardenName||'the chapter warden')+'.';
+    obj.textContent='◈ Recover memory traces';
+    count.textContent=state.echoes+' / '+requirements.echoes;
+  }else if(q===3){
+    title.textContent=chapter.wardenName||'The Chapter Warden';
+    desc.textContent='The recovered evidence has drawn out the keeper. Read the attack tells, evade the marked strike and hit during recovery.';
+    obj.textContent='◈ Face '+(chapter.wardenName||'the chapter warden');
+    count.textContent=encounter?'WARDEN PRESENT':'WARDEN APPROACHING';
+  }else if(q===4){
+    title.textContent=state.chapter===1?'A Choice in the Ash':chapter.title+' · The Choice';
+    desc.textContent=(chapter.summary||'The truth has surfaced.')+' Return to Lyra and choose: '+String(chapter.choice||'choose what to preserve').replace(' / ',' or ')+'.';
+    obj.textContent='◈ Return to Lyra';
+    count.textContent='CONSEQUENCE';
+  }else{
+    title.textContent=chapter?.title||'The Hearthbound Vow';
+    desc.textContent=state.chapter===10?'All ten roads return to the Sanctuary. Review the names you restored and decide what the next generation inherits.':state.chapter>1?'The choice in '+chapter.title+' is recorded. Return to the Sanctuary and speak with Lyra before opening another road.':state.flags.sanctuaryOpen?'The lost village has a name again. Its people can begin to return.':'One name remains to guard the last refuge; the others are free.';
+    obj.textContent=state.chapter===10?'◈ Return to Lyra · Found your home':'◈ Chapter '+String(state.chapter).padStart(2,'0')+' complete · Return to Sanctuary';
+    count.textContent='COMPLETE';
+  }
   $('regionLabel').textContent=region().toUpperCase();
   updateQuestGuide(true);
 }
@@ -2515,17 +2600,25 @@ function interact(){
     const n=a.n;
     if(n.role==='merchant'){openShop(n)}
     else if(n.id==='lyra'&&state.quest===0&&state.chapter>1){const ch=window.ASHEN_CAMPAIGN[state.chapter-1];dialogue(n,ch.summary+' The Sanctuary will keep your place while you investigate. What matters most on this road?',[
-      {label:'Follow the people affected by this chapter',fn:()=>{state.rep.lyra++;state.quest=1;xp(30);item(ch.items[0],'Chapter Relic','Epic',['Chapter '+state.chapter,'Story']);state.log.unshift('Lyra asked you to listen before choosing a side in '+ch.title+'.');setQuest();saveState()}},
-      {label:'Search for the hidden record first',fn:()=>{state.rep.seer++;state.flags.truth=true;state.quest=1;xp(35);item(ch.items[1]||ch.items[0],'Chapter Record','Rare',['Discovery','Story']);state.log.unshift('You chose investigation before allegiance in '+ch.title+'.');setQuest();saveState()}}
+      {label:'Follow the people affected by this chapter',fn:()=>{state.rep.lyra++;state.quest=state.chapterGathered>=getChapterRequirements(state.chapter).embers?2:1;xp(30);item(ch.items[0],'Chapter Relic','Epic',['Chapter '+state.chapter,'Story']);state.log.unshift('Lyra asked you to listen before choosing a side in '+ch.title+'.');setQuest();saveState()}},
+      {label:'Search for the hidden record first',fn:()=>{state.rep.seer++;state.flags.truth=true;state.quest=state.chapterGathered>=getChapterRequirements(state.chapter).embers?2:1;xp(35);item(ch.items[1]||ch.items[0],'Chapter Record','Rare',['Discovery','Story']);state.log.unshift('You chose investigation before allegiance in '+ch.title+'.');setQuest();saveState()}}
     ]);}
     else if(n.id==='lyra'&&state.quest===0)dialogue(n,'That flame is the last unburned name of a village the Crown erased. The gate can keep it buried, or you can learn whose name it is. Wake the bell, and its keeper will wake too.',[
-      {label:'Seal it until the hamlet is safe',fn:()=>{state.rep.lyra++;state.flags.protectedSanctuary=true;state.quest=1;xp(25);item('Sanctuary Sigil','Relic','Rare',['Ward','Story Bound']);state.log.unshift('You promised to keep the sanctuary safe before seeking the truth.');toastMsg('Lyra trusts your promise');setQuest();saveState()}},
-      {label:'Tell me whose name they erased',fn:()=>{state.rep.lyra+=2;state.flags.truth=true;state.quest=1;xp(30);item('Emberleaf Charm','Trinket','Epic',['Lore','Luck']);state.log.unshift('You chose the truth: the ember carries a village erased from the Crown’s record.');toastMsg('A name stirs inside the ember');setQuest();saveState()}}
+      {label:'Seal it until the hamlet is safe',fn:()=>{state.rep.lyra++;state.flags.protectedSanctuary=true;state.quest=state.chapterGathered>=getChapterRequirements(state.chapter).embers?2:1;xp(25);item('Sanctuary Sigil','Relic','Rare',['Ward','Story Bound']);state.log.unshift('You promised to keep the sanctuary safe before seeking the truth.');toastMsg('Lyra trusts your promise');setQuest();saveState()}},
+      {label:'Tell me whose name they erased',fn:()=>{state.rep.lyra+=2;state.flags.truth=true;state.quest=state.chapterGathered>=getChapterRequirements(state.chapter).embers?2:1;xp(30);item('Emberleaf Charm','Trinket','Epic',['Lore','Luck']);state.log.unshift('You chose the truth: the ember carries a village erased from the Crown’s record.');toastMsg('A name stirs inside the ember');setQuest();saveState()}}
     ]);
-    else if(n.id==='orren'&&state.quest===2)dialogue(n,state.flags.truth?'The cut road leads to the bell chamber. The Crown erased its village, then built a gate over the names.':'I cut the road from my map because every traveler who follows it hears a bell that has no tower.',[
-      {label:'Follow Orren’s marked path',fn:()=>{state.rep.orren+=2;state.quest=3;state.flags.gate=true;xp(35);state.log.unshift('Orren marked the safe path to Hollow.');toastMsg('The Ashen Gate opens');setQuest();saveState()}},
-      {label:'Take the map and choose my own way',fn:()=>{state.rep.orren++;state.quest=3;state.flags.gate=true;item('Tideglass Compass','Relic','Rare',['Discovery']);state.log.unshift('You kept Orren’s map but chose your own route.');toastMsg('A hidden route is marked');setQuest();saveState()}}
-    ]);
+    else if(n.id==='orren'&&state.quest===2){
+      const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
+      if(!hasChapterRecord(state.flags,state.chapter)){
+        toastMsg('Recover '+(chapter.recordName||'the chapter record')+' before choosing a route.');
+        return;
+      }
+      const routes=chapter.routeChoices||['Follow Orren’s marked path','Take the map and choose my own way'];
+      dialogue(n,(chapter.recordClue||'The recovered record points toward the next road.')+' What will you do with this evidence?',[
+        {label:routes[0],fn:()=>{state.rep.orren+=2;state.flags['chapter'+state.chapter+'Route']='marked';state.quest=3;xp(35);state.log.unshift('You chose to '+routes[0].toLowerCase()+' in '+chapter.title+'.');toastMsg('Orren marks the next route');setQuest();saveState()}},
+        {label:routes[1],fn:()=>{state.rep.orren++;state.rep.seer++;state.flags.truth=true;state.flags['chapter'+state.chapter+'Route']='independent';state.quest=3;item(chapter.items?.[2]||chapter.items?.[0]||'Route Relic','Relic','Rare',['Discovery','Chapter '+state.chapter]);state.log.unshift('You chose to '+routes[1].toLowerCase()+' in '+chapter.title+'.');toastMsg('A second route is marked');setQuest();saveState()}}
+      ]);
+    }
     else if(n.id==='lyra'&&state.quest===5&&state.chapter<10)dialogue(n,'Chapter '+String(state.chapter).padStart(2,'0')+' is carried home with you. The Sanctuary can grow stronger before the next road opens.',[{label:'Prepare and begin Chapter '+String(state.chapter+1).padStart(2,'0'),fn:advanceChapter},{label:'Stay at the Sanctuary for now',fn:()=>{openSystemMenu('base')}}]);
     else if(n.id==='lyra'&&state.quest===5&&state.chapter===10)dialogue(n,'Ten roads return to this hearth. The Sanctuary is no longer only a refuge; it is the home you built from every name and choice you carried back.',[{label:'Found the new home',fn:()=>{state.meta.chaptersComplete=10;if(!state.flags.legacyHome)state.meta.legacy++;state.flags.legacyHome=true;updateSanctuaryBuild();state.log.unshift('After ten chapters, you founded a lasting home at the Sanctuary.');saveState();toastMsg('The Sanctuary is your home · 10 chapters complete');openSystemMenu('base')}}]);
     else if(n.id==='lyra'&&state.quest===4&&state.chapter>1){const ch=window.ASHEN_CAMPAIGN[state.chapter-1],options=ch.choice.split(' / ');dialogue(n,ch.summary+' Both paths cost something. Which answer will you carry home?',[
@@ -2537,11 +2630,34 @@ function interact(){
       {label:'Keep one name to guard the last refuge',fn:()=>{state.quest=5;state.flags.sanctuaryOpen=false;state.rep.lyra+=2;xp(70);item('Hearthbound Vow','Relic','Legendary',['Legacy','Ward']);state.log.unshift('You kept one name bound to the sanctuary as its final guardian.');if(state.chapter<10){setActiveMap('sanctuary');player.position.set(-5,0,-1)}toastMsg('One ember remains to guard the refuge');setQuest();saveState()}}
     ]);
     else toastMsg(n.name+': The road remembers every choice.');
-  }else if(a.k==='node'){
-    const n=a.n;n.collected=true;n.root.visible=false;state.collectedNodes.push(nodeKey(n));
-    if(n.type==='ember'){state.shards++;state.chapterGathered++;xp(18);item(n.label,'Material',state.shards>=2?'Rare':'Uncommon',['Crafting','Ember']);toastMsg('Emberleaf collected · +1 forge shard');if(state.quest===1&&state.chapterGathered>=2)state.quest=2}
-    else if(n.type==='echo'){state.echoes++;xp(22);item(n.label,'Quest Item','Epic',['Memory','Lore']);toastMsg('A name returns to the bell');if(state.quest===3&&state.echoes>=2){state.flags.bellAwakened=true;state.log.unshift('The second memory rang out. Something answered from beneath Hollow.');spawnEnemy()}}
-    else{state.coins+=35;xp(30);item('Ancient Relic','Relic','Legendary',['Collection','Value']);toastMsg('Hidden relic discovered')}
+   }else if(a.k==='node'){
+    const n=a.n;
+    if(n.type==='ember'&&state.quest!==1){toastMsg('The ember trail will answer when this chapter asks you to follow it.');return}
+    if(n.type==='echo'&&state.quest!==3){toastMsg('These memories are sealed until the recovered record points you here.');return}
+    if(n.type==='record'&&(state.quest!==2||hasChapterRecord(state.flags,state.chapter))){toastMsg('The record is sealed until the investigation reaches this stage.');return}
+    n.collected=true;n.root.visible=false;state.collectedNodes.push(nodeKey(n));
+    if(n.type==='ember'){
+      state.shards++;state.chapterGathered++;xp(18);item(n.label,'Material',state.shards>=2?'Rare':'Uncommon',['Crafting','Ember']);
+      toastMsg('Emberleaf collected · '+state.chapterGathered+' / '+getChapterRequirements(state.chapter).embers+' traces');
+      if(state.quest===1&&state.chapterGathered>=getChapterRequirements(state.chapter).embers)state.quest=2;
+    }else if(n.type==='echo'){
+      state.echoes++;xp(22);item(n.label,'Quest Item','Epic',['Memory','Lore']);
+      toastMsg('A name returns to the record · '+state.echoes+' / '+getChapterRequirements(state.chapter).echoes);
+      if(state.quest===3&&state.echoes>=getChapterRequirements(state.chapter).echoes&&hasChapterRecord(state.flags,state.chapter)){
+        state.flags.bellAwakened=true;
+        const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];
+        state.log.unshift('The final echo answered. '+(chapter?.wardenName||'The chapter warden')+' has been drawn out.');
+        spawnEnemy();
+      }
+    }else if(n.type==='record'){
+      const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
+      state.flags[chapterRecordKey(state.chapter)]=true;
+      item(chapter.recordName||n.label,'Chapter Record','Rare',['Story','Chapter '+state.chapter],{focus:1});
+      state.log.unshift(chapter.recordClue||('You recovered a record from '+chapter.title+'.'));
+      toastMsg((chapter.recordName||'Chapter record')+' recovered · Orren can now verify the route');
+    }else{
+      state.coins+=35;xp(30);item('Ancient Relic','Relic','Legendary',['Collection','Value']);toastMsg('Hidden relic discovered');
+    }
     setQuest();saveState();
   }else if(a.k==='gate'){if(state.quest<a.n.unlock){toastMsg(a.n.name+' is sealed by the story.');return}toastMsg(a.n.name+' discovered — '+region())}
   else if(a.k==='enemy')pulse();
@@ -2819,7 +2935,7 @@ function loadState(){
         state.xp=Math.max(0,state.xp);state.level=Math.max(1,state.level);state.quest=THREE.MathUtils.clamp(state.quest,0,5);state.hp=Math.max(0,state.hp);state.stamina=THREE.MathUtils.clamp(state.stamina,0,100);state.coins=Math.max(0,state.coins);state.shards=Math.max(0,state.shards);state.echoes=Math.max(0,state.echoes);
         state.role=ROLE_DEFS[saved.role]?saved.role:'ashbreaker';state.appearance=['default','moon','moss'].includes(saved.appearance)?saved.appearance:'default';state.skillPoints=Math.max(0,Number(saved.skillPoints)||0);state.skillRanks=Array.isArray(saved.skillRanks)?saved.skillRanks.slice(0,3).map(v=>THREE.MathUtils.clamp(Math.floor(Number(v)||0),0,3)):[0,0,0];state.skillPoints=Math.max(state.skillPoints,Math.max(0,state.level-1-state.skillRanks.reduce((sum,v)=>sum+v,0)));state.settings={...state.settings,...(saved.settings&&typeof saved.settings==='object'&&!Array.isArray(saved.settings)?saved.settings:{})};if(state.settings.resourcePackDisabled===true&&state.settings.resourcePackDisabledVersion!==MODEL_PIPELINE_VERSION)state.settings.resourcePackDisabled=false;if(!['auto','performance','high'].includes(state.settings.quality))state.settings.quality='auto';state.settings.sensitivity=THREE.MathUtils.clamp(Number(state.settings.sensitivity)||1,.5,2);state.settings.volume=THREE.MathUtils.clamp(Number(state.settings.volume??.35),0,1);state.settings.uiScale=THREE.MathUtils.clamp(Number(state.settings.uiScale)||1,.8,1.2);state.settings.cameraFov=THREE.MathUtils.clamp(Number(state.settings.cameraFov)||55,42,68);for(const key of ['sound','animations','visualEffects','reducedMotion'])if(typeof state.settings[key]!=='boolean')state.settings[key]=true;state.rep={...state.rep,...(saved.rep&&typeof saved.rep==='object'&&!Array.isArray(saved.rep)?saved.rep:{})};for(const key of ['lyra','orren','seer']){const value=Number(state.rep[key]);state.rep[key]=Number.isFinite(value)?THREE.MathUtils.clamp(Math.floor(value),-1000,1000):0}
         state.flags={...state.flags,...(saved.flags&&typeof saved.flags==='object'&&!Array.isArray(saved.flags)?saved.flags:{})};state.currentMap=MAPS[saved.currentMap]?saved.currentMap:'sanctuary';
-        if(state.flags.bellWardenDefeated&&state.quest===3)state.quest=4;
+        if(state.flags.bellWardenDefeated&&state.quest===3)state.quest=4;if(state.quest>=3)state.flags[chapterRecordKey(state.chapter)]=true;
         state.meta={...state.meta,...(saved.meta&&typeof saved.meta==='object'&&!Array.isArray(saved.meta)?saved.meta:{})};
         for(const key of ['renown','mastery','legacy','points','contracts','developmentDay','hubLevel','chaptersComplete']){const value=Number(state.meta[key]);state.meta[key]=Number.isFinite(value)?THREE.MathUtils.clamp(Math.floor(value),0,1000000):0}
         state.chapter=THREE.MathUtils.clamp(Math.floor(state.chapter),1,10);state.level=Math.min(Math.max(1,Math.floor(state.level)),chapterLevelCap(state.chapter));state.xp=THREE.MathUtils.clamp(Math.floor(state.xp),0,xpNeededForLevel(state.level)-1);
@@ -2829,7 +2945,7 @@ function loadState(){
         const rawEquipment=saved.equipment&&typeof saved.equipment==='object'?saved.equipment:{};
         for(const slot of ['core','charm','armor','relic']){const candidate=sanitizeItemRecord(rawEquipment[slot]);const owned=candidate?state.inventory.find(i=>candidate.itemId?i.itemId===candidate.itemId:i.name===candidate.name&&i.type===candidate.type&&JSON.stringify(i.stats)===JSON.stringify(candidate.stats)&&JSON.stringify(i.attrs)===JSON.stringify(candidate.attrs)):null;if(owned&&equipmentSlotFor(owned)===slot)state.equipment[slot]=owned}
         state.collectedNodes=Array.isArray(saved.collectedNodes)?saved.collectedNodes.filter(x=>typeof x==='string'):[];
-        state.hunt={kills:Math.max(0,Math.floor(Number(saved.hunt?.kills)||0))};if(!Number.isFinite(Number(saved.chapterGathered)))state.chapterGathered=state.quest===1?Math.min(2,state.shards):0;if(state.quest===1&&state.chapterGathered>=2)state.quest=2;state.weaponRank=THREE.MathUtils.clamp(Math.floor(state.weaponRank||0),0,12);state.chapterGathered=Math.max(0,Math.floor(state.chapterGathered||0));state.log=Array.isArray(saved.log)?saved.log.filter(x=>typeof x==='string').slice(0,80):state.log;
+        state.hunt={kills:Math.max(0,Math.floor(Number(saved.hunt?.kills)||0))};if(!Number.isFinite(Number(saved.chapterGathered)))state.chapterGathered=state.quest===1?Math.min(2,state.shards):0;if(state.quest===1&&state.chapterGathered>=getChapterRequirements(state.chapter).embers)state.quest=2;state.weaponRank=THREE.MathUtils.clamp(Math.floor(state.weaponRank||0),0,12);state.chapterGathered=Math.max(0,Math.floor(state.chapterGathered||0));state.log=Array.isArray(saved.log)?saved.log.filter(x=>typeof x==='string').slice(0,80):state.log;
         state.tutorial=saved.tutorial===true;
         if(saved.playerPosition&&Number.isFinite(saved.playerPosition.x)&&Number.isFinite(saved.playerPosition.z)){player.position.x=THREE.MathUtils.clamp(saved.playerPosition.x,-106,106);player.position.z=THREE.MathUtils.clamp(saved.playerPosition.z,-106,106)}
       }
@@ -3088,7 +3204,7 @@ if(activeMapId==='sanctuary')spawnWildlifeBurst(10);
 updateSky();
 const DEVELOPMENT_DAY=9;state.meta.developmentDay=Math.max(Number(state.meta.developmentDay||0),DEVELOPMENT_DAY);toastMsg('Development Day '+state.meta.developmentDay+' — the world wakes, villages stir, and the morning sun rises.');
 setInterval(()=>{
-  if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!(state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated))spawnEnemy();
+  if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!isChapterWardenReady(state))spawnEnemy();
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
 setInterval(()=>{if(!document.hidden)scheduleIdleSave()},15000);

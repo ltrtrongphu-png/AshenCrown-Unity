@@ -23,6 +23,7 @@ const webFiles = [
   'app.js',
   'i18n.js',
   'campaign.js',
+  'story-progression.js',
   'model3d.js',
   'play.js',
   'save-utils.js',
