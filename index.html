@@ -1,25 +1,234 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#070606"><meta name="description" content="Ashen Crown: The Last Ember — a dark fantasy 3D action RPG.">
-<title>Ashen Crown — The Last Ember</title>
-<link rel="icon" href="./assets/ashen-crown-logo.svg"><link rel="stylesheet" href="./styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0a09">
+  <meta name="description" content="Ashen Crown: The Last Ember — a dark-fantasy 3D action RPG about the names erased from history. Play the opening web demo.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Ashen Crown: The Last Ember">
+  <meta property="og:description" content="The Crown erased a village. One ember remembers every name. Enter the opening web demo.">
+  <meta property="og:image" content="https://raw.githubusercontent.com/ltrtrongphu-png/AshenCrown-Unity/main/assets/ashen-crown-logo.svg">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Ashen Crown: The Last Ember">
+  <meta name="twitter:description" content="The Crown erased a village. One ember remembers every name.">
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/ltrtrongphu-png/AshenCrown-Unity/main/assets/ashen-crown-logo.svg">
+  <link rel="icon" href="./assets/ashen-crown-logo.svg" type="image/svg+xml">
+  <link rel="manifest" href="./site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Ashen Crown — The Last Ember</title>
 </head>
 <body>
-<div class="noise"></div><div class="cursor-glow" aria-hidden="true"></div>
-<header class="site-header"><a class="brand" href="#top"><img src="./assets/ashen-crown-logo.svg" alt="" class="brand-logo"><span><b>ASHEN</b><em>CROWN</em><small>THE LAST EMBER</small></span></a><nav id="main-nav" aria-label="Main navigation"><a href="#world">World</a><a href="#combat">Combat</a><a href="#systems">Systems</a><a href="#progression">Progression</a><a href="#controls">Controls</a><button class="nav-auth" id="accountOpen" type="button">Account / Sign in</button><a class="nav-cta" href="./play.html">Play Story Demo <span>↗</span></a></nav><button class="menu" type="button" aria-label="Open navigation" aria-controls="main-nav" aria-expanded="false"><i></i><i></i></button></header>
-<main id="top">
-<section class="hero"><div class="hero-grid"></div><div class="hero-copy"><p class="eyebrow"><span></span> DARK FANTASY ARPG · FIRST CHAPTER PLAYABLE</p><div class="title-lockup"><img src="./assets/ashen-crown-logo.svg" alt="Ashen Crown" class="hero-logo"><div><p>ASHEN</p><h1>CROWN</h1></div></div><p class="hero-subtitle">THE LAST EMBER</p><p class="lede">A village was erased from the Crown’s record. The last ember carries its names. Cross the hamlet, face the keeper beneath Hollow, and decide what the sanctuary will remember.</p><div class="hero-actions"><a class="button primary" href="./play.html">Enter the story demo <span>→</span></a><a class="button quiet" href="#world">Enter the world <span>↓</span></a></div><p class="journey-resume-note" id="journeyResumeNote" aria-live="polite"></p><div class="hero-stats"><div><b>01</b><span>Playable chapter</span></div><div><b>02</b><span>Chapter endings</span></div><div><b>05</b><span>Site languages</span></div><div><b>LOCAL</b><span>Device save</span></div></div></div><div class="hero-art" aria-hidden="true"><div class="moon"></div><div class="halo halo-a"></div><div class="halo halo-b"></div><div class="crown-sigil"><span class="core"></span><i></i><i></i><i></i><i></i></div><div class="floating-card card-a"><small>WORLD STATE</small><b>THE LAST EMBER</b><span>Story cycle · 08</span></div><div class="floating-card card-b"><small>LEGACY</small><b>ASCENDANT</b><span>Persistent progression</span></div></div><div class="hero-foot"><span>01 — THE LAST EMBER</span><span>BUILD / ETERNAL WORLD</span><span>SCROLL TO DESCEND</span></div></section>
-<section class="manifesto" id="world"><div class="section-index">02</div><div><p class="eyebrow">A WORLD THAT REMEMBERS</p><h2>One ember.<br><em>A village erased.</em></h2></div><div class="manifesto-text"><p>A bell beneath Hollow holds the names the Crown removed from history. Lyra wants the sanctuary protected. Orren has cut the road from his map. The first chapter ends with your choice about who gets to remember.</p><a class="text-link" href="#systems">Explore the game systems <span>→</span></a></div></section>
-<section class="world-panel"><div class="world-copy"><p class="eyebrow">03 / WORLD MAP</p><h2>Walk deeper<br>into the <em>ashes.</em></h2><p>From the Ashen March to the Starless Depths, each act introduces new goals, characters and discoveries.</p><p class="act-selection" id="actSelection" aria-live="polite">Selected · Prologue — The First Spark</p></div><div class="act-map"><div class="map-line"></div><button class="act active" type="button" aria-pressed="true"><b>I</b><span>Prologue</span><small>THE FIRST SPARK</small></button><button class="act" type="button" aria-pressed="false"><b>II</b><span>Ashen March</span><small>THE BROKEN ROAD</small></button><button class="act" type="button" aria-pressed="false"><b>III</b><span>Hollow Kingdom</span><small>A CROWN WITHOUT A KING</small></button><button class="act" type="button" aria-pressed="false"><b>IV</b><span>Veil Sea</span><small>BEYOND THE MIST</small></button><button class="act" type="button" aria-pressed="false"><b>V</b><span>Crownlands</span><small>THE OLD THRONE</small></button><button class="act" type="button" aria-pressed="false"><b>VI</b><span>Starless Depths</span><small>WHERE LIGHT ENDS</small></button><button class="act" type="button" aria-pressed="false"><b>VII</b><span>Last Ember</span><small>THE FINAL FIRE</small></button><button class="act" type="button" aria-pressed="false"><b>VIII</b><span>New Game+</span><small>BEGIN AGAIN</small></button></div></section>
-<section id="combat" class="combat"><div class="section-head"><div><p class="eyebrow">04 / ADVENTURE</p><h2>Learn the rhythm.</h2></div><p>Weight, timing and readable feedback turn every encounter into a conversation between pressure and patience.</p></div><div class="combat-grid"><article class="feature feature-large"><span class="number">01</span><div class="feature-icon blade"></div><h3>Committed attacks</h3><p>Light chains, charged attacks and abilities are built around clear commitment windows.</p><div class="mini-meter"><i style="width:82%"></i></div><small>IMPACT / 82</small></article><article class="feature"><span class="number">02</span><div class="feature-icon shield"></div><h3>Defense timing</h3><p>Block, parry or dodge. Precision creates openings without removing risk.</p><div class="timing-dots"><i></i><i class="active"></i><i></i><i></i><i></i></div></article><article class="feature"><span class="number">03</span><div class="feature-icon poise"></div><h3>Poise & stagger</h3><p>Pressure changes the state of a fight. Break an enemy's rhythm and take the opening.</p><div class="boss-mini"><span>WARDEN</span><i><b></b></i><small>POISE 36%</small></div></article><article class="feature feature-wide"><span class="number">04</span><div class="phase-bars"><i></i><i></i><i></i></div><div><h3>Bosses that evolve</h3><p>Multi-phase encounters, enrage states, ranged threats and environmental hazards shift priorities instead of simply inflating health.</p></div></article></div></section>
-<section id="systems" class="systems"><div class="systems-intro"><p class="eyebrow">05 / GAME SYSTEMS</p><h2>Everything<br>feeds the <em>journey.</em></h2><p>Combat, exploration, quests, crafting, reputation, codex and long-term progression are designed to share one persistent world state.</p></div><div class="system-list"><div><span>01</span><b>Character</b><p>3D appearance · presets · cosmetics</p><em>READY</em></div><div><span>02</span><b>Questing</b><p>NPC dialogue · objectives · story flags</p><em>READY</em></div><div><span>03</span><b>Progression</b><p>XP · Essence · Prestige · Skills</p><em>LIVE</em></div><div><span>04</span><b>World</b><p>Regions · reputation · codex · events</p><em>LIVE</em></div><div><span>05</span><b>Endgame</b><p>Contracts · Journey · Legacy · Expeditions</p><em>LIVE</em></div><div><span>06</span><b>Cloud</b><p>Supabase account · persistent saves</p><em>SETUP REQUIRED</em></div></div></section>
-<section class="model-section" id="model"><div class="section-head"><div><p class="eyebrow">06 / 3D RELIC CHAMBER</p><h2>Inspect the ember.</h2></div><p>Rotate · zoom · explore the interactive presentation.</p></div><div class="model-shell"><div id="ash-crown-3d" class="model-canvas" data-model="./Assets/Models/Characters/AshenSentinel.glb" role="img" aria-label="Interactive Ashen Crown production 3D model"></div><div class="model-overlay"><span>ASHEN CROWN</span><b>THE LAST EMBER</b><small>WEBGL · ORBIT CONTROLS · GLB READY</small></div><div class="model-ui"><span>DRAG TO ROTATE</span><span>SCROLL TO ZOOM</span></div></div></section>
-<section id="progression" class="progression"><div class="section-head"><div><p class="eyebrow">07 / ETERNAL PROGRESSION</p><h2>There is always<br><em>another horizon.</em></h2></div><p>Build a character, then build a legacy. Your progression continues beyond the main campaign.</p></div><div class="progress-grid"><article><span class="icon">✦</span><small>LEVEL</small><strong>∞</strong><p>XP and Essence power a persistent character journey.</p></article><article><span class="icon">◇</span><small>LEGACY</small><strong>01</strong><p>Long-term progression carries your choices forward.</p></article><article><span class="icon">◈</span><small>EXPEDITIONS</small><strong>20</strong><p>Escalating tiers create repeatable endgame goals.</p></article><article><span class="icon">◎</span><small>COLLECTION</small><strong>∞</strong><p>Discoveries feed lore, cosmetics and future systems.</p></article></div></section>
-<section id="controls" class="controls"><div class="section-head"><div><p class="eyebrow">08 / STORY DEMO FIELD NOTES</p><h2>Controls at a glance.</h2></div><a class="button quiet" href="./play.html">Play the story demo →</a></div><div class="control-card"><div class="control-row"><span>W A S D</span><b>Move</b><small>Walk around the sanctuary and wilds</small></div><div class="control-row"><span>MOUSE DRAG</span><b>Look</b><small>Rotate the camera</small></div><div class="control-row"><span>SHIFT</span><b>Sprint</b><small>Consumes stamina</small></div><div class="control-row"><span>LMB / F</span><b>Ember Pulse</b><small>Short-range attack · costs stamina</small></div><div class="control-row"><span>SPACE</span><b>Dodge</b><small>Evade a shade’s telegraphed strike</small></div><div class="control-row"><span>E</span><b>Inventory</b><small>Open your pack, compare loot and equip gear</small></div><div class="control-row"><span>G</span><b>Interact</b><small>Talk to NPCs, gather resources and use routes</small></div><div class="control-row"><span>I / M</span><b>Inventory / Map</b><small>I remains as an inventory shortcut</small></div><div class="control-row"><span>J / K / ESC</span><b>Journal / Archive / Pause</b><small>Review the journey or pause the game</small></div></div></section>
-<section class="closing"><img src="./assets/ashen-crown-logo.svg" alt="Ashen Crown" class="closing-logo"><p class="eyebrow">THE FIRE IS NOT GONE.</p><h2>It is waiting<br><em>for a hand.</em></h2><div class="closing-actions"><a class="button primary" href="./play.html">Enter the story demo <span>→</span></a><a class="button quiet" href="https://github.com/ltrtrongphu-png/AshenCrown-Unity" target="_blank" rel="noreferrer">View source ↗</a></div></section>
-</main><footer><span>ASHEN CROWN / THE LAST EMBER</span><span>UNITY · DARK FANTASY · ETERNAL WORLD</span></footer>
-<script src="./app.js"></script><script src="./i18n.js"></script><script type="module" src="./model3d.js"></script>
-<script src="./auth-config.js"></script><script type="module" src="./auth.js"></script>
-</body></html>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="site-atmosphere" aria-hidden="true"><span class="ash ash-one"></span><span class="ash ash-two"></span><span class="ash ash-three"></span><span class="ash ash-four"></span><span class="ash ash-five"></span><span class="cursor-glow"></span></div>
+
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Ashen Crown home">
+      <img src="./assets/ashen-crown-logo.svg" alt="" class="brand-logo" width="42" height="42">
+      <span class="brand-lockup"><b>ASHEN</b><em>CROWN</em><small>THE LAST EMBER</small></span>
+    </a>
+    <nav id="main-nav" aria-label="Main navigation">
+      <a href="#combat">Gameplay</a>
+      <a href="#world">The world</a>
+      <a href="#characters">Characters</a>
+      <a href="#legacy">Progression</a>
+      <a href="#account">Account</a>
+    </nav>
+    <div class="header-tools">
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-label="English" aria-pressed="true">EN</button>
+        <button type="button" data-lang="vi" aria-label="Vietnamese" aria-pressed="false">VI</button>
+        <button type="button" data-lang="ja" aria-label="Japanese" aria-pressed="false">JA</button>
+        <button type="button" data-lang="ko" aria-label="Korean" aria-pressed="false">KO</button>
+        <button type="button" data-lang="zh" aria-label="Chinese" aria-pressed="false">中文</button>
+      </div>
+      <a class="header-play" href="./play.html">Play now <span aria-hidden="true">↗</span></a>
+    </div>
+    <button class="menu" type="button" aria-label="Open navigation" aria-controls="main-nav" aria-expanded="false"><i></i><i></i></button>
+  </header>
+
+  <main id="main-content">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-stone" aria-hidden="true"></div>
+      <div class="hero-sigil" aria-hidden="true"><span></span><i></i><i></i><i></i><i></i><b></b></div>
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="eyebrow-rule"></span> A DARK-FANTASY ACTION RPG <span class="eyebrow-dot">/</span> WEB DEMO</p>
+        <p class="hero-overline">THE CROWN REMEMBERS NOTHING.</p>
+        <h1 id="hero-title">ASHEN<br><em>CROWN</em></h1>
+        <p class="hero-subtitle">THE LAST EMBER</p>
+        <p class="hero-tagline">The Crown erased a village.<br><strong>One ember remembers every name.</strong></p>
+        <div class="hero-actions">
+          <a class="button primary" href="./play.html">Play now <span aria-hidden="true">↗</span></a>
+          <a class="button secondary" href="#combat">Discover the world <span aria-hidden="true">↓</span></a>
+        </div>
+        <p class="journey-resume-note" id="journeyResumeNote" aria-live="polite" hidden></p>
+        <div class="hero-meta" aria-label="Demo status">
+          <div><span class="status-dot"></span><b>PRE-ALPHA</b><small>Browser demo</small></div>
+          <div><b>01 / 10</b><small>Opening chapter</small></div>
+          <div><b>LOCAL</b><small>Device save</small></div>
+        </div>
+      </div>
+      <div class="hero-caption hero-caption-left"><span>01</span> THE LAST EMBER</div>
+      <div class="hero-caption hero-caption-right">A NAME CAN OUTLIVE A KINGDOM</div>
+      <a class="scroll-cue" href="#combat"><span></span> Descend into the ashes</a>
+    </section>
+
+    <section class="opening-note section-shell" aria-labelledby="opening-title">
+      <div class="section-marker">I <span>—</span> THE ERASURE</div>
+      <div class="opening-heading">
+        <p class="eyebrow">A WORLD THAT FORGOT</p>
+        <h2 id="opening-title">Not every<br><em>ghost is dead.</em></h2>
+      </div>
+      <div class="opening-body">
+        <p>A village vanished from the Crown’s records. Its roads were cut from maps, its people from memory. Beneath Hollow, a bell still carries the names no history will admit.</p>
+        <p>Follow the last ember through a quiet sanctuary and into a story about memory, loyalty, and what should survive a fallen kingdom.</p>
+        <a class="text-link" href="#world">Read the world’s record <span aria-hidden="true">↘</span></a>
+      </div>
+    </section>
+
+    <section class="gameplay section-shell" id="combat" aria-labelledby="combat-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">02 / THE ART OF SURVIVAL</p><h2 id="combat-title">Every opening<br>has a <em>price.</em></h2></div>
+        <p>The wider combat design rewards patience and precise timing. The browser demo exposes a smaller, playable slice while the full Soulslike combat set remains in development.</p>
+      </div>
+      <div class="combat-grid">
+        <article class="combat-card combat-card-main">
+          <div class="card-number">01 <span>— ATTACK</span></div>
+          <div class="combat-mark mark-blade" aria-hidden="true"><i></i></div>
+          <h3>Commit to the strike.</h3>
+          <p>Read the distance, choose the moment, then follow through. The current demo includes a basic Ember Pulse attack.</p>
+          <div class="card-status"><span class="status-live"></span> IN WEB DEMO</div>
+        </article>
+        <article class="combat-card">
+          <div class="card-number">02 <span>— DEFEND</span></div>
+          <div class="combat-mark mark-ring" aria-hidden="true"><i></i></div>
+          <h3>Dodge the inevitable.</h3>
+          <p>Evade a telegraphed strike and create room to breathe. A dedicated roll/parry/Perfect Dodge combat loop is part of the wider design, not fully exposed in this demo.</p>
+          <div class="card-status"><span class="status-design"></span> DESIGN IN PROGRESS</div>
+        </article>
+        <article class="combat-card">
+          <div class="card-number">03 <span>— MASTER</span></div>
+          <div class="combat-mark mark-rune" aria-hidden="true"><i></i><i></i><i></i></div>
+          <h3>Shape your approach.</h3>
+          <p>The full design plans combo chains, parries, Perfect Dodge and Q / E / R skills. In the web demo, role skills use 1 / 2 / 3 where available.</p>
+          <div class="card-status"><span class="status-design"></span> PARTIAL PROTOTYPE</div>
+        </article>
+      </div>
+      <div class="controls-inline">
+        <div><span class="eyebrow">DEMO CONTROLS</span><b>Learn the language of the ember.</b></div>
+        <div class="key-list"><span><kbd>W A S D</kbd> Move</span><span><kbd>LMB / F</kbd> Ember Pulse</span><span><kbd>SPACE</kbd> Dodge</span><span><kbd>G</kbd> Interact</span><span><kbd>1 / 2 / 3</kbd> Skills</span><span><kbd>J</kbd> Journal</span><span><kbd>M</kbd> Map</span><span><kbd>ESC</kbd> Pause</span></div>
+        <a href="./play.html" class="text-link">Enter the demo <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <section class="world-section" id="world" aria-labelledby="world-title">
+      <div class="world-head section-shell">
+        <div><p class="eyebrow">03 / THE LOST CHRONICLES</p><h2 id="world-title">Ten chapters.<br><em>One broken history.</em></h2></div>
+        <div><p>The planned journey crosses ruined sanctuaries, drowned archives and a glass observatory. Only the opening chapter is represented as the playable web demo today.</p><div class="chapter-legend"><span><i class="legend-live"></i> Playable demo</span><span><i class="legend-planned"></i> Story roadmap</span></div></div>
+      </div>
+      <div class="chapter-timeline section-shell">
+        <div class="timeline-thread" aria-hidden="true"></div>
+        <div class="chapter-grid">
+          <button class="act chapter-card active" type="button" aria-pressed="true"><b class="chapter-index">01</b><span>The Last Ember</span><small>PLAYABLE DEMO</small><i aria-hidden="true">↗</i></button>
+          <button class="act chapter-card" type="button" aria-pressed="false"><b class="chapter-index">02</b><span>The Bell Beneath Hollow</span><small>STORY ROADMAP</small><i aria-hidden="true">↗</i></button>
+          <button class="act chapter-card" type="button" aria-pressed="false"><b class="chapter-index">03</b><span>Veil of Tides</span><small>STORY ROADMAP</small><i aria-hidden="true">↗</i></button>
+          <button class="act chapter-card" type="button" aria-pressed="false"><b class="chapter-index">04</b><span>The Crownless City</span><small>STORY ROADMAP</small><i aria-hidden="true">↗</i></button>
+          <button class="act chapter-card" type="button" aria-pressed="false"><b class="chapter-index">05</b><span>Garden of Sleeping Stars</span><small>STORY ROADMAP</small><i aria-hidden="true">↗</i></button>
+          <button class="act chapter-card" type="button" aria-pressed="false"><b class="chapter-index">06</b><span>The Nameless Choir</span><small>STORY ROADMAP</small><i aria-hidden="true">↗</i></button>
+          <button class="act chapter-card" type="button" aria-pressed="false"><b class="chapter-index">07</b><span>Ashfall Winter</span><small>STORY ROADMAP</small><i aria-hidden="true">↗</i></button>
+          <button class="act chapter-card" type="button" aria-pressed="false"><b class="chapter-index">08</b><span>The Glass Observatory</span><small>STORY ROADMAP</small><i aria-hidden="true">↗</i></button>
+          <button class="act chapter-card" type="button" aria-pressed="false"><b class="chapter-index">09</b><span>The Starless Depths</span><small>STORY ROADMAP</small><i aria-hidden="true">↗</i></button>
+          <button class="act chapter-card" type="button" aria-pressed="false"><b class="chapter-index">10</b><span>The New Dawn</span><small>STORY ROADMAP</small><i aria-hidden="true">↗</i></button>
+        </div>
+        <p class="chapter-selection" id="actSelection" aria-live="polite">Selected · The Last Ember — PLAYABLE DEMO</p>
+      </div>
+      <div class="world-foot section-shell"><span>THE SANCTUARY IS THE LAST PLACE THAT STILL SPEAKS YOUR NAME.</span><a href="./play.html" class="text-link">Walk the opening path <span aria-hidden="true">↗</span></a></div>
+    </section>
+
+    <section class="characters section-shell" id="characters" aria-labelledby="characters-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">04 / THE FIGURES LEFT BEHIND</p><h2 id="characters-title">Even legends<br>turn to <em>ash.</em></h2></div>
+        <p>Two existing GLB models anchor the visual direction. They are model showcases, not a promise that every character or animation is fully integrated into gameplay.</p>
+      </div>
+      <div class="character-layout">
+        <div class="model-shell">
+          <div id="ash-crown-3d" class="model-canvas" data-model="./Assets/Models/Characters/AshenSentinel.glb" role="img" aria-label="Interactive 3D model of the Ashen Sentinel"></div>
+          <div class="model-overlay"><span>CHARACTER MODEL / 01</span><b>ASHEN SENTINEL</b><small>INTERACTIVE GLB VIEWER</small></div>
+          <div class="model-ui"><span>DRAG TO ROTATE</span><span>SCROLL TO ZOOM</span></div>
+        </div>
+        <div class="character-notes">
+          <article class="character-note">
+            <span class="character-symbol" aria-hidden="true">I</span><div><p class="eyebrow">THE EMBERBOUND</p><h3>Ash and iron.</h3><p>The Sentinel’s layered armor and folded mantle establish the project’s charcoal, antique brass and ember palette.</p><small>EXISTING MODEL ASSET</small></div>
+          </article>
+          <article class="character-note">
+            <span class="character-symbol" aria-hidden="true">II</span><div><p class="eyebrow">THE CROWN’S SHADOW</p><h3>A throne without a name.</h3><p>The Ashen Regent is the companion boss model in the repository. Boss encounters and animation integration remain prototype work.</p><small>EXISTING BOSS MODEL ASSET</small></div>
+          </article>
+          <div class="character-disclaimer">Model previews may need a WebGL-capable browser. If the viewer does not load, the rest of the page and the Play link remain available.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="legacy-section" id="legacy" aria-labelledby="legacy-title">
+      <div class="section-shell">
+        <div class="section-heading">
+          <div><p class="eyebrow">05 / THE LEGACY YOU CARRY</p><h2 id="legacy-title">Progress is more<br>than <em>survival.</em></h2></div>
+          <p>The long-term design combines equipment ranks, a Sanctuary hub and Expeditions. The browser demo exposes only part of the intended progression loop.</p>
+        </div>
+        <div class="rank-panel">
+          <div class="rank-copy"><span class="rank-kicker">EQUIPMENT LADDER</span><h3>Eight steps<br>from ash to myth.</h3><p>Rank structure is part of the project design; this landing page does not imply all eight ranks are implemented or balanced in the demo.</p></div>
+          <div class="rank-grid" aria-label="Eight planned equipment ranks"><span><b>I</b><small>Rank I</small></span><span><b>II</b><small>Rank II</small></span><span><b>III</b><small>Rank III</small></span><span><b>IV</b><small>Rank IV</small></span><span><b>V</b><small>Rank V</small></span><span><b>VI</b><small>Rank VI</small></span><span><b>VII</b><small>Rank VII</small></span><span><b>VIII</b><small>Rank VIII</small></span></div>
+        </div>
+        <div class="system-cards">
+          <article><span class="system-index">01 / REST</span><div class="system-emblem sanctuary-emblem" aria-hidden="true">⌂</div><h3>The Sanctuary</h3><p>A quiet hub for characters, preparation and the memory that carries forward.</p><small>HUB SYSTEM / PARTIAL</small></article>
+          <article><span class="system-index">02 / RETURN</span><div class="system-emblem expedition-emblem" aria-hidden="true">↗</div><h3>Expeditions</h3><p>A planned replayable endgame loop built around risk, discovery and earned rewards.</p><small>ENDGAME DESIGN / IN PROGRESS</small></article>
+          <article><span class="system-index">03 / REMEMBER</span><div class="system-emblem archive-emblem" aria-hidden="true">⌘</div><h3>Memory & legacy</h3><p>Quests, people and choices are designed to shape what the world remembers.</p><small>STORY SYSTEM / PROTOTYPE</small></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="account-section section-shell" id="account" aria-labelledby="account-title">
+      <div class="account-mark" aria-hidden="true"><span></span><i></i><i></i><i></i></div>
+      <div class="account-copy"><p class="eyebrow">06 / YOUR JOURNEY, KEPT</p><h2 id="account-title">The ember<br>remembers <em>you.</em></h2><p>The web demo saves progress on this device. Optional Supabase sign-in and cloud saves depend on the deployment’s existing configuration; they are not guaranteed to be enabled on every hosted build.</p><div class="save-facts"><span><i class="status-live"></i> Local device save</span><span><i class="status-optional"></i> Cloud save when configured</span></div></div>
+      <div class="account-action"><button type="button" id="accountOpen" class="auth-entry">Account / Sign in <span aria-hidden="true">↗</span></button><p>Signing in is optional for the local demo. Your existing account and cloud-save flow is unchanged.</p><a class="text-link" href="./play.html">Continue without an account <span aria-hidden="true">→</span></a></div>
+    </section>
+
+    <section class="faq-section section-shell" id="faq" aria-labelledby="faq-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">07 / BEFORE YOU CROSS</p><h2 id="faq-title">A few things<br>to <em>know.</em></h2></div>
+        <p>A transparent field guide for this pre-alpha browser demo.</p>
+      </div>
+      <div class="faq-list">
+        <details><summary>What can I play right now?<span aria-hidden="true">+</span></summary><p>The browser demo includes a 3D space to explore, NPC interaction and dialogue, quest objectives, a basic attack, dodge, inventory, map, journal and local device saves. Some systems are prototypes.</p></details>
+        <details><summary>Are all ten chapters playable?<span aria-hidden="true">+</span></summary><p>No. The page presents the ten-chapter story roadmap. The opening chapter is the current playable web slice; the remaining chapters are not being presented as complete, playable content.</p></details>
+        <details><summary>Will my progress be saved?<span aria-hidden="true">+</span></summary><p>The browser demo uses local storage on this device. Cloud save is optional and depends on the existing Supabase deployment configuration and account sign-in.</p></details>
+        <details><summary>Is this a Unity build?<span aria-hidden="true">+</span></summary><p>No. The public Play link opens a browser prototype powered by Three.js. It is separate from the Unity C# source and is labelled pre-alpha.</p></details>
+        <details><summary>Does the game support mobile?</summary><p>The website is designed to adapt to mobile screens, but the browser gameplay experience has not been verified on every phone, browser or touch-control setup.</p></details>
+      </div>
+    </section>
+
+    <section class="closing-section" aria-labelledby="closing-title">
+      <img src="./assets/ashen-crown-logo.svg" alt="" class="closing-logo" width="74" height="74" loading="lazy">
+      <p class="eyebrow">THE FIRE IS NOT GONE.</p>
+      <h2 id="closing-title">A name forgotten<br><em>is not a name lost.</em></h2>
+      <a class="button primary" href="./play.html">Play the opening demo <span aria-hidden="true">↗</span></a>
+      <p class="closing-status"><span class="status-dot"></span> PRE-ALPHA · BROWSER DEMO · IN DEVELOPMENT</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="footer-brand" href="#top"><img src="./assets/ashen-crown-logo.svg" alt="" width="28" height="28" loading="lazy"><span>ASHEN CROWN <small>THE LAST EMBER</small></span></a>
+    <div class="footer-note"><span>PRE-ALPHA BROWSER DEMO</span><span>NOT A FINISHED UNITY RELEASE</span></div>
+    <div class="footer-links"><a href="./play.html">Play demo</a><a href="https://github.com/ltrtrongphu-png/AshenCrown-Unity" target="_blank" rel="noreferrer">Source code ↗</a><div class="lang-switch footer-languages" role="group" aria-label="Language"><button type="button" data-lang="en" aria-label="English" aria-pressed="true">EN</button><button type="button" data-lang="vi" aria-label="Vietnamese" aria-pressed="false">VI</button><button type="button" data-lang="ja" aria-label="Japanese" aria-pressed="false">JA</button><button type="button" data-lang="ko" aria-label="Korean" aria-pressed="false">KO</button><button type="button" data-lang="zh" aria-label="Chinese" aria-pressed="false">中文</button></div></div>
+    <p class="copyright">© ASHEN CROWN — A WORK IN PROGRESS.</p>
+  </footer>
+
+  <script src="./app.js"></script>
+  <script src="./i18n.js"></script>
+  <script type="module" src="./model3d.js"></script>
+  <script src="./auth-config.js"></script>
+  <script type="module" src="./auth.js"></script>
+</body>
+</html>
