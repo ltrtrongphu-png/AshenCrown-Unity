@@ -30,6 +30,7 @@ const webFiles = [
   'vendor/three.module.js',
   'vendor/three.core.js',
   'vendor/GLTFLoader.js',
+  'Assets/ashen-crown-logo.svg',
   'play-boot.js',
   'auth-config.js',
   'auth.js',
@@ -45,6 +46,7 @@ const npmAssetSources = new Map([
   ['vendor/three.module.js', 'node_modules/three/build/three.module.js'],
   ['vendor/three.core.js', 'node_modules/three/build/three.core.js'],
   ['vendor/GLTFLoader.js', 'node_modules/three/examples/jsm/loaders/GLTFLoader.js'],
+  ['Assets/ashen-crown-logo.svg', 'assets/ashen-crown-logo.svg'],
 ]);
 function sourcePath(file) {
   return join(repoRoot, npmAssetSources.get(file) || file);
