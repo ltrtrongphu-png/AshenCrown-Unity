@@ -114,7 +114,7 @@ main { position: relative; z-index: 2; }
 .scroll-cue { position: absolute; right: 50%; bottom: 28px; display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 8px; letter-spacing: .16em; text-decoration: none; text-transform: uppercase; transform: translateX(50%); }
 .scroll-cue span { width: 23px; height: 1px; background: var(--ember); }
 
-.section-shell { width: min(100% - 2 * var(--page-pad), var(--page-width)); margin-inline: auto; }
+.section-shell { width: calc(100% - var(--page-pad) - var(--page-pad)); max-width: var(--page-width); margin-inline: auto; }
 .opening-note { display: grid; grid-template-columns: .7fr 1.05fr 1fr; gap: clamp(28px, 5vw, 82px); align-items: start; padding-block: clamp(82px, 11vw, 148px); border-bottom: 1px solid var(--line); }
 .section-marker { padding-top: 7px; color: var(--dim); font-size: 9px; font-weight: 700; letter-spacing: .18em; }
 .section-marker span { color: var(--ember); }
