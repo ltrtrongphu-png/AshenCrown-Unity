@@ -20,6 +20,10 @@ const generated = new Set(['resource-pack.json']);
 const packageSources = new Map([
   ['vendor/three.module.js', 'node_modules/three/build/three.module.js'],
   ['vendor/three.core.js', 'node_modules/three/build/three.core.js'],
+  ['vendor/GLTFLoader.js', 'node_modules/three/examples/jsm/loaders/GLTFLoader.js'],
+  ['Assets/ashen-crown-logo.svg', 'assets/ashen-crown-logo.svg'],
+  ['utils/BufferGeometryUtils.js', 'node_modules/three/examples/jsm/utils/BufferGeometryUtils.js'],
+  ['utils/SkeletonUtils.js', 'node_modules/three/examples/jsm/utils/SkeletonUtils.js'],
 ]);
 
 for (const file of allowList) {

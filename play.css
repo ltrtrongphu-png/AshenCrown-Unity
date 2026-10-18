@@ -391,3 +391,27 @@ a:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visib
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+
+/* Owner-only, account-gated local QA panel. */
+.owner-access{border-color:rgba(213,151,93,.68)!important;color:#ffcb91!important;background:rgba(67,38,23,.55)!important}
+.owner-console{position:fixed;z-index:120;top:82px;right:clamp(12px,3vw,42px);width:min(460px,calc(100vw - 24px));max-height:calc(100vh - 105px);overflow:auto;padding:20px;border:1px solid rgba(224,155,99,.48);background:linear-gradient(145deg,rgba(18,15,14,.98),rgba(8,12,17,.98));box-shadow:0 24px 90px rgba(0,0,0,.72),inset 0 1px rgba(255,255,255,.045);color:#eee2d5;display:none;backdrop-filter:blur(16px)}
+.owner-console.show{display:block}
+.owner-console-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:15px;border-bottom:1px solid rgba(211,161,118,.22)}
+.owner-console-head span{font-size:8px;letter-spacing:.17em;color:#d18a59}
+.owner-console-head h2{margin:4px 0 2px;font:600 27px/1.1 var(--serif)}
+.owner-console-head small{color:#9f9186;font-size:9px}
+.owner-console-head>button{width:32px;height:32px;background:#181310;border:1px solid #63432f;color:#efc5a2;font-size:20px;cursor:pointer}
+.owner-diagnostics{display:grid;gap:0;margin:12px 0;border:1px solid rgba(213,178,145,.12)}
+.owner-diagnostics>div{display:flex;justify-content:space-between;gap:12px;padding:9px 10px;border-bottom:1px solid rgba(213,178,145,.09)}
+.owner-diagnostics>div:last-child{border-bottom:0}
+.owner-diagnostics span{font-size:8px;letter-spacing:.12em;color:#92877e}
+.owner-diagnostics b{max-width:65%;font-size:10px;font-weight:500;color:#e9d5c3;text-align:right}
+.owner-tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.owner-tools-grid button{min-height:39px;padding:9px;border:1px solid rgba(195,126,79,.38);background:linear-gradient(110deg,rgba(67,40,27,.8),rgba(28,26,26,.92));color:#e7cbb1;font-size:8px;letter-spacing:.11em;cursor:pointer}
+.owner-tools-grid button:hover,.owner-tools-grid button.selected{border-color:#e6aa75;background:rgba(111,63,34,.65);color:#fff0df}
+.owner-console>p{margin:13px 0 0;color:#8d837a;font-size:9px;line-height:1.5}
+.combat-callout{position:fixed;z-index:55;left:50%;bottom:clamp(115px,18vh,190px);transform:translate(-50%,12px);opacity:0;pointer-events:none;padding:9px 15px;border:1px solid rgba(228,175,123,.48);background:linear-gradient(100deg,rgba(17,15,15,.94),rgba(44,28,21,.92));box-shadow:0 8px 36px rgba(0,0,0,.45),0 0 22px rgba(192,109,62,.12);font:600 12px var(--serif);letter-spacing:.17em;color:#f6d1aa;transition:opacity .12s ease,transform .12s ease}
+.combat-callout.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:700px){.owner-console{top:66px;right:8px;width:calc(100vw - 16px);padding:14px}.owner-console-head h2{font-size:23px}.owner-diagnostics>div{padding:8px}.owner-tools-grid button{font-size:7px}.combat-callout{bottom:150px;font-size:10px}}
+@media(prefers-reduced-motion:reduce){.combat-callout{transition:none}}

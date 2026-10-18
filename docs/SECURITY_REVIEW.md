@@ -49,3 +49,11 @@ The repository has a `server/` directory with a package script but no `src/index
 4. Verify a failed cloud save does not falsely report a successful sync; verify local save remains available when offline.
 5. Open the Unity project in Unity 2021.3 LTS; run tests after configuring a valid Unity license for CI.
 6. Before any competitive online feature, move progression/reward validation to a trusted server or database function.
+
+
+## Browser local-save encryption
+
+- New local writes use Web Crypto AES-256-GCM with a fresh random 96-bit IV per write. The non-extractable key is stored in IndexedDB, separately from the localStorage ciphertext envelope; write/read-back verification is required.
+- The rollout deliberately deletes plaintext v5 local saves and their rolling backups rather than carrying old cleartext forward. Failed authentication/decryption of an existing envelope also clears that envelope and its local backups. There is no plaintext fallback when Web Crypto or IndexedDB is unavailable.
+- This protects casual inspection of localStorage, not against same-origin script compromise or a player controlling their own browser: code running in the same origin may request the IndexedDB key and decrypt the save. Encryption is not server-side anti-cheat.
+- Optional signed-in cloud backup still sends the in-memory save object to the existing Supabase table; this patch encrypts the browser's localStorage representation, not the Supabase JSONB payload. The current version remains client-trusted.

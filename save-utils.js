@@ -151,3 +151,119 @@ export function backupLocalSave(storage, rawSave, timestamp = Date.now(), keep =
   while (backups.length > limit) storage.removeItem(backups.shift());
   return key;
 }
+
+
+/**
+ * Local saves are ciphertext envelopes. The AES-GCM key is held separately by
+ * the browser's IndexedDB keyring (not exported into localStorage).
+ */
+export const ENCRYPTED_SAVE_PREFIX = 'ASHEN-AESGCM-v1:';
+
+export function isEncryptedSaveEnvelope(value) {
+  return typeof value === 'string' && value.startsWith(ENCRYPTED_SAVE_PREFIX);
+}
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + 0x8000, bytes.length)));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(encoded) {
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+export async function encryptSavePayload(value, key, cryptoApi = globalThis.crypto) {
+  if (!cryptoApi?.subtle || typeof cryptoApi.getRandomValues !== 'function' || !key) {
+    throw new Error('Web Crypto and a local AES-GCM key are required to encrypt saves.');
+  }
+  const plaintext = new TextEncoder().encode(JSON.stringify(value));
+  const iv = cryptoApi.getRandomValues(new Uint8Array(12));
+  const ciphertext = new Uint8Array(await cryptoApi.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext));
+  const packed = new Uint8Array(iv.length + ciphertext.length);
+  packed.set(iv, 0);
+  packed.set(ciphertext, iv.length);
+  return ENCRYPTED_SAVE_PREFIX + bytesToBase64(packed);
+}
+
+export async function decryptSavePayload(envelope, key, cryptoApi = globalThis.crypto) {
+  if (!isEncryptedSaveEnvelope(envelope)) throw new Error('The local save is not an encrypted AES-GCM envelope.');
+  if (!cryptoApi?.subtle || !key) throw new Error('The local save encryption key is unavailable.');
+  const packed = base64ToBytes(envelope.slice(ENCRYPTED_SAVE_PREFIX.length));
+  if (packed.length < 29) throw new Error('The encrypted save is incomplete.');
+  const iv = packed.slice(0, 12);
+  const ciphertext = packed.slice(12);
+  const plaintext = await cryptoApi.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+  const value = JSON.parse(new TextDecoder().decode(plaintext));
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('The decrypted local save is not a valid save object.');
+  }
+  return value;
+}
+
+function removeLocalSaveBackups(storage, keyName) {
+  const remove = new Set();
+  const backupPrefix = keyName + '.backup.';
+  for (let index = 0; index < storage.length; index++) {
+    const key = storage.key(index);
+    if (typeof key === 'string' && (key.startsWith(backupPrefix) || key.startsWith('ashen-crown-3d.backup.'))) {
+      remove.add(key);
+    }
+  }
+  // Collect keys before deleting so an index shift cannot skip a backup.
+  for (const key of remove) storage.removeItem(key);
+  return remove.size;
+}
+
+function removeLocalSaveAndBackups(storage, keyName) {
+  storage.removeItem(keyName);
+  removeLocalSaveBackups(storage, keyName);
+}
+
+/**
+ * Plaintext v5 records are intentionally not migrated: on first encrypted-save
+ * rollout, remove them and their rolling backups instead of leaving cleartext.
+ * A corrupt envelope is also cleared so the next save starts cleanly.
+ */
+export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi = globalThis.crypto) {
+  if (!storage || typeof storage.getItem !== 'function' || typeof storage.removeItem !== 'function') {
+    throw new TypeError('A readable and writable local storage object is required.');
+  }
+  // Backups are from the previous plaintext implementation. Remove them on
+  // every boot, even if the primary record is missing or already encrypted.
+  const removedBackups = removeLocalSaveBackups(storage, keyName);
+  const raw = storage.getItem(keyName);
+  if (raw === null || raw === undefined || raw === '') {
+    return { value: null, wipedLegacy: false, corrupt: false, removedBackups };
+  }
+  if (!isEncryptedSaveEnvelope(raw)) {
+    storage.removeItem(keyName);
+    return { value: null, wipedLegacy: true, corrupt: false, reason: 'plaintext', removedBackups };
+  }
+  try {
+    if (typeof getKey !== 'function') throw new Error('The local save key provider is unavailable.');
+    const key = await getKey();
+    const value = await decryptSavePayload(raw, key, cryptoApi);
+    return { value, wipedLegacy: false, corrupt: false, removedBackups };
+  } catch (error) {
+    removeLocalSaveAndBackups(storage, keyName);
+    return { value: null, wipedLegacy: true, corrupt: true, reason: 'corrupt', error, removedBackups };
+  }
+}
+
+export async function writeEncryptedLocalSave(storage, keyName, value, key, cryptoApi = globalThis.crypto) {
+  if (!storage || typeof storage.setItem !== 'function' || typeof storage.getItem !== 'function') {
+    throw new TypeError('A writable local storage object is required.');
+  }
+  const envelope = await encryptSavePayload(value, key, cryptoApi);
+  storage.setItem(keyName, envelope);
+  if (storage.getItem(keyName) !== envelope || !isEncryptedSaveEnvelope(storage.getItem(keyName))) {
+    throw new Error('Encrypted local-save verification failed.');
+  }
+  return true;
+}

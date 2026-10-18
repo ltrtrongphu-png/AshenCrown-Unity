@@ -29,6 +29,10 @@ const webFiles = [
   'save-utils.js',
   'vendor/three.module.js',
   'vendor/three.core.js',
+  'vendor/GLTFLoader.js',
+  'utils/BufferGeometryUtils.js',
+  'utils/SkeletonUtils.js',
+  'Assets/ashen-crown-logo.svg',
   'play-boot.js',
   'auth-config.js',
   'auth.js',
@@ -43,6 +47,10 @@ const generatedFiles = new Set(['resource-pack.json']);
 const npmAssetSources = new Map([
   ['vendor/three.module.js', 'node_modules/three/build/three.module.js'],
   ['vendor/three.core.js', 'node_modules/three/build/three.core.js'],
+  ['vendor/GLTFLoader.js', 'node_modules/three/examples/jsm/loaders/GLTFLoader.js'],
+  ['utils/BufferGeometryUtils.js', 'node_modules/three/examples/jsm/utils/BufferGeometryUtils.js'],
+  ['utils/SkeletonUtils.js', 'node_modules/three/examples/jsm/utils/SkeletonUtils.js'],
+  ['Assets/ashen-crown-logo.svg', 'assets/ashen-crown-logo.svg'],
 ]);
 function sourcePath(file) {
   return join(repoRoot, npmAssetSources.get(file) || file);
@@ -97,7 +105,7 @@ function checkJavaScriptSyntax(file, module = false) {
 for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js', 'play-boot.js', 'auth-config.js']) {
   checkJavaScriptSyntax(file, false);
 }
-for (const file of ['play.js', 'save-utils.js', 'model3d.js', 'auth.js', 'vendor/three.module.js', 'vendor/three.core.js']) {
+for (const file of ['play.js', 'save-utils.js', 'model3d.js', 'auth.js', 'vendor/three.module.js', 'vendor/three.core.js', 'vendor/GLTFLoader.js', 'utils/BufferGeometryUtils.js', 'utils/SkeletonUtils.js']) {
   checkJavaScriptSyntax(file, true);
 }
 
@@ -129,6 +137,16 @@ for (const file of webFiles) {
       })),
     };
     writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`);
+  } else if (file === 'vendor/GLTFLoader.js' || file.startsWith('utils/')) {
+    const moduleSource = readFileSync(source, 'utf8');
+    const localThreeImport = file.startsWith('utils/') ? '../vendor/three.module.js' : './three.module.js';
+    const localModuleSource = moduleSource
+      .replaceAll("from 'three'", `from '${localThreeImport}'`)
+      .replaceAll('from "three"', `from "${localThreeImport}"`);
+    if (localModuleSource.includes("from 'three'") || localModuleSource.includes('from "three"')) {
+      throw new Error('Could not rewrite a Three.js module import to a local URL in ' + file);
+    }
+    writeFileSync(destination, localModuleSource);
   } else if (existsSync(source)) {
     if (file === 'sw.js' || file === 'play.html' || file === 'index.html') {
       const template = readFileSync(source, 'utf8');
