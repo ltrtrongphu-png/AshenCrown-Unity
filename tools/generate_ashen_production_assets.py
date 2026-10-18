@@ -48,14 +48,14 @@ def make_textures() -> list[Path]:
     )
     scratches = np.zeros((size, size), dtype=np.float32)
     # Fine directional abrasion gives steel and leather a readable surface.
-    for _ in range(540):
+    for _ in range(920):
         sx = int(rng.integers(0, size)); sy = int(rng.integers(0, size))
         length = int(rng.integers(7, 68)); width = int(rng.integers(1, 3))
         ex = min(size - 1, sx + length)
         scratches[sy:min(size, sy + width), sx:ex] -= float(rng.uniform(12, 54))
     pits = Image.new("L", (size, size), 0)
     pit_draw = ImageDraw.Draw(pits)
-    for _ in range(620):
+    for _ in range(900):
         px = int(rng.integers(0, size)); py = int(rng.integers(0, size))
         radius = int(rng.integers(1, 3))
         value = int(rng.integers(65, 210))
@@ -77,12 +77,19 @@ def make_textures() -> list[Path]:
     # Fine, branching ember fissures used by the emissive glass material.
     crack = Image.new("L", (size, size), 0)
     draw = ImageDraw.Draw(crack)
-    for _ in range(96):
+    for _ in range(132):
         px = int(rng.integers(0, size)); py = int(rng.integers(0, size))
         points = [(px, py)]
-        for _step in range(int(rng.integers(4, 12))):
+        for step in range(int(rng.integers(5, 13))):
             px += int(rng.integers(-12, 13)); py += int(rng.integers(5, 18))
             points.append((max(0, min(size, px)), max(0, min(size, py))))
+            if step in (2, 5) and rng.random() < 0.42:
+                bx, by = px, py
+                branch = [(bx, by)]
+                for _branch_step in range(int(rng.integers(2, 5))):
+                    bx += int(rng.integers(-10, 11)); by += int(rng.integers(-3, 13))
+                    branch.append((max(0, min(size, bx)), max(0, min(size, by))))
+                draw.line(branch, fill=int(rng.integers(115, 225)), width=1)
         draw.line(points, fill=int(rng.integers(120, 256)), width=int(rng.integers(1, 3)))
     crack = crack.filter(ImageFilter.GaussianBlur(0.35))
     glow = np.asarray(crack, dtype=np.float32) / 255.0
@@ -268,6 +275,14 @@ class Character:
         for center_x,width in ((-.18,.19),(0,.21),(.18,.19)):
             self.plate("AshenCloth","Hips",[(center_x-width/2,1.02),(center_x+width/2,1.02),(center_x+width*.40,.80),(center_x,.68),(center_x-width*.40,.80)],.255,.05)
             self.plate("AntiqueBrass","Hips",[(center_x-.012,.96),(center_x+.012,.96),(center_x+.008,.77),(center_x,.72),(center_x-.008,.77)],.286,.012)
+        # Fine, layered gorget flanges break up the broad breastplate silhouette.
+        for side in (-1,1):
+            self.plate("ObsidianSteel","Chest",
+                [(side*.12,1.69),(side*.19,1.73),(side*.24,1.65),(side*.22,1.57),(side*.17,1.54)],.314,.018)
+            self.plate("AntiqueBrass","Chest",
+                [(side*.145,1.675),(side*.17,1.685),(side*.205,1.625),(side*.19,1.59)],.328,.008)
+        self.plate("ObsidianSteel","Chest",[(-.065,1.43),(-.045,1.49),(0,1.52),(.045,1.49),(.065,1.43),(0,1.39)],.301,.018)
+        self.plate("AntiqueBrass","Chest",[(-.032,1.455),(0,1.49),(.032,1.455),(0,1.415)],.317,.007)
         # Shoulder pauldrons, articulated arms and riveted cuffs.
         for side, label in [(-1,"Left"),(1,"Right")]:
             shoulder_joint=label+"Shoulder"; upper=label+"UpperArm"; lower=label+"LowerArm"; hand=label+"Hand"
@@ -288,6 +303,9 @@ class Character:
             self.plate("ObsidianSteel",shoulder_joint,outer,.215,.045)
             band=[(side*.28,1.88),(side*.34,1.91),(side*.47,1.85),(side*.44,1.81)]
             self.plate("AntiqueBrass",shoulder_joint,band,.247,.012)
+            inner=[(side*.29,1.84),(side*.35,1.88),(side*.435,1.84),(side*.42,1.79)]
+            self.plate("ObsidianSteel",shoulder_joint,inner,.262,.012)
+            self.plate("AntiqueBrass",shoulder_joint,[(side*.335,1.855),(side*.365,1.865),(side*.412,1.835)],.272,.006)
             self.ellipsoid("AntiqueBrass",shoulder_joint,(side*.39,1.77,.266),(.018,.018,.012),10,8)
             lower=label+"LowerArm"
             cuff=[(side*.57,1.34),(side*.79,1.34),(side*.81,1.22),(side*.75,1.13),(side*.61,1.17)]
@@ -339,6 +357,14 @@ class Character:
             for side in (-1,1):
                 self.cone("Emberglass","Chest",(side*.47,1.82,-.01),.44,.12,9)
                 self.ellipsoid("AntiqueBrass","Chest",(side*.38,1.73,-.11),(.12,.16,.12),16,10)
+                # A second, irregular row of obsidian ridges gives the Regent a more
+                # threatening silhouette without runtime cloth/physics cost.
+                for ridge in range(3):
+                    y=1.68-ridge*.115
+                    self.cone("ObsidianSteel","Chest",(side*(.48+ridge*.025),y,-.16),.19-ridge*.025,.055,7,direction=-1)
+                    self.ellipsoid("AntiqueBrass","Chest",(side*(.39+ridge*.035),y+.035,-.085),(.038,.027,.025),10,7)
+                self.plate("ObsidianSteel","Chest",
+                    [(side*.32,1.73),(side*.47,1.78),(side*.52,1.68),(side*.44,1.57),(side*.35,1.61)],-.105,.025)
 
 
 def pack_glb(character: Character, texture_paths: list[Path], target: Path):
