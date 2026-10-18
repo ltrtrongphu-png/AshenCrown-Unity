@@ -49,3 +49,11 @@ ASHEN_SMOKE_URL=http://127.0.0.1:4173 node tests/e2e/game-smoke.mjs
 The smoke test must assert that the game rendered, the production Sentinel GLB loaded, the production Regent GLB loaded and is attached to the live encounter, and a real player attack reduces the Warden's health. It saves screenshots and a JSON diagnostics report under `artifacts/game-smoke/`. A successful JavaScript boot or a non-empty canvas alone is not enough to claim the production model paths work.
 
 The smoke-only hooks are enabled only when `?e2e=1` is used on localhost/127.0.0.1/::1; they are not enabled on the deployed public host.
+
+
+## NPC character roster
+
+- Source and built path: `Assets/Models/NPC/AshenNPCRoster.glb` → `/Assets/Models/NPC/AshenNPCRoster.glb`.
+- The NPC roster is one compact GLB containing 56 named roots (`NPCMODEL_<id>`) with different archetype silhouettes and per-character PBR material factors. It shares the same four embedded 1024x1024 PBR maps inside a single GLB, so the runtime downloads one roster file rather than 56 separate multi-megabyte files.
+- `play.js` parses the roster once and keeps the named prototype roots off-scene; Lyra/Orren/The Seer and villagers receive clones of their assigned production prototype. Their old procedural meshes remain hidden as a fallback only if pack loading fails.
+- The smoke test confirms that the roster loaded, narrative NPCs and villagers received production-model clones, and the screenshot shows the live scene after those attachments.
