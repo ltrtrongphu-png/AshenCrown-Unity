@@ -13,10 +13,12 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
 const pageErrors = [];
 const consoleErrors = [];
+const consoleWarnings = [];
 const failedRequests = [];
 page.on('pageerror', error => pageErrors.push(String(error?.stack || error)));
 page.on('console', message => {
   if (message.type() === 'error') consoleErrors.push(message.text());
+  if (message.type() === 'warning') consoleWarnings.push(message.text());
 });
 page.on('requestfailed', request => failedRequests.push({ url: request.url(), failure: request.failure()?.errorText || 'unknown' }));
 page.on('response', response => {
@@ -65,7 +67,7 @@ try {
 } finally {
   status ||= await page.evaluate(() => window.__ASHEN_TEST__?.status?.() || null).catch(() => null);
   await writeFile(artifactDir + '/diagnostics.json', JSON.stringify({
-    baseUrl, status, failure, pageErrors, consoleErrors, failedRequests,
+    baseUrl, status, failure, pageErrors, consoleErrors, consoleWarnings, failedRequests,
     screenshotFiles: ['ashen-crown-gameplay.png', 'ashen-crown-boss-encounter.png']
   }, null, 2));
   await browser.close();
