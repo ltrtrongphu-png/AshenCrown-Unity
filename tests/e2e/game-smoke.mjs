@@ -69,9 +69,15 @@ try {
   assert.equal(await page.evaluate(() => window.__ASHEN_TEST__.releaseBossHold()), true, 'test-only staging hold should release');
   for (let strike = 0; strike < 3; strike++) {
     await page.evaluate(() => window.__ASHEN_TEST__.attackOnce());
-    await page.waitForTimeout(390);
+    if (strike < 2) await page.waitForTimeout(390);
   }
+  // Capture the final chain strike while its real in-game feedback/effects are visible.
+  await page.waitForTimeout(120);
+  await page.screenshot({ path: artifactDir + '/ashen-crown-combo-strike.png', fullPage: false });
+  screenshotFiles.push('ashen-crown-combo-strike.png');
+  await page.waitForTimeout(300);
   const afterAttack = await page.evaluate(() => window.__ASHEN_TEST__.status());
+  status = afterAttack;
   assert.ok(afterAttack.bossHp < beforeAttack, 'real player attack input should reduce Warden HP');
   assert.equal(pageErrors.length, 0, 'browser must not report uncaught JavaScript exceptions');
   assert.equal(consoleErrors.length, 0, 'browser must not report console errors');
