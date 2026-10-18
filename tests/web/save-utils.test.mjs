@@ -202,8 +202,12 @@ test('encrypted local-save adapter verifies ciphertext and clears a tampered env
   assert.equal(await writeEncryptedLocalSave(storage, 'ashen-crown-3d', save, key, webcrypto), true);
   const savedEnvelope = storage.getItem('ashen-crown-3d');
   assert.equal(savedEnvelope.includes('"level"'), false);
+  storage.setItem('ashen-crown-3d.backup.legacy', '{"level":1}');
   const loaded = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
   assert.deepEqual(loaded.value, save);
+  assert.equal(loaded.removedBackups, 1);
+  assert.equal(loaded.wipedLegacy, false);
+  assert.equal(storage.getItem('ashen-crown-3d.backup.legacy'), null);
   const badEnvelope = await encryptSavePayload(save, key, webcrypto);
   const middle = badEnvelope.length - 6;
   values.set('ashen-crown-3d', badEnvelope.slice(0, middle) + (badEnvelope[middle] === 'A' ? 'B' : 'A') + badEnvelope.slice(middle + 1));
@@ -213,3 +217,30 @@ test('encrypted local-save adapter verifies ciphertext and clears a tampered env
   assert.equal(bad.corrupt, true);
   assert.equal(storage.getItem('ashen-crown-3d'), null);
 });
+
+
+test('orphaned plaintext backups are wiped even when the primary local save is missing', async () => {
+  const { readEncryptedLocalSave } = await import('../../save-utils.js');
+  const values = new Map([
+    ['ashen-crown-3d.backup.100', '{"level":22,"coins":999}'],
+    ['ashen-crown-3d.backup.200', '{"level":18,"coins":500}'],
+    ['unrelated-preference', 'dark']
+  ]);
+  const storage = {
+    get length() { return values.size; },
+    key(index) { return [...values.keys()][index] ?? null; },
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(String(key), String(value)); },
+    removeItem(key) { values.delete(key); }
+  };
+  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => {
+    throw new Error('no encryption key should be requested for an empty primary slot');
+  });
+  assert.equal(result.value, null);
+  assert.equal(result.wipedLegacy, false);
+  assert.equal(result.removedBackups, 2);
+  assert.equal(storage.getItem('ashen-crown-3d.backup.100'), null);
+  assert.equal(storage.getItem('ashen-crown-3d.backup.200'), null);
+  assert.equal(storage.getItem('unrelated-preference'), 'dark');
+});
+
