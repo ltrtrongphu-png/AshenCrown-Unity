@@ -35,3 +35,11 @@ Do not switch either contract to v6 without a reviewed migration plan. Required 
 3. Verify old fixtures load after migration and new saves reload correctly.
 4. Define local/cloud conflict behavior before overwriting user data.
 5. Update this document and the security review with the new version and rollback path.
+
+
+## Encrypted local-save rollout
+
+- The browser keeps the current key `ashen-crown-3d` and the save-object schema at v5, but the stored value is now an `ASHEN-AESGCM-v1:` envelope containing a random 96-bit IV and AES-256-GCM ciphertext.
+- The non-extractable AES-GCM `CryptoKey` is stored separately in IndexedDB (`ashen-crown-local-keyring-v1`); it is not stored beside the ciphertext in localStorage. Saves are verified after each write.
+- On the first run after this change, any plaintext save at `ashen-crown-3d` and all `ashen-crown-3d.backup.*` copies are intentionally deleted rather than migrated. An unreadable/tampered encrypted envelope is also cleared. A fresh encrypted v5 save is then created as the player progresses.
+- A browser-local keyring means clearing site data, losing IndexedDB, or moving only the localStorage ciphertext to another device makes that local save unrecoverable. This is deliberate rather than silently writing plaintext. Optional signed-in cloud backup remains an in-memory v5 payload sent to the existing Supabase table; localStorage itself stores only ciphertext.
