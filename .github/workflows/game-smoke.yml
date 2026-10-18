@@ -1,0 +1,57 @@
+name: Browser gameplay smoke and screenshots
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gameplay-smoke:
+    name: Render game and capture real browser screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install production web dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Build deployment files
+        run: node tools/build-web.mjs
+      - name: Install pinned Playwright browser runner
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.0
+          npx playwright install --with-deps chromium
+      - name: Start the built web game
+        run: |
+          python3 -m http.server 4173 --directory dist > /tmp/ashen-crown-http.log 2>&1 &
+          echo $! > /tmp/ashen-crown-http.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/play.html > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/ashen-crown-http.log
+          exit 1
+      - name: Run browser gameplay smoke and capture screenshots
+        run: node tests/e2e/game-smoke.mjs
+        env:
+          ASHEN_SMOKE_URL: http://127.0.0.1:4173
+      - name: Upload real gameplay screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashen-crown-game-smoke
+          path: artifacts/game-smoke/
+          if-no-files-found: warn
+      - name: Upload static-server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashen-crown-game-smoke-server-log
+          path: /tmp/ashen-crown-http.log
+          if-no-files-found: warn
