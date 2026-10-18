@@ -2630,11 +2630,34 @@ function interact(){
       {label:'Keep one name to guard the last refuge',fn:()=>{state.quest=5;state.flags.sanctuaryOpen=false;state.rep.lyra+=2;xp(70);item('Hearthbound Vow','Relic','Legendary',['Legacy','Ward']);state.log.unshift('You kept one name bound to the sanctuary as its final guardian.');if(state.chapter<10){setActiveMap('sanctuary');player.position.set(-5,0,-1)}toastMsg('One ember remains to guard the refuge');setQuest();saveState()}}
     ]);
     else toastMsg(n.name+': The road remembers every choice.');
-  }else if(a.k==='node'){
-    const n=a.n;n.collected=true;n.root.visible=false;state.collectedNodes.push(nodeKey(n));
-    if(n.type==='ember'){state.shards++;state.chapterGathered++;xp(18);item(n.label,'Material',state.shards>=2?'Rare':'Uncommon',['Crafting','Ember']);toastMsg('Emberleaf collected · +1 forge shard');if(state.quest===1&&state.chapterGathered>=2)state.quest=2}
-    else if(n.type==='echo'){state.echoes++;xp(22);item(n.label,'Quest Item','Epic',['Memory','Lore']);toastMsg('A name returns to the bell');if(state.quest===3&&state.echoes>=2){state.flags.bellAwakened=true;state.log.unshift('The second memory rang out. Something answered from beneath Hollow.');spawnEnemy()}}
-    else{state.coins+=35;xp(30);item('Ancient Relic','Relic','Legendary',['Collection','Value']);toastMsg('Hidden relic discovered')}
+   }else if(a.k==='node'){
+    const n=a.n;
+    if(n.type==='ember'&&state.quest!==1){toastMsg('The ember trail will answer when this chapter asks you to follow it.');return}
+    if(n.type==='echo'&&state.quest!==3){toastMsg('These memories are sealed until the recovered record points you here.');return}
+    if(n.type==='record'&&(state.quest!==2||hasChapterRecord(state.flags,state.chapter))){toastMsg('The record is sealed until the investigation reaches this stage.');return}
+    n.collected=true;n.root.visible=false;state.collectedNodes.push(nodeKey(n));
+    if(n.type==='ember'){
+      state.shards++;state.chapterGathered++;xp(18);item(n.label,'Material',state.shards>=2?'Rare':'Uncommon',['Crafting','Ember']);
+      toastMsg('Emberleaf collected · '+state.chapterGathered+' / '+getChapterRequirements(state.chapter).embers+' traces');
+      if(state.quest===1&&state.chapterGathered>=getChapterRequirements(state.chapter).embers)state.quest=2;
+    }else if(n.type==='echo'){
+      state.echoes++;xp(22);item(n.label,'Quest Item','Epic',['Memory','Lore']);
+      toastMsg('A name returns to the record · '+state.echoes+' / '+getChapterRequirements(state.chapter).echoes);
+      if(state.quest===3&&state.echoes>=getChapterRequirements(state.chapter).echoes&&hasChapterRecord(state.flags,state.chapter)){
+        state.flags.bellAwakened=true;
+        const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];
+        state.log.unshift('The final echo answered. '+(chapter?.wardenName||'The chapter warden')+' has been drawn out.');
+        spawnEnemy();
+      }
+    }else if(n.type==='record'){
+      const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
+      state.flags[chapterRecordKey(state.chapter)]=true;
+      item(chapter.recordName||n.label,'Chapter Record','Rare',['Story','Chapter '+state.chapter],{focus:1});
+      state.log.unshift(chapter.recordClue||('You recovered a record from '+chapter.title+'.'));
+      toastMsg((chapter.recordName||'Chapter record')+' recovered · Orren can now verify the route');
+    }else{
+      state.coins+=35;xp(30);item('Ancient Relic','Relic','Legendary',['Collection','Value']);toastMsg('Hidden relic discovered');
+    }
     setQuest();saveState();
   }else if(a.k==='gate'){if(state.quest<a.n.unlock){toastMsg(a.n.name+' is sealed by the story.');return}toastMsg(a.n.name+' discovered — '+region())}
   else if(a.k==='enemy')pulse();
@@ -2912,7 +2935,7 @@ function loadState(){
         state.xp=Math.max(0,state.xp);state.level=Math.max(1,state.level);state.quest=THREE.MathUtils.clamp(state.quest,0,5);state.hp=Math.max(0,state.hp);state.stamina=THREE.MathUtils.clamp(state.stamina,0,100);state.coins=Math.max(0,state.coins);state.shards=Math.max(0,state.shards);state.echoes=Math.max(0,state.echoes);
         state.role=ROLE_DEFS[saved.role]?saved.role:'ashbreaker';state.appearance=['default','moon','moss'].includes(saved.appearance)?saved.appearance:'default';state.skillPoints=Math.max(0,Number(saved.skillPoints)||0);state.skillRanks=Array.isArray(saved.skillRanks)?saved.skillRanks.slice(0,3).map(v=>THREE.MathUtils.clamp(Math.floor(Number(v)||0),0,3)):[0,0,0];state.skillPoints=Math.max(state.skillPoints,Math.max(0,state.level-1-state.skillRanks.reduce((sum,v)=>sum+v,0)));state.settings={...state.settings,...(saved.settings&&typeof saved.settings==='object'&&!Array.isArray(saved.settings)?saved.settings:{})};if(state.settings.resourcePackDisabled===true&&state.settings.resourcePackDisabledVersion!==MODEL_PIPELINE_VERSION)state.settings.resourcePackDisabled=false;if(!['auto','performance','high'].includes(state.settings.quality))state.settings.quality='auto';state.settings.sensitivity=THREE.MathUtils.clamp(Number(state.settings.sensitivity)||1,.5,2);state.settings.volume=THREE.MathUtils.clamp(Number(state.settings.volume??.35),0,1);state.settings.uiScale=THREE.MathUtils.clamp(Number(state.settings.uiScale)||1,.8,1.2);state.settings.cameraFov=THREE.MathUtils.clamp(Number(state.settings.cameraFov)||55,42,68);for(const key of ['sound','animations','visualEffects','reducedMotion'])if(typeof state.settings[key]!=='boolean')state.settings[key]=true;state.rep={...state.rep,...(saved.rep&&typeof saved.rep==='object'&&!Array.isArray(saved.rep)?saved.rep:{})};for(const key of ['lyra','orren','seer']){const value=Number(state.rep[key]);state.rep[key]=Number.isFinite(value)?THREE.MathUtils.clamp(Math.floor(value),-1000,1000):0}
         state.flags={...state.flags,...(saved.flags&&typeof saved.flags==='object'&&!Array.isArray(saved.flags)?saved.flags:{})};state.currentMap=MAPS[saved.currentMap]?saved.currentMap:'sanctuary';
-        if(state.flags.bellWardenDefeated&&state.quest===3)state.quest=4;
+        if(state.flags.bellWardenDefeated&&state.quest===3)state.quest=4;if(state.quest>=3)state.flags[chapterRecordKey(state.chapter)]=true;
         state.meta={...state.meta,...(saved.meta&&typeof saved.meta==='object'&&!Array.isArray(saved.meta)?saved.meta:{})};
         for(const key of ['renown','mastery','legacy','points','contracts','developmentDay','hubLevel','chaptersComplete']){const value=Number(state.meta[key]);state.meta[key]=Number.isFinite(value)?THREE.MathUtils.clamp(Math.floor(value),0,1000000):0}
         state.chapter=THREE.MathUtils.clamp(Math.floor(state.chapter),1,10);state.level=Math.min(Math.max(1,Math.floor(state.level)),chapterLevelCap(state.chapter));state.xp=THREE.MathUtils.clamp(Math.floor(state.xp),0,xpNeededForLevel(state.level)-1);
@@ -2922,7 +2945,7 @@ function loadState(){
         const rawEquipment=saved.equipment&&typeof saved.equipment==='object'?saved.equipment:{};
         for(const slot of ['core','charm','armor','relic']){const candidate=sanitizeItemRecord(rawEquipment[slot]);const owned=candidate?state.inventory.find(i=>candidate.itemId?i.itemId===candidate.itemId:i.name===candidate.name&&i.type===candidate.type&&JSON.stringify(i.stats)===JSON.stringify(candidate.stats)&&JSON.stringify(i.attrs)===JSON.stringify(candidate.attrs)):null;if(owned&&equipmentSlotFor(owned)===slot)state.equipment[slot]=owned}
         state.collectedNodes=Array.isArray(saved.collectedNodes)?saved.collectedNodes.filter(x=>typeof x==='string'):[];
-        state.hunt={kills:Math.max(0,Math.floor(Number(saved.hunt?.kills)||0))};if(!Number.isFinite(Number(saved.chapterGathered)))state.chapterGathered=state.quest===1?Math.min(2,state.shards):0;if(state.quest===1&&state.chapterGathered>=2)state.quest=2;state.weaponRank=THREE.MathUtils.clamp(Math.floor(state.weaponRank||0),0,12);state.chapterGathered=Math.max(0,Math.floor(state.chapterGathered||0));state.log=Array.isArray(saved.log)?saved.log.filter(x=>typeof x==='string').slice(0,80):state.log;
+        state.hunt={kills:Math.max(0,Math.floor(Number(saved.hunt?.kills)||0))};if(!Number.isFinite(Number(saved.chapterGathered)))state.chapterGathered=state.quest===1?Math.min(2,state.shards):0;if(state.quest===1&&state.chapterGathered>=getChapterRequirements(state.chapter).embers)state.quest=2;state.weaponRank=THREE.MathUtils.clamp(Math.floor(state.weaponRank||0),0,12);state.chapterGathered=Math.max(0,Math.floor(state.chapterGathered||0));state.log=Array.isArray(saved.log)?saved.log.filter(x=>typeof x==='string').slice(0,80):state.log;
         state.tutorial=saved.tutorial===true;
         if(saved.playerPosition&&Number.isFinite(saved.playerPosition.x)&&Number.isFinite(saved.playerPosition.z)){player.position.x=THREE.MathUtils.clamp(saved.playerPosition.x,-106,106);player.position.z=THREE.MathUtils.clamp(saved.playerPosition.z,-106,106)}
       }
@@ -3181,7 +3204,7 @@ if(activeMapId==='sanctuary')spawnWildlifeBurst(10);
 updateSky();
 const DEVELOPMENT_DAY=9;state.meta.developmentDay=Math.max(Number(state.meta.developmentDay||0),DEVELOPMENT_DAY);toastMsg('Development Day '+state.meta.developmentDay+' — the world wakes, villages stir, and the morning sun rises.');
 setInterval(()=>{
-  if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!(state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated))spawnEnemy();
+  if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!isChapterWardenReady(state))spawnEnemy();
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
 setInterval(()=>{if(!document.hidden)scheduleIdleSave()},15000);
