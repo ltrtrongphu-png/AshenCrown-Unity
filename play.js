@@ -2293,7 +2293,7 @@ async function loadFullResourceModels(manifest,cache){
   if(fullPackLoaderPromise)return fullPackLoaderPromise;
   fullPackLoaderPromise=(async()=>{
     try{
-      const loaderModule=await import('https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/loaders/GLTFLoader.js');
+      const loaderModule=await import('./vendor/GLTFLoader.js');
       productionGltfLoader=new loaderModule.GLTFLoader();
 
       // Fetch cached buffers together, then parse only the player on startup.
