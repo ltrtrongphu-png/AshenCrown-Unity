@@ -18,12 +18,17 @@ if (!allowListMatch) {
 const allowList = [...allowListMatch[1].matchAll(/'([^']+)'/g)].map((match) => match[1]);
 const npcRosterPath = 'Assets/Models/NPC/AshenNPCRoster.glb';
 if (!allowList.includes(npcRosterPath)) fail('The NPC production roster must be in the web deployment allow-list.');
-const resourceFilesMatch = build.match(/const resourceFiles = \[([\\s\\S]*?)\];/);
-if (!resourceFilesMatch || !resourceFilesMatch[1].includes(npcRosterPath))
+const resourceFilesStart = build.indexOf('const resourceFiles = [');
+const resourceFilesEnd = resourceFilesStart >= 0 ? build.indexOf('];', resourceFilesStart) : -1;
+const resourceFilesSource = resourceFilesStart >= 0 && resourceFilesEnd > resourceFilesStart
+  ? build.slice(resourceFilesStart, resourceFilesEnd)
+  : '';
+if (!resourceFilesSource.includes(npcRosterPath))
   fail('The NPC production roster must be included in resource-pack.json.');
 const vercelIgnore = read('.vercelignore');
+const vercelIgnoreLines = vercelIgnore.split(String.fromCharCode(10)).map((line) => line.trim());
 for (const pattern of ['!Assets/Models/NPC/', '!Assets/Models/NPC/AshenNPCRoster.glb']) {
-  if (!vercelIgnore.split(/\\r?\\n/).includes(pattern))
+  if (!vercelIgnoreLines.includes(pattern))
     fail('.vercelignore must re-include the runtime NPC asset path: ' + pattern);
 }
 const generated = new Set(['resource-pack.json']);
