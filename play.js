@@ -1,4 +1,5 @@
 import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision, backupLocalSave } from './save-utils.js';
+import { getChapterRequirements, chapterRecordKey, hasChapterRecord, isChapterWardenReady, canAdvanceChapter } from './story-progression.js';
 // Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
 // prevent the entire game from starting.
 async function loadThreeEngine() {
@@ -1644,7 +1645,7 @@ for(let i=0;i<16;i++){
 }
 
 const nodes=[];function node(type,x,z,c,label,parent=props,mapId='sanctuary'){const g=new THREE.Group();g.position.set(x,0,z);const o=orb(.32,c,true);o.position.y=.5;g.add(o);const r=new THREE.Mesh(new THREE.TorusGeometry(.55,.035,8,24),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.5}));r.rotation.x=Math.PI/2;g.add(r);parent.add(g);nodes.push({type,x,z,label,root:g,collected:false,mapId})}
-node('ember',-10,-6,0xff7040,'Emberleaf');node('ember',-14,2,0xff7040,'Emberleaf');node('echo',48,-18,0x9b78dc,'Memory Echo');node('echo',65,-18,0x9b78dc,'Memory Echo');node('relic',3,-13,0xd7b36a,'Ancient Relic');
+node('ember',-10,-6,0xff7040,'Emberleaf');node('ember',-14,2,0xff7040,'Emberleaf');node('ember',-27,-12,0xff7040,'Emberleaf');node('ember',22,-19,0xff7040,'Emberleaf');node('ember',34,20,0xff7040,'Emberleaf');node('echo',48,-18,0x9b78dc,'Memory Echo');node('echo',65,-18,0x9b78dc,'Memory Echo');node('echo',-42,18,0x9b78dc,'Memory Echo');node('echo',-47,-25,0x9b78dc,'Memory Echo');node('echo',25,29,0x9b78dc,'Memory Echo');node('relic',3,-13,0xd7b36a,'Ancient Relic');node('record',34,-27,0xe4bd78,'Chapter Record');
 
 const MAPS={
   sanctuary:{name:'Sanctuary',hint:'The home that opens and closes every road.',chapters:[1,10],fog:0xc0aa98,ground:0x30281e,stone:0x665340,accent:0xd88b55,sky:0x4c8dca},
@@ -1692,9 +1693,9 @@ function makeExpeditionMap(id){
     const tip=new THREE.Mesh(new THREE.OctahedronGeometry(.16,0),detailMat);tip.position.set(x,1.35,z);g.add(tip);
   }
   // Compact resource loops keep chapter objectives close while optional materials sit farther out.
-  node('ember',-8,2,def.accent,'Wild Ember',g,id);node('ember',8,2,def.accent,'Wild Ember',g,id);
-  node('echo',-8,-12,0xa8a5ed,'Lost Trace',g,id);node('echo',8,-12,0xa8a5ed,'Lost Trace',g,id);
-  node('relic',0,29,0xf0cf83,'Buried Cache',g,id);
+  node('ember',-8,2,def.accent,'Wild Ember',g,id);node('ember',8,2,def.accent,'Wild Ember',g,id);node('ember',-23,18,def.accent,'Wild Ember',g,id);node('ember',23,18,def.accent,'Wild Ember',g,id);node('ember',0,-36,def.accent,'Wild Ember',g,id);
+  node('echo',-8,-12,0xa8a5ed,'Lost Trace',g,id);node('echo',8,-12,0xa8a5ed,'Lost Trace',g,id);node('echo',-23,26,0xa8a5ed,'Lost Trace',g,id);node('echo',23,26,0xa8a5ed,'Lost Trace',g,id);node('echo',0,-43,0xa8a5ed,'Lost Trace',g,id);
+  node('relic',0,29,0xf0cf83,'Buried Cache',g,id);node('record',14,29,def.accent,'Chapter Record',g,id);
   mapGroups[id]=g;return g;
 }
 for(const id of Object.keys(MAPS))if(id!=='sanctuary')makeExpeditionMap(id);
@@ -1708,7 +1709,7 @@ function setActiveMap(id,teleport=true){
   const home=activeMapId==='sanctuary';
   villagers.forEach(v=>v.root.visible=home);
   npcs.forEach((n,i)=>{const p=home?n.homePosition:[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1]);n.root.visible=true});
-  for(const n of nodes)n.root.visible=n.mapId===activeMapId&&!n.collected;
+  for(const n of nodes){if(n.type==='record')n.label=window.ASHEN_CAMPAIGN?.[state.chapter-1]?.recordName||'Chapter Record';n.root.visible=n.mapId===activeMapId&&!n.collected;}
   wildlife.forEach(w=>w.root.visible=home);
   if(teleport)player.position.set(0,0,home?7:14);
   const def=MAPS[activeMapId];scene.fog.color.setHex(def.fog);scene.fog.near=activeMapId==='sanctuary'?58:30;scene.fog.far=activeMapId==='sanctuary'?245:105;
