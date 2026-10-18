@@ -16,6 +16,16 @@ if (!allowListMatch) {
   process.exit(1);
 }
 const allowList = [...allowListMatch[1].matchAll(/'([^']+)'/g)].map((match) => match[1]);
+const npcRosterPath = 'Assets/Models/NPC/AshenNPCRoster.glb';
+if (!allowList.includes(npcRosterPath)) fail('The NPC production roster must be in the web deployment allow-list.');
+const resourceFilesMatch = build.match(/const resourceFiles = \[([\\s\\S]*?)\];/);
+if (!resourceFilesMatch || !resourceFilesMatch[1].includes(npcRosterPath))
+  fail('The NPC production roster must be included in resource-pack.json.');
+const vercelIgnore = read('.vercelignore');
+for (const pattern of ['!Assets/Models/NPC/', '!Assets/Models/NPC/AshenNPCRoster.glb']) {
+  if (!vercelIgnore.split(/\\r?\\n/).includes(pattern))
+    fail('.vercelignore must re-include the runtime NPC asset path: ' + pattern);
+}
 const generated = new Set(['resource-pack.json']);
 const packageSources = new Map([
   ['vendor/three.module.js', 'node_modules/three/build/three.module.js'],
