@@ -3350,6 +3350,8 @@ async function bootstrapEncryptedSave() {
     toastMsg(result.corrupt
       ? 'Damaged encrypted save and local backups removed. A fresh local journey will begin.'
       : 'Legacy plaintext save and all local backup copies removed. A fresh encrypted journey will begin.');
+  } else if(result.removedBackups>0) {
+    toastMsg('Legacy plaintext backup copies removed; only the encrypted local save is retained.');
   }
   return result;
 }
