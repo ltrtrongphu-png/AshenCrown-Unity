@@ -48,7 +48,7 @@ try {
   }, null, { timeout: 90000 });
   await page.waitForTimeout(700);
   const landscapeStatus = await page.evaluate(() => window.__ASHEN_TEST__.status());
-  assert.equal(landscapeStatus.npcRosterLoaded, true, '56-model NPC production roster should load');
+  assert.equal(landscapeStatus.npcRosterLoaded, true, 'NPC production roster should load at least 50 unique models');
   assert.ok(landscapeStatus.npcRosterModelCount >= 50, 'roster should contain at least 50 named character roots');
   assert.equal(landscapeStatus.npcProductionModelCount, 3, 'all narrative NPCs should use production model clones');
   assert.equal(landscapeStatus.villagerProductionModelCount, 10, 'all ten villager definitions should use production model clones');
@@ -57,6 +57,15 @@ try {
   assert.equal(landscapeStatus.gameReady, true, 'Three.js scene should have rendered at least one frame');
   assert.equal(landscapeStatus.playerModelLoaded, true, 'production Ashen Sentinel GLB should load');
   assert.ok(landscapeStatus.canvasWidth >= 600 && landscapeStatus.canvasHeight >= 300, 'game canvas should be visible at desktop test size');
+
+  // Capture the NPCs up close, using the live models attached by the actual game.
+  const showcase = await page.evaluate(() => window.__ASHEN_TEST__.stageNpcShowcase());
+  assert.equal(showcase.narrative, 3, 'all three narrative models should be in the NPC showcase');
+  assert.equal(showcase.villagers, 10, 'the full villager roster should have production model instances');
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: artifactDir + '/ashen-crown-npc-showcase.png', fullPage: false });
+  screenshotFiles.push('ashen-crown-npc-showcase.png');
+  assert.equal(await page.evaluate(() => window.__ASHEN_TEST__.restoreNpcHomes()), true, 'restore original world NPC placements before combat test');
 
   const started = await page.evaluate(() => window.__ASHEN_TEST__.startBossEncounter());
   assert.equal(started, true, 'local-only harness should be able to start the Warden encounter');
@@ -113,5 +122,5 @@ if (failure) {
   console.error(failure);
   process.exitCode = 1;
 } else {
-  console.log('Gameplay smoke passed: Sentinel, Regent and 56-model NPC roster loaded; live NPC models attached; Warden visual attached; real combo damage verified; screenshots captured.');
+  console.log('Gameplay smoke passed: Sentinel, Regent and NPC production roster loaded; live NPC models attached; Warden visual attached; real combo damage verified; screenshots captured.');
 }
