@@ -54,14 +54,28 @@ try {
   assert.equal(started, true, 'local-only harness should be able to start the Warden encounter');
   await page.waitForFunction(() => window.__ASHEN_TEST__.status().bossModelLoaded === true, null, { timeout: 60000 });
   await page.waitForFunction(() => window.__ASHEN_TEST__.status().bossEncounter === true, null, { timeout: 12000 });
+  await page.waitForFunction(() => window.__ASHEN_TEST__.status().bossVisualAttached === true, null, { timeout: 12000 });
   await page.waitForTimeout(900);
   status = await page.evaluate(() => window.__ASHEN_TEST__.status());
   await page.screenshot({ path: artifactDir + '/ashen-crown-boss-encounter.png', fullPage: false });
   screenshotFiles.push('ashen-crown-boss-encounter.png');
   assert.equal(status.bossModelLoaded, true, 'production Ashen Regent GLB should load');
+  assert.equal(status.bossVisualAttached, true, 'production Ashen Regent scene should be attached to the encounter root');
   assert.equal(status.bossEncounter, true, 'boss should remain active after model load');
   assert.ok(status.bossHp > 0, 'boss health should be initialized');
+
+  // Resume the staged encounter, then exercise the real light-attack combo path.
+  const beforeAttack = status.bossHp;
+  assert.equal(await page.evaluate(() => window.__ASHEN_TEST__.releaseBossHold()), true, 'test-only staging hold should release');
+  for (let strike = 0; strike < 3; strike++) {
+    await page.evaluate(() => window.__ASHEN_TEST__.attackOnce());
+    await page.waitForTimeout(390);
+  }
+  const afterAttack = await page.evaluate(() => window.__ASHEN_TEST__.status());
+  assert.ok(afterAttack.bossHp < beforeAttack, 'real player attack input should reduce Warden HP');
   assert.equal(pageErrors.length, 0, 'browser must not report uncaught JavaScript exceptions');
+  assert.equal(consoleErrors.length, 0, 'browser must not report console errors');
+  assert.equal(failedRequests.length, 0, 'all same-origin resource-pack paths should resolve');
   const bootError = await page.locator('.game-boot-status').evaluate(el => !el.hidden).catch(() => false);
   assert.equal(bootError, false, 'game boot diagnostic must remain hidden');
 
@@ -83,5 +97,5 @@ if (failure) {
   console.error(failure);
   process.exitCode = 1;
 } else {
-  console.log('Gameplay smoke passed; captured production-player and Warden encounter screenshots.');
+  console.log('Gameplay smoke passed: Sentinel and Regent GLBs loaded, Warden visual attached, real combo damage verified, screenshots captured.');
 }
