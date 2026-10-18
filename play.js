@@ -2772,8 +2772,8 @@ function move(dt){
   state.stamina=Math.max(0,state.stamina+(run?-9:16)*dt);
 }
 
-let e2eCameraDistance=null;
-function updateCamera(dt){const target=moveForward.copy(player.position);target.y+=1.15;const back=moveBack.set(Math.sin(yaw),0,Math.cos(yaw));const pos=back.multiplyScalar(e2eCameraDistance??7.2).add(target);pos.y+=3.2+pitch*2;const damping=state.settings.reducedMotion ? .02 : .001;camera.position.lerp(pos,1-Math.pow(damping,dt));camera.lookAt(target)}
+let e2eCameraDistance=null,e2eCameraTarget=null;
+function updateCamera(dt){const target=moveForward.copy(player.position);if(e2eCameraTarget)target.copy(e2eCameraTarget);else target.y+=1.15;const back=moveBack.set(Math.sin(yaw),0,Math.cos(yaw));const pos=back.multiplyScalar(e2eCameraDistance??7.2).add(target);pos.y+=3.2+pitch*2;const damping=state.settings.reducedMotion ? .02 : .001;camera.position.lerp(pos,1-Math.pow(damping,dt));camera.lookAt(target)}
 function tick(dt){
   time+=dt;
   if(Math.floor(time/12)!==Math.floor((time-dt)/12))saveState();
@@ -3424,7 +3424,7 @@ if(isLocalE2ESession) {
     stageNpcShowcase:()=>{
       window.__ASHEN_NPC_SHOWCASE_ORIGINALS__={
         player:{x:player.position.x,z:player.position.z,yaw,pitch,visible:player.visible},
-        cameraDistance:e2eCameraDistance,
+        cameraDistance:e2eCameraDistance,cameraTarget:e2eCameraTarget,
         nameplateVisibility:nameplateLayer.style.visibility,
         messageVisibility:$('message').style.visibility,
         toastVisibility:$('toast').style.visibility,
@@ -3433,7 +3433,7 @@ if(isLocalE2ESession) {
       };
       // Local-only staging for a close, legible evidence screenshot. The running
       // game model objects are reused; only their test positions are moved.
-      player.position.set(0,0,3.3);yaw=0;pitch=.22;e2eCameraDistance=3.0;player.visible=false;
+      player.position.set(0,0,3.3);yaw=0;pitch=.22;e2eCameraDistance=7.2;e2eCameraTarget=new THREE.Vector3(0,1.15,-1.05);player.visible=false;
       nameplateLayer.style.visibility='hidden';
       $('message').style.visibility='hidden';
       $('toast').style.visibility='hidden';
@@ -3454,7 +3454,7 @@ if(isLocalE2ESession) {
       const saved=window.__ASHEN_NPC_SHOWCASE_ORIGINALS__;
       if(!saved)return false;
       player.position.set(saved.player.x,0,saved.player.z);yaw=saved.player.yaw;pitch=saved.player.pitch;player.visible=saved.player.visible;
-      e2eCameraDistance=saved.cameraDistance;
+      e2eCameraDistance=saved.cameraDistance;e2eCameraTarget=saved.cameraTarget;
       nameplateLayer.style.visibility=saved.nameplateVisibility;
       $('message').style.visibility=saved.messageVisibility;
       $('toast').style.visibility=saved.toastVisibility;
