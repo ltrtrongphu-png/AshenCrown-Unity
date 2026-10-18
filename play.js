@@ -1854,7 +1854,7 @@ let encounterHud;
 function setEncounterHud(enemy){
   if(!encounterHud){encounterHud=document.createElement('div');encounterHud.className='encounter-hud';encounterHud.innerHTML='<span>WANDERING SHADE</span><b>45 / 45</b><i><em></em></i>';document.querySelector('.stage').appendChild(encounterHud)}
   encounterHud.classList.toggle('visible',!!enemy);
-  if(enemy){encounterHud.querySelector('span').textContent=enemy.isBoss?(state.chapter===1?'THE BELL WARDEN':'CHAPTER '+String(state.chapter).padStart(2,'0')+' WARDEN · SKILL '+(enemy.attackSkill||1)):'WANDERING SHADE';encounterHud.querySelector('b').textContent=Math.ceil(enemy.hp)+' / '+enemy.maxHp;encounterHud.querySelector('em').style.width=Math.max(0,enemy.hp/enemy.maxHp*100)+'%';encounterHud.classList.toggle('warning',enemy.state==='windup')}
+  if(enemy){encounterHud.querySelector('span').textContent=enemy.isBoss?((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.wardenName||'CHAPTER WARDEN').toUpperCase()+' · SKILL '+(enemy.attackSkill||1)):'WANDERING SHADE';encounterHud.querySelector('b').textContent=Math.ceil(enemy.hp)+' / '+enemy.maxHp;encounterHud.querySelector('em').style.width=Math.max(0,enemy.hp/enemy.maxHp*100)+'%';encounterHud.classList.toggle('warning',enemy.state==='windup')}
 }
 let enemies=[];
 let worldSimAccumulator=0;
@@ -1887,7 +1887,7 @@ function attachProductionBoss(enemy){
 function spawnEnemy(){
   if(enemies.length)return;
   if(activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
-  const isBoss=state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated;
+  const isBoss=isChapterWardenReady(state);
   const angle=Math.random()*Math.PI*2;
   const radius=isBoss?10+Math.random()*3:12+Math.random()*15;
   const mapBound=activeMapId==='sanctuary'?92:50;
@@ -1937,7 +1937,7 @@ function spawnEnemy(){
     else void ensureProductionBossLoaded().then(()=>{if(encounter?.isBoss)attachProductionBoss(encounter)}).catch(error=>console.warn('[Ashen Crown] Boss model stays on fallback:',error));
   }
   setEncounterHud(encounter);
-  toastMsg(isBoss?'The bell answers. The Warden has found you.':'A wandering shade has entered the wilds.');
+  toastMsg(isBoss?((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.wardenName||'The Chapter Warden')+' has answered the evidence.'): 'A wandering shade has entered the wilds.');
 }
 function dodge(){
   if(anyOverlayOpen()||dodgeCooldown>0||state.stamina<18)return;
@@ -2012,12 +2012,12 @@ function disposeEncounterVisuals(enemy) {
 
 function finishEncounter(){
   const defeated=encounter;if(!defeated)return;
-  const bellWaiting=!defeated.isBoss&&state.quest===3&&state.echoes>=2&&!state.flags.bellWardenDefeated;
+  const bellWaiting=!defeated.isBoss&&isChapterWardenReady(state);
   disposeEncounterVisuals(defeated);defeated.root.removeFromParent();enemies=[];recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);
   if(defeated.isBoss){
     const ch=window.ASHEN_CAMPAIGN[state.chapter-1]||window.ASHEN_CAMPAIGN[0];state.flags.bellWardenDefeated=true;state.quest=4;
-    if(state.chapter===1){item('Eda Vey’s Name','Quest Relic','Legendary',['Memory','Identity'],{focus:2});state.log.unshift('The Bell Warden was Eda Vey, the keeper who refused to let the Crown erase her village.');toastMsg('The Bell Warden falls — Eda Vey is remembered.')}
-    else{item(ch.items[ch.items.length-1]||ch.title,'Chapter Relic','Legendary',['Chapter '+state.chapter,'Boss Drop'],{focus:2});state.log.unshift('The chapter warden fell. '+ch.title+' can no longer keep its record hidden.');toastMsg(ch.title+' warden defeated · chapter relic recovered')}
+    if(state.chapter===1){item('Eda Vey’s Name','Quest Relic','Legendary',['Memory','Identity'],{focus:2});state.log.unshift(ch.wardenReveal||'The Bell Warden was Eda Vey, the keeper who refused to let the Crown erase her village.');toastMsg((ch.wardenName||'The Bell Warden')+' falls — a forgotten name returns.')}
+    else{item(ch.items[ch.items.length-1]||ch.title,'Chapter Relic','Legendary',['Chapter '+state.chapter,'Boss Drop'],{focus:2});state.log.unshift(ch.wardenReveal||('The chapter warden fell. '+ch.title+' can no longer keep its record hidden.'));toastMsg((ch.wardenName||ch.title+' warden')+' defeated · chapter relic recovered')}
     dropEquipment(true);setQuest()
   }else{
     item('Ashen Wisp Fragment','Material','Common',['Crafting']);
@@ -2028,7 +2028,37 @@ function finishEncounter(){
   }
   encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy()}saveState()
 }
-function advanceChapter(){if(state.quest<5||state.chapter>=10)return;state.meta.chaptersComplete=Math.max(state.meta.chaptersComplete,state.chapter);updateSanctuaryBuild();state.chapter++;state.quest=0;state.chapterGathered=0;state.echoes=0;state.flags.bellAwakened=false;state.flags.bellWardenDefeated=false;state.flags.gate=false;state.flags.truth=false;state.flags.sanctuaryOpen=false;state.flags.protectedSanctuary=false;state.collectedNodes=[];restoreCollectedNodes();state.hp=state.maxHp;state.stamina=100;setActiveMap(mapIdForChapter(state.chapter));const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];state.log.unshift('Expedition '+state.chapter+' begins: '+(chapter?.title||'The next road')+'.');saveState();$('systemMenu').classList.remove('show');setQuest();showChapterTitle(chapter?.title||'NEW EXPEDITION','Explore '+MAPS[activeMapId].name+' · gather · hunt · shape this chapter');toastMsg('Chapter '+String(state.chapter).padStart(2,'0')+' · '+MAPS[activeMapId].name)}
+function advanceChapter(){
+  if(!canAdvanceChapter(state,activeMapId)){
+    if(state.quest<5)toastMsg('Finish the current chapter and make its choice first.');
+    else if(activeMapId!=='sanctuary')toastMsg('Return to the Sanctuary before opening the next road.');
+    return;
+  }
+  state.meta.chaptersComplete=Math.max(state.meta.chaptersComplete,state.chapter);
+  updateSanctuaryBuild();
+  state.chapter++;
+  state.quest=0;
+  state.chapterGathered=0;
+  state.echoes=0;
+  state.flags.bellAwakened=false;
+  state.flags.bellWardenDefeated=false;
+  state.flags.gate=false;
+  state.flags.truth=false;
+  state.flags.sanctuaryOpen=false;
+  state.flags.protectedSanctuary=false;
+  state.collectedNodes=[];
+  restoreCollectedNodes();
+  state.hp=state.maxHp;
+  state.stamina=100;
+  setActiveMap(mapIdForChapter(state.chapter));
+  const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];
+  state.log.unshift('Expedition '+state.chapter+' begins: '+(chapter?.title||'The next road')+'.');
+  saveState();
+  $('systemMenu').classList.remove('show');
+  setQuest();
+  showChapterTitle(chapter?.title||'NEW EXPEDITION',chapter?.summary||'Explore '+MAPS[activeMapId].name+' · gather · hunt · shape this chapter');
+  toastMsg('Chapter '+String(state.chapter).padStart(2,'0')+' · '+MAPS[activeMapId].name);
+}
 function syncRenderQuality(){
   const quality=state.settings.quality||'auto';
   const shadowsAllowed=state.settings.visualEffects!==false&&(
