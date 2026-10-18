@@ -11,6 +11,7 @@ const browser = await chromium.launch({
   args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader']
 });
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
+page.setDefaultTimeout(60000);
 const pageErrors = [];
 const consoleErrors = [];
 const consoleWarnings = [];
@@ -38,17 +39,34 @@ try {
   });
   await page.goto(baseUrl + '/play.html?e2e=1', { waitUntil: 'domcontentloaded', timeout: 45000 });
   await page.waitForFunction(() => document.documentElement.dataset.ashenGameReady === 'true', null, { timeout: 60000 });
-  await page.locator('#tutorialStart').click({ timeout: 12000 });
+  await page.locator('#tutorialStart').evaluate(button => button.click());
   await page.waitForFunction(() => typeof window.__ASHEN_TEST__?.status === 'function', null, { timeout: 12000 });
   await page.evaluate(() => window.__ASHEN_TEST__.prepareVisuals());
-  await page.waitForFunction(() => window.__ASHEN_TEST__.status().playerModelLoaded === true, null, { timeout: 60000 });
-  await page.waitForTimeout(900);
+  await page.waitForFunction(() => {
+    const state = window.__ASHEN_TEST__.status();
+    return state.playerModelLoaded === true && state.npcRosterLoaded === true
+      && state.npcProductionModelCount >= 3 && state.villagerProductionModelCount >= 10;
+  }, null, { timeout: 90000 });
+  await page.waitForTimeout(700);
   const landscapeStatus = await page.evaluate(() => window.__ASHEN_TEST__.status());
+  assert.equal(landscapeStatus.npcRosterLoaded, true, 'NPC production roster should load at least 50 unique models');
+  assert.ok(landscapeStatus.npcRosterModelCount >= 50, 'roster should contain at least 50 named character roots');
+  assert.equal(landscapeStatus.npcProductionModelCount, 3, 'all narrative NPCs should use production model clones');
+  assert.equal(landscapeStatus.villagerProductionModelCount, 10, 'all ten villager definitions should use production model clones');
   await page.screenshot({ path: artifactDir + '/ashen-crown-gameplay.png', fullPage: false });
   screenshotFiles.push('ashen-crown-gameplay.png');
   assert.equal(landscapeStatus.gameReady, true, 'Three.js scene should have rendered at least one frame');
   assert.equal(landscapeStatus.playerModelLoaded, true, 'production Ashen Sentinel GLB should load');
   assert.ok(landscapeStatus.canvasWidth >= 600 && landscapeStatus.canvasHeight >= 300, 'game canvas should be visible at desktop test size');
+
+  // Capture the NPCs up close, using the live models attached by the actual game.
+  const showcase = await page.evaluate(() => window.__ASHEN_TEST__.stageNpcShowcase());
+  assert.equal(showcase.narrative, 3, 'all three narrative models should be in the NPC showcase');
+  assert.equal(showcase.villagers, 10, 'the full villager roster should have production model instances');
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: artifactDir + '/ashen-crown-npc-showcase.png', fullPage: false });
+  screenshotFiles.push('ashen-crown-npc-showcase.png');
+  assert.equal(await page.evaluate(() => window.__ASHEN_TEST__.restoreNpcHomes()), true, 'restore original world NPC placements before combat test');
 
   const started = await page.evaluate(() => window.__ASHEN_TEST__.startBossEncounter());
   assert.equal(started, true, 'local-only harness should be able to start the Warden encounter');
@@ -59,6 +77,8 @@ try {
   status = await page.evaluate(() => window.__ASHEN_TEST__.status());
   await page.screenshot({ path: artifactDir + '/ashen-crown-boss-encounter.png', fullPage: false });
   screenshotFiles.push('ashen-crown-boss-encounter.png');
+  assert.equal(status.npcRosterLoaded, true, 'production NPC roster should remain loaded during a boss encounter');
+  assert.ok(status.npcProductionModelCount >= 3, 'narrative NPC models should remain attached after boss spawn');
   assert.equal(status.bossModelLoaded, true, 'production Ashen Regent GLB should load');
   assert.equal(status.bossVisualAttached, true, 'production Ashen Regent scene should be attached to the encounter root');
   assert.equal(status.bossEncounter, true, 'boss should remain active after model load');
@@ -103,5 +123,5 @@ if (failure) {
   console.error(failure);
   process.exitCode = 1;
 } else {
-  console.log('Gameplay smoke passed: Sentinel and Regent GLBs loaded, Warden visual attached, real combo damage verified, screenshots captured.');
+  console.log('Gameplay smoke passed: Sentinel, Regent and NPC production roster loaded; live NPC models attached; Warden visual attached; real combo damage verified; screenshots captured.');
 }

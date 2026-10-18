@@ -831,7 +831,7 @@ function actor(c,a){
    return g;
 }
 const playerVisual=actor(0x29221d,0x613724);player.add(playerVisual);
-let productionPlayerScene=null,productionBossScene=null,productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null,productionGltfLoader=null,productionBossBuffer=null,productionBossLoadPromise=null;
+let productionPlayerScene=null,productionBossScene=null,productionNpcRosterScene=null,productionNpcModelPrototypes=new Map(),productionBossAnimations=[],productionPlayerMixer=null,productionBossMixer=null,productionPlayerActions={},productionBossActions={},activePlayerAction='',activeBossAction='',playerActionUntil=0,bossActionUntil=0,fullPackLoaderPromise=null,productionGltfLoader=null,productionBossBuffer=null,productionBossLoadPromise=null;
 const bossTelegraphs=[];
 const transientEffects=[];
 const skillRingPool=[[],[],[]];
@@ -1478,10 +1478,10 @@ function forge(x,z){
 forge(14,18);
 
 const npcs=[
- {id:'lyra',name:'Lyra',role:'Sanctuary Keeper',pos:[-5,-3],c:0x70432f,a:0xb8784d},
- {id:'orren',name:'Orren',role:'Wayfinder',pos:[7,-1],c:0x384456,a:0x6f86a5},
- {id:'seer',name:'The Seer',role:'Keeper of Echoes',pos:[13,-8],c:0x493b63,a:0x9272c4}
-].map(n=>{const g=new THREE.Group();g.position.set(n.pos[0],0,n.pos[1]);g.add(actor(n.c,n.a));characters.add(g);return {...n,homePosition:[...n.pos],root:g}});
+ {id:'lyra',name:'Lyra',role:'Sanctuary Keeper',pos:[-5,-3],c:0x70432f,a:0xb8784d,modelKey:'seraphine'},
+ {id:'orren',name:'Orren',role:'Wayfinder',pos:[7,-1],c:0x384456,a:0x6f86a5,modelKey:'riven'},
+ {id:'seer',name:'The Seer',role:'Keeper of Echoes',pos:[13,-8],c:0x493b63,a:0x9272c4,modelKey:'nyx'}
+].map(n=>{const g=new THREE.Group();g.position.set(n.pos[0],0,n.pos[1]);const fallbackVisual=actor(n.c,n.a);g.add(fallbackVisual);characters.add(g);return {...n,homePosition:[...n.pos],root:g,fallbackVisual,productionVisual:null}});
 
 function villagerModel(outfit,skin,hair,role){
   const g=new THREE.Group();
@@ -1525,17 +1525,24 @@ function villagerModel(outfit,skin,hair,role){
   return g;
 }
 
+const VILLAGER_PRODUCTION_MODELS={
+  farmer_01:'anwen-briar',farmer_02:'rowan-greycloak',
+  merchant_01:'sable',merchant_02:'isolde',
+  guard_01:'kael-varric',guard_02:'astrid',
+  villager_01:'lyra-dreamweaver',villager_02:'faelar',
+  villager_03:'elspeth-silver',villager_04:'darius'
+};
 function spawnVillager(id,name,role,x,z,outfit,skin=0xd0b9a5,hair=0x2e231c){
   const g=new THREE.Group();
   g.name=id; g.position.set(x,0,z);
-  g.add(villagerModel(outfit,skin,hair,role));
+  const fallbackVisual=villagerModel(outfit,skin,hair,role);
+  g.add(fallbackVisual);
   characters.add(g);
   villagers.push({
-    id,name,role,root:g,home:new THREE.Vector3(x,0,z),
-    target:new THREE.Vector3(x,0,z),
-    wait:.5+Math.random()*3,
-    speed:.55+Math.random()*.25,
-    phase:Math.random()*Math.PI*2
+    id,name,role,root:g,fallbackVisual,productionVisual:null,
+    modelKey:VILLAGER_PRODUCTION_MODELS[id]||'rowan-greycloak',
+    home:new THREE.Vector3(x,0,z),target:new THREE.Vector3(x,0,z),
+    wait:.5+Math.random()*3,speed:.55+Math.random()*.25,phase:Math.random()*Math.PI*2
   });
 }
 
@@ -2289,6 +2296,27 @@ function parseProductionGlb(loader,buffer){
   return new Promise((resolve,reject)=>loader.parse(buffer,'',resolve,reject));
 }
 
+function attachProductionNpcRosterModels(){
+  if(!productionNpcModelPrototypes.size)return {narrative:0,villagers:0};
+  const attach=(entity)=>{
+    const prototype=productionNpcModelPrototypes.get(entity.modelKey);
+    if(!prototype||!entity.root)return false;
+    if(entity.productionVisual?.parent===entity.root)return true;
+    if(entity.productionVisual)entity.productionVisual.removeFromParent();
+    const visual=prototype.clone(true);
+    visual.name='production-npc-'+entity.modelKey;
+    visual.visible=true;
+    entity.root.add(visual);
+    entity.productionVisual=visual;
+    if(entity.fallbackVisual)entity.fallbackVisual.visible=false;
+    return true;
+  };
+  const narrative=npcs.filter(attach).length;
+  const villagerCount=villagers.filter(attach).length;
+  window.dispatchEvent(new CustomEvent('ashen:npc-models-ready',{detail:{models:productionNpcModelPrototypes.size,narrative,villagers:villagerCount}}));
+  return {narrative,villagers:villagerCount};
+}
+
 async function loadFullResourceModels(manifest,cache){
   if(fullPackLoaderPromise)return fullPackLoaderPromise;
   fullPackLoaderPromise=(async()=>{
@@ -2305,7 +2333,8 @@ async function loadFullResourceModels(manifest,cache){
       }));
       const sentinelAsset=assets.find(asset=>asset.url.includes('AshenSentinel'));
       const regentAsset=assets.find(asset=>asset.url.includes('AshenRegent'));
-      if(!sentinelAsset||!regentAsset)throw new Error('The production models are missing from the pack.');
+      const rosterAsset=assets.find(asset=>asset.url.includes('AshenNPCRoster'));
+      if(!sentinelAsset||!regentAsset||!rosterAsset)throw new Error('The production character pack is missing the Sentinel, Regent, or NPC roster model.');
 
       const sentinel=await parseProductionGlb(productionGltfLoader,sentinelAsset.buffer);
       productionBossBuffer=regentAsset.buffer;
@@ -2321,12 +2350,32 @@ async function loadFullResourceModels(manifest,cache){
       playPlayerAnimation('Idle');
       window.dispatchEvent(new CustomEvent('ashen:player-model-ready'));
 
+      // The roster is a single static GLB with one named root per archetype.
+      // Keep prototypes detached from the scene and clone them onto live NPC roots.
+      const roster=await parseProductionGlb(productionGltfLoader,rosterAsset.buffer);
+      productionNpcRosterScene=roster.scene;
+      productionNpcModelPrototypes.clear();
+      productionNpcRosterScene.traverse(object=>{
+        if(object.name.startsWith('NPCMODEL_')&&object.children?.length){
+          productionNpcModelPrototypes.set(object.name.slice('NPCMODEL_'.length),object);
+        }
+      });
+      if(productionNpcModelPrototypes.size<50)throw new Error('The NPC production roster is incomplete: '+productionNpcModelPrototypes.size+' models.');
+      const attached=attachProductionNpcRosterModels();
+      if(attached.narrative<npcs.length||attached.villagers<villagers.length){
+        throw new Error('Some narrative NPCs/villagers have no production-model assignment ('+attached.narrative+'/'+npcs.length+', '+attached.villagers+'/'+villagers.length+').');
+      }
+
       if(encounter?.isBoss)await ensureProductionBossLoaded();
       return true;
     }catch(error){
       fullPackLoaderPromise=null;
       productionGltfLoader=null;
       productionBossBuffer=null;
+      productionNpcRosterScene=null;
+      productionNpcModelPrototypes.clear();
+      npcs.forEach(n=>{n.productionVisual?.removeFromParent();n.productionVisual=null;if(n.fallbackVisual)n.fallbackVisual.visible=true;});
+      villagers.forEach(n=>{n.productionVisual?.removeFromParent();n.productionVisual=null;if(n.fallbackVisual)n.fallbackVisual.visible=true;});
       throw error;
     }
   })();
@@ -3362,11 +3411,46 @@ if(isLocalE2ESession) {
     status:()=>({
       gameReady:gameRenderReady,playerModelLoaded:Boolean(productionPlayerScene),
       bossModelLoaded:Boolean(productionBossScene),bossVisualAttached:Boolean(encounter?.isBoss&&productionBossScene?.parent===encounter.root),
+      npcRosterLoaded:productionNpcModelPrototypes.size>=50,
+      npcRosterModelCount:productionNpcModelPrototypes.size,
+      npcProductionModelCount:npcs.filter(n=>n.productionVisual?.parent===n.root).length,
+      villagerProductionModelCount:villagers.filter(n=>n.productionVisual?.parent===n.root).length,
       bossEncounter:Boolean(encounter?.isBoss),bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
       chapter:state.chapter,level:state.level,fps:Math.round(currentFps||0),
       canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight
     }),
     prepareVisuals:()=>{state.settings.quality='high';state.settings.reducedMotion=false;applySettings();return true;},
+    stageNpcShowcase:()=>{
+      window.__ASHEN_NPC_SHOWCASE_ORIGINALS__={
+        player:{x:player.position.x,z:player.position.z,yaw,pitch},
+        npcs:npcs.map(n=>({x:n.root.position.x,z:n.root.position.z,visible:n.root.visible})),
+        villagers:villagers.map(v=>({x:v.root.position.x,z:v.root.position.z,visible:v.root.visible}))
+      };
+      // Local-only staging for a close, legible evidence screenshot. The running
+      // game model objects are reused; only their test positions are moved.
+      player.position.set(0,0,5.3);yaw=0;pitch=.22;
+      const layout=[[-3.0,1.2],[.65,.2],[3.2,1.0]];
+      npcs.forEach((n,i)=>{n.root.position.set(layout[i][0],0,layout[i][1]);n.root.visible=true;});
+      const crowd=[
+        [-4.7,-.2],[4.8,-.1],[-5.2,2.6],[5.4,2.7],
+        [-1.7,-1.3],[1.9,-1.5]
+      ];
+      villagers.forEach((v,i)=>{
+        if(i<crowd.length){v.root.position.set(crowd[i][0],0,crowd[i][1]);v.root.visible=true;}
+        else v.root.visible=false;
+      });
+      return {narrative:npcs.filter(n=>n.productionVisual?.parent===n.root).length,
+        villagers:villagers.filter(v=>v.productionVisual?.parent===v.root).length};
+    },
+    restoreNpcHomes:()=>{
+      const saved=window.__ASHEN_NPC_SHOWCASE_ORIGINALS__;
+      if(!saved)return false;
+      player.position.set(saved.player.x,0,saved.player.z);yaw=saved.player.yaw;pitch=saved.player.pitch;
+      npcs.forEach((n,i)=>{n.root.position.set(n.homePosition[0],0,n.homePosition[1]);n.root.visible=saved.npcs[i].visible;});
+      villagers.forEach((v,i)=>{v.root.position.set(saved.villagers[i].x,0,saved.villagers[i].z);v.root.visible=saved.villagers[i].visible;});
+      delete window.__ASHEN_NPC_SHOWCASE_ORIGINALS__;
+      return true;
+    },
     startBossEncounter:()=>{
       if(encounter){disposeEncounterVisuals(encounter);encounter.root.removeFromParent();encounter=null;enemies=[];setEncounterHud(null);}
       state.quest=3;state.echoes=Math.max(state.echoes,getChapterRequirements(state.chapter).echoes);

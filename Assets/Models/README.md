@@ -23,3 +23,10 @@ Recommended Animator parameters: `Speed`, `MoveX`, `MoveY`, `Grounded`, `Combat`
 Recommended triggers: `Light1`, `Light2`, `Light3`, `Light4`, `Heavy`, `VoidThrust`, `AshenEruption`, `Enrage`, `PhaseTransition`, `Stagger`, `Execute`, `Die`.
 
 `AnimatorSafe` ignores missing parameters, so prototype and production models remain compatible. The GLB clips are source animations; create or assign an Animator Controller to map gameplay states to the imported clips.
+
+
+## NPC production roster
+
+`NPC/AshenNPCRoster.glb` contains 56 distinct reusable NPC character roots based on the supplied dark-fantasy roster concepts. The models have separate material batches for cloth, armor, trim, skin, hair, leather, and emissive accents and embed the shared four-map 1024x1024 PBR atlas. The browser build downloads this one roster asset alongside the Sentinel and Regent hero models, then clones the selected archetype for narrative NPCs and villagers. It is an authored low-poly roster, not 56 copies of the same capsule or a screenshot texture atlas.
+
+The roster generator is `tools/generate_ashen_npc_roster.py`; the asset workflow regenerates it after the common PBR maps and hero models are generated. `tools/validate_ashen_production_assets.py` checks the GLB container, embedded map count, material batches and at least 50 named NPC roots.
