@@ -3433,7 +3433,7 @@ if(isLocalE2ESession) {
       };
       // Local-only staging for a close, legible evidence screenshot. The running
       // game model objects are reused; only their test positions are moved.
-      player.position.set(0,0,3.3);yaw=0;pitch=.22;e2eCameraDistance=7.2;e2eCameraTarget=new THREE.Vector3(0,1.15,-1.05);player.visible=false;
+      player.position.set(0,0,3.3);yaw=0;pitch=.22;e2eCameraDistance=4.8;e2eCameraTarget=new THREE.Vector3(0,1.15,.3);player.visible=false;
       nameplateLayer.style.visibility='hidden';
       $('message').style.visibility='hidden';
       $('toast').style.visibility='hidden';
