@@ -2750,6 +2750,13 @@ function tick(dt){
     const distance=Math.hypot(dx,dz)||1;
     e.root.rotation.y=Math.atan2(dx,dz);
 
+    // Hold test-only Warden placement for the real-browser screenshot. The smoke
+    // run then releases it and attacks the live encounter through the same combat path.
+    if(e.testOnly&&e.qaHoldPosition){
+      updateBossAnimation(dt,e,distance);
+      continue;
+    }
+
     if(state.settings.animations!==false){
       e.root.position.y=.02+Math.sin(time*2+(e.root.id||0))*.022;
     }
@@ -3352,8 +3359,8 @@ if(isLocalE2ESession) {
   window.__ASHEN_TEST__={
     status:()=>({
       gameReady:gameRenderReady,playerModelLoaded:Boolean(productionPlayerScene),
-      bossModelLoaded:Boolean(productionBossScene),bossEncounter:Boolean(encounter?.isBoss),
-      bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
+      bossModelLoaded:Boolean(productionBossScene),bossVisualAttached:Boolean(encounter?.isBoss&&productionBossScene?.parent===encounter.root),
+      bossEncounter:Boolean(encounter?.isBoss),bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
       chapter:state.chapter,level:state.level,fps:Math.round(currentFps||0),
       canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight
     }),
@@ -3363,8 +3370,23 @@ if(isLocalE2ESession) {
       state.quest=3;state.echoes=Math.max(state.echoes,getChapterRequirements(state.chapter).echoes);
       state.flags[chapterRecordKey(state.chapter)]=true;state.flags.bellWardenDefeated=false;
       state.hp=state.maxHp;state.stamina=100;
-      spawnEnemy(true);return Boolean(encounter?.isBoss);
-    }
+      spawnEnemy(true);
+      if(encounter?.isBoss){
+        const facing=new THREE.Vector3(Math.sin(Math.PI+yaw),0,Math.cos(Math.PI+yaw));
+        const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+        encounter.root.position.copy(player.position).addScaledVector(facing,4.1).addScaledVector(right,1.7);
+        encounter.root.position.y=0;
+        encounter.qaHoldPosition=true;
+        encounter.root.rotation.y=Math.atan2(player.position.x-encounter.root.position.x,player.position.z-encounter.root.position.z);
+        encounter.root.updateMatrixWorld(true);
+      }
+      return Boolean(encounter?.isBoss);
+    },
+    releaseBossHold:()=>{
+      if(!encounter?.isBoss)return false;
+      encounter.qaHoldPosition=false;return true;
+    },
+    attackOnce:()=>{pulse();return encounter?.isBoss?Math.round(encounter.hp):null;}
   };
 }
 
