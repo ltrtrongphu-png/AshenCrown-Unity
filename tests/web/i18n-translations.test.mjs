@@ -44,7 +44,7 @@ test('navigation and hero copy use the correct translation column for all five l
     'The Crown erased a village.',
     'Vương Miện đã xóa sổ một ngôi làng.',
     '王冠は村を消し去った。',
-    '왕관은 한 마을을 지워 버렸다。',
+    '왕관은 한 마을을 지워 버렸다.',
     '王冠抹去了一个村庄。'
   ]);
   assert.deepEqual(translations.get('One ember remembers every name.'), [
