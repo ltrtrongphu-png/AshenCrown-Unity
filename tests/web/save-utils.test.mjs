@@ -243,4 +243,3 @@ test('orphaned plaintext backups are wiped even when the primary local save is m
   assert.equal(storage.getItem('ashen-crown-3d.backup.200'), null);
   assert.equal(storage.getItem('unrelated-preference'), 'dark');
 });
-
