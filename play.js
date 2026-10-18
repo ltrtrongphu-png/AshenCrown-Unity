@@ -2377,19 +2377,27 @@ function getQuestTarget(){
   const activeNpc=id=>npcs.find(n=>n.id===id&&n.root.visible)||npcs.find(n=>n.id===id);
   const nextNode=type=>nodes.find(n=>n.type===type&&!n.collected&&n.mapId===activeMapId)
     ||nodes.find(n=>n.type===type&&!n.collected);
+  const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];
+  const requirements=getChapterRequirements(state.chapter);
   if(state.quest===0)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   if(state.quest===1){
     const target=nextNode('ember');
     if(target)return {kind:'node',label:'Emberleaf',entity:target};
     return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   }
-  if(state.quest===2)return {kind:'npc',label:'Orren',entity:activeNpc('orren')};
-  if(state.quest===3&&state.echoes<2){
+  if(state.quest===2){
+    if(!hasChapterRecord(state.flags,state.chapter)){
+      const target=nextNode('record');
+      if(target)return {kind:'node',label:chapter?.recordName||target.label,entity:target};
+    }
+    return {kind:'npc',label:'Orren',entity:activeNpc('orren')};
+  }
+  if(state.quest===3&&state.echoes<requirements.echoes){
     const target=nextNode('echo');
     if(target)return {kind:'node',label:'Memory Echo',entity:target};
-    return {kind:'gate',label:'Hollow Gate',entity:gates?.find(g=>g.name==='Hollow Ruins')};
+    return {kind:'gate',label:chapter?.wardenName||'Chapter Warden',entity:gates?.find(g=>g.name==='Hollow Ruins')};
   }
-  if(state.quest===3&&encounter)return {kind:'enemy',label:encounter.isBoss?'Bell Warden':'Wandering Shade',entity:encounter};
+  if(state.quest===3&&encounter)return {kind:'enemy',label:encounter.isBoss?(chapter?.wardenName||'Chapter Warden'):'Wandering Shade',entity:encounter};
   if(state.quest===4)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   if(state.quest>=5){
     if(activeMapId!=='sanctuary')return {kind:'home',label:'Sanctuary',position:new THREE.Vector3(0,0,7)};
@@ -2399,44 +2407,52 @@ function getQuestTarget(){
 }
 function getQuestSteps(){
   const q=state.quest;
+  const requirements=getChapterRequirements(state.chapter);
+  const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
+  const recordFound=hasChapterRecord(state.flags,state.chapter);
   if(q===0)return [
-    ['Go to Lyra at Sanctuary (-5, -3).',false],
-    ['Press E to talk to the character.',false],
-    ['Choose whether to protect the Sanctuary or seek the truth.',false]
+    ['Go to Lyra at Sanctuary.',false],
+    ['Press E to hear what this chapter is hiding.',false],
+    ['Choose how you will investigate the road ahead.',false]
   ];
   if(q===1)return [
-    ['Collect 2 Emberleaf',state.chapterGathered>=2],
-    ['Reach the glowing orange orb, then press E to gather the item.',false],
-    ['Progress: '+state.chapterGathered+' / 2',state.chapterGathered>=2]
+    ['Collect '+requirements.embers+' Emberleaf traces',state.chapterGathered>=requirements.embers],
+    ['Search for orange glowing traces in this region.',false],
+    ['Progress: '+state.chapterGathered+' / '+requirements.embers,state.chapterGathered>=requirements.embers]
   ];
-  if(q===2)return [
-    ['Go to Orren at Sanctuary (7, -1).',false],
-    ['Press E to talk to the character.',false],
-    ['Choose a route in the dialogue to continue.',false]
+  if(q===2&&!recordFound)return [
+    ['Find '+(chapter.recordName||'the chapter record'),false],
+    ['Search for the gold record marker in this region.',false],
+    ['The record must be recovered before Orren will verify the route.',false]
   ];
-  if(q===3&&state.echoes<2)return [
-    ['Collect 2 Memory Echoes',state.echoes>=2],
-    ['Look for purple glowing objects and their ground rings.',false],
-    ['Press E near each Echo to collect it.',false],
-    ['Progress: '+state.echoes+' / 2',state.echoes>=2]
+  if(q===2&&recordFound)return [
+    ['Recovered: '+(chapter.recordName||'Chapter Record'),true],
+    ['Go to Orren and compare the evidence with his map.',false],
+    ['Choose a route based on what the record reveals.',false]
+  ];
+  if(q===3&&state.echoes<requirements.echoes)return [
+    ['Collect '+requirements.echoes+' Memory Echoes',state.echoes>=requirements.echoes],
+    ['Look for violet traces scattered across the region.',false],
+    ['Press E near each echo to recover its memory.',false],
+    ['Progress: '+state.echoes+' / '+requirements.echoes,state.echoes>=requirements.echoes]
   ];
   if(q===3)return [
-    ['Dodge when the Warden telegraphs, then attack during recovery.',false],
-    ['Use LMB for Ember Pulse or keys 1 / 2 / 3 for role skills.',false],
-    ['Watch the colored ring: a larger ring signals a wider attack.',false]
+    ['Face '+(chapter.wardenName||'the Chapter Warden'),false],
+    ['Dodge the telegraphed strike, then attack during recovery.',false],
+    ['Use Ember Pulse or role skills when the Warden is exposed.',false]
   ];
   if(q===4)return [
-    ['Return to Lyra at Sanctuary.',false],
-    ['Press E to speak and choose one of the story options.',false],
-    ['Your choice changes the Sanctuary ending.',false]
+    ['Return to Lyra at the Sanctuary.',false],
+    ['Hear what the recovered record means for the people involved.',false],
+    ['Choose the consequence you are willing to carry.',false]
   ];
   if(activeMapId!=='sanctuary')return [
     ['Return to the Sanctuary.',false],
-    ['Travel back, then speak with Lyra.',false]
+    ['Speak with Lyra to close this chapter before the next road opens.',false]
   ];
   return [
     ['Speak with Lyra at the Sanctuary.',false],
-    [state.chapter<10?'Prepare to begin the next chapter.':'Found your legacy at the Sanctuary.',false]
+    [state.chapter<10?'Choose when to begin the next expedition.':'Found your legacy at the Sanctuary.',false]
   ];
 }
 function updateQuestGuide(force=false){
