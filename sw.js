@@ -17,6 +17,7 @@ const APP_FILES = [
   './model3d.js',
   './model3d.css',
   './assets/ashen-crown-logo.svg',
+  './site.webmanifest',
   './resource-pack.json',
 ];
 const CURRENT_ASSETS = new Set(APP_FILES.map((path) => new URL(path, self.location.href).href));

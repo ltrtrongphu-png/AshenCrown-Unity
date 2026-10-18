@@ -33,6 +33,7 @@ const webFiles = [
   'auth.js',
   'sw.js',
   'assets/ashen-crown-logo.svg',
+  'site.webmanifest',
   'Assets/Models/Bosses/AshenRegent.glb',
   'Assets/Models/Characters/AshenSentinel.glb',
   'resource-pack.json',
@@ -101,7 +102,7 @@ for (const file of ['play.js', 'save-utils.js', 'model3d.js', 'auth.js', 'vendor
 
 for (const page of ['index.html', 'play.html']) {
   const html = readFileSync(join(repoRoot, page), 'utf8');
-  const references = html.matchAll(/(?:href|src)="([^"]+\.(?:js|css|svg|png|jpe?g|webp|woff2|json)(?:\?[^\"]*)?)"/gi);
+  const references = html.matchAll(/(?:href|src)="([^"]+\.(?:js|css|svg|png|jpe?g|webp|woff2|json|webmanifest)(?:\?[^\"]*)?)"/gi);
   for (const [, reference] of references) {
     if (/^(?:[a-z]+:|\/\/|data:|#)/i.test(reference)) continue;
     const localPath = reference.split(/[?#]/, 1)[0].replace(/^\.\//, '');
