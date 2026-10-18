@@ -20,6 +20,7 @@ const generated = new Set(['resource-pack.json']);
 const packageSources = new Map([
   ['vendor/three.module.js', 'node_modules/three/build/three.module.js'],
   ['vendor/three.core.js', 'node_modules/three/build/three.core.js'],
+  ['vendor/GLTFLoader.js', 'node_modules/three/examples/jsm/loaders/GLTFLoader.js'],
 ]);
 
 for (const file of allowList) {
