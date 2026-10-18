@@ -2496,15 +2496,53 @@ function updateQuestGuide(force=false){
   questWaypointGem.position.y=2.75+Math.sin(time*2.5)*.12;
 }
 function setQuest(){
-  const q=state.quest,title=$('questTitle'),desc=$('questDesc'),obj=$('objective'),count=$('questCount'),chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
-  $('chapterNumber').textContent='CHAPTER '+String(state.chapter).padStart(2,'0');$('chapterTitle').textContent=(chapter?.title||'THE LAST EMBER').toUpperCase();
-  if(q===0){title.textContent=chapter?.title||'A Stranger at the Gate';desc.textContent=state.chapter===1?'Meet Lyra. The ember carries the last unburned name of a village erased by the Crown.':(chapter?.summary||'A new road opens from the Sanctuary.');obj.textContent='◈ Speak with Lyra';count.textContent='01'}
-  else if(q===1){title.textContent=state.chapter===1?'Embers in the Grove':chapter.title;desc.textContent=state.chapter===1?'Find two living embers before the bell beneath Hollow can be heard.':chapter.activities[0]+'. Search the wilds and bring back two traces.';obj.textContent='◈ Gather chapter traces';count.textContent=state.chapterGathered+' / 2'}
-  else if(q===2){title.textContent=state.chapter===1?'Orren’s Unfinished Map':chapter.title;desc.textContent=state.chapter===1?'Ask the gatekeeper why one road on his map has been cut away.':chapter.activities[1]+'. Orren has a lead for you.';obj.textContent='◈ Speak with Orren';count.textContent='02'}
-  else if(q===3&&state.echoes<2){title.textContent=state.chapter===1?'The Bell Beneath Hollow':chapter.title;desc.textContent=state.chapter===1?'Recover the two memories the Crown tried to erase.':chapter.activities[2]+'. Recover two traces to draw out the chapter warden.';obj.textContent='◈ Recover memory traces';count.textContent=state.echoes+' / 2'}
-  else if(q===3){title.textContent=state.chapter===1?'The Bell Beneath Hollow':chapter.title;desc.textContent=state.chapter===1?'The name inside the bell has a guardian. Silence the Bell Warden.':'The chapter warden is drawn to the traces. Read its tell, dodge its three skills, then strike.';obj.textContent='◈ Defeat the chapter warden';count.textContent=encounter?'WARDEN PRESENT':'WARDEN APPROACHING'}
-  else if(q===4){title.textContent=state.chapter===1?'A Choice in the Ash':chapter.title;desc.textContent=state.chapter===1?'Return the stolen name to Lyra. Decide what the sanctuary is for.':chapter.summary+' Return to Lyra and make the chapter choice.';obj.textContent='◈ Return to Lyra';count.textContent='03'}
-  else{title.textContent=chapter?.title||'The Hearthbound Vow';desc.textContent=state.chapter===10?'All ten roads lead home. Found your legacy at the Sanctuary.':state.chapter>1?'The choice in '+chapter.title+' is remembered. Return to the Sanctuary and prepare for the next expedition.':state.flags.sanctuaryOpen?'The lost village has a name again. Its people can begin to return.':'One name remains to guard the last refuge; the others are free.';obj.textContent=state.chapter===10?'◈ Return to Lyra · Found your home':'◈ Chapter '+String(state.chapter).padStart(2,'0')+' complete · Return to Sanctuary';count.textContent='COMPLETE'}
+  const q=state.quest,title=$('questTitle'),desc=$('questDesc'),obj=$('objective'),count=$('questCount');
+  const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
+  const requirements=getChapterRequirements(state.chapter);
+  const recordFound=hasChapterRecord(state.flags,state.chapter);
+  $('chapterNumber').textContent='CHAPTER '+String(state.chapter).padStart(2,'0');
+  $('chapterTitle').textContent=(chapter?.title||'THE LAST EMBER').toUpperCase();
+  if(q===0){
+    title.textContent=chapter?.title||'A Stranger at the Gate';
+    desc.textContent=chapter?.summary||'A new road opens from the Sanctuary.';
+    obj.textContent='◈ Speak with Lyra';
+    count.textContent='01';
+  }else if(q===1){
+    title.textContent=state.chapter===1?'Embers in the Grove':(chapter.activities?.[0]||chapter.title);
+    desc.textContent=(chapter.activities?.[0]||'Follow the evidence')+'. Gather '+requirements.embers+' ember traces before the route can be confirmed.';
+    obj.textContent='◈ Gather chapter traces';
+    count.textContent=state.chapterGathered+' / '+requirements.embers;
+  }else if(q===2&&!recordFound){
+    title.textContent=chapter.recordName||'Chapter Record';
+    desc.textContent=(chapter.activities?.[1]||'Search the region')+'. Find the sealed record before Orren will commit to a route.';
+    obj.textContent='◈ Recover '+(chapter.recordName||'the chapter record');
+    count.textContent='RECORD MISSING';
+  }else if(q===2&&recordFound){
+    title.textContent=state.chapter===1?'Orren’s Unfinished Map':chapter.title;
+    desc.textContent=(chapter.recordClue||chapter.summary)+' Orren can confirm where the evidence leads.';
+    obj.textContent='◈ Speak with Orren';
+    count.textContent='RECORD FOUND';
+  }else if(q===3&&state.echoes<requirements.echoes){
+    title.textContent=chapter.activities?.[2]||chapter.title;
+    desc.textContent=(chapter.activities?.[2]||'Recover the lost memories')+'. Recover '+requirements.echoes+' echoes to draw out '+(chapter.wardenName||'the chapter warden')+'.';
+    obj.textContent='◈ Recover memory traces';
+    count.textContent=state.echoes+' / '+requirements.echoes;
+  }else if(q===3){
+    title.textContent=chapter.wardenName||'The Chapter Warden';
+    desc.textContent='The recovered evidence has drawn out the keeper. Read the attack tells, evade the marked strike and hit during recovery.';
+    obj.textContent='◈ Face '+(chapter.wardenName||'the chapter warden');
+    count.textContent=encounter?'WARDEN PRESENT':'WARDEN APPROACHING';
+  }else if(q===4){
+    title.textContent=state.chapter===1?'A Choice in the Ash':chapter.title+' · The Choice';
+    desc.textContent=(chapter.summary||'The truth has surfaced.')+' Return to Lyra and choose: '+String(chapter.choice||'choose what to preserve').replace(' / ',' or ')+'.';
+    obj.textContent='◈ Return to Lyra';
+    count.textContent='CONSEQUENCE';
+  }else{
+    title.textContent=chapter?.title||'The Hearthbound Vow';
+    desc.textContent=state.chapter===10?'All ten roads return to the Sanctuary. Review the names you restored and decide what the next generation inherits.':state.chapter>1?'The choice in '+chapter.title+' is recorded. Return to the Sanctuary and speak with Lyra before opening another road.':state.flags.sanctuaryOpen?'The lost village has a name again. Its people can begin to return.':'One name remains to guard the last refuge; the others are free.';
+    obj.textContent=state.chapter===10?'◈ Return to Lyra · Found your home':'◈ Chapter '+String(state.chapter).padStart(2,'0')+' complete · Return to Sanctuary';
+    count.textContent='COMPLETE';
+  }
   $('regionLabel').textContent=region().toUpperCase();
   updateQuestGuide(true);
 }
