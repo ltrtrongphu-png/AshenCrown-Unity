@@ -12,6 +12,8 @@ const APP_FILES = [
   './save-utils.js',
   './vendor/three.module.js',
   './vendor/three.core.js',
+  './vendor/GLTFLoader.js',
+  './Assets/ashen-crown-logo.svg',
   './play-boot.js?v=__ASHEN_BUILD_ID__',
   './auth-config.js?v=__ASHEN_BUILD_ID__',
   './auth.js?v=__ASHEN_BUILD_ID__',
