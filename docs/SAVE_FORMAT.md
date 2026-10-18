@@ -43,3 +43,6 @@ Do not switch either contract to v6 without a reviewed migration plan. Required 
 - The non-extractable AES-GCM `CryptoKey` is stored separately in IndexedDB (`ashen-crown-local-keyring-v1`); it is not stored beside the ciphertext in localStorage. Saves are verified after each write.
 - On the first run after this change, any plaintext save at `ashen-crown-3d` and all `ashen-crown-3d.backup.*` copies are intentionally deleted rather than migrated. An unreadable/tampered encrypted envelope is also cleared. A fresh encrypted v5 save is then created as the player progresses.
 - A browser-local keyring means clearing site data, losing IndexedDB, or moving only the localStorage ciphertext to another device makes that local save unrecoverable. This is deliberate rather than silently writing plaintext. Optional signed-in cloud backup remains an in-memory v5 payload sent to the existing Supabase table; localStorage itself stores only ciphertext.
+
+
+- Boot also sweeps old plaintext backup keys even when the primary key is missing or already encrypted. If a current valid encrypted record exists, removing stale backups does not delete its keyring entry.
