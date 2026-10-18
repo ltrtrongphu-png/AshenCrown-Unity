@@ -41,6 +41,7 @@ const webFiles = [
   'site.webmanifest',
   'Assets/Models/Bosses/AshenRegent.glb',
   'Assets/Models/Characters/AshenSentinel.glb',
+  'Assets/Models/NPC/AshenNPCRoster.glb',
   'resource-pack.json',
 ];
 const generatedFiles = new Set(['resource-pack.json']);
@@ -71,6 +72,7 @@ const buildId = buildHash.digest('hex').slice(0, 16);
 const resourceFiles = [
   'Assets/Models/Characters/AshenSentinel.glb',
   'Assets/Models/Bosses/AshenRegent.glb',
+  'Assets/Models/NPC/AshenNPCRoster.glb',
 ];
 
 for (const file of webFiles) {
