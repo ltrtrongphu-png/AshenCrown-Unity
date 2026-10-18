@@ -43,14 +43,14 @@ jobs:
           ASHEN_SMOKE_URL: http://127.0.0.1:4173
       - name: Upload real gameplay screenshots and diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ashen-crown-game-smoke
           path: artifacts/game-smoke/
           if-no-files-found: warn
       - name: Upload static-server log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ashen-crown-game-smoke-server-log
           path: /tmp/ashen-crown-http.log
