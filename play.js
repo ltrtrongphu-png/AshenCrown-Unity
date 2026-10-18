@@ -2997,7 +2997,6 @@ function loadState(){
         state.tutorial=saved.tutorial===true;
         if(saved.playerPosition&&Number.isFinite(saved.playerPosition.x)&&Number.isFinite(saved.playerPosition.z)){player.position.x=THREE.MathUtils.clamp(saved.playerPosition.x,-106,106);player.position.z=THREE.MathUtils.clamp(saved.playerPosition.z,-106,106)}
       }
-    }
   }catch{toastMsg('Save data could not be read; a fresh journey has started.')}
   recalculateEquipmentStats();state.hp=THREE.MathUtils.clamp(state.hp,0,state.maxHp);restoreCollectedNodes();updateSanctuaryBuild();applyRoleLook();applySettings();
 }
