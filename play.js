@@ -2356,7 +2356,7 @@ async function loadFullResourceModels(manifest,cache){
       productionNpcRosterScene=roster.scene;
       productionNpcModelPrototypes.clear();
       productionNpcRosterScene.traverse(object=>{
-        if(object.isGroup&&object.name.startsWith('NPCMODEL_')){
+        if(object.name.startsWith('NPCMODEL_')&&object.children?.length){
           productionNpcModelPrototypes.set(object.name.slice('NPCMODEL_'.length),object);
         }
       });
