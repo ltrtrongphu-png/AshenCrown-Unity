@@ -2600,17 +2600,25 @@ function interact(){
     const n=a.n;
     if(n.role==='merchant'){openShop(n)}
     else if(n.id==='lyra'&&state.quest===0&&state.chapter>1){const ch=window.ASHEN_CAMPAIGN[state.chapter-1];dialogue(n,ch.summary+' The Sanctuary will keep your place while you investigate. What matters most on this road?',[
-      {label:'Follow the people affected by this chapter',fn:()=>{state.rep.lyra++;state.quest=1;xp(30);item(ch.items[0],'Chapter Relic','Epic',['Chapter '+state.chapter,'Story']);state.log.unshift('Lyra asked you to listen before choosing a side in '+ch.title+'.');setQuest();saveState()}},
-      {label:'Search for the hidden record first',fn:()=>{state.rep.seer++;state.flags.truth=true;state.quest=1;xp(35);item(ch.items[1]||ch.items[0],'Chapter Record','Rare',['Discovery','Story']);state.log.unshift('You chose investigation before allegiance in '+ch.title+'.');setQuest();saveState()}}
+      {label:'Follow the people affected by this chapter',fn:()=>{state.rep.lyra++;state.quest=state.chapterGathered>=getChapterRequirements(state.chapter).embers?2:1;xp(30);item(ch.items[0],'Chapter Relic','Epic',['Chapter '+state.chapter,'Story']);state.log.unshift('Lyra asked you to listen before choosing a side in '+ch.title+'.');setQuest();saveState()}},
+      {label:'Search for the hidden record first',fn:()=>{state.rep.seer++;state.flags.truth=true;state.quest=state.chapterGathered>=getChapterRequirements(state.chapter).embers?2:1;xp(35);item(ch.items[1]||ch.items[0],'Chapter Record','Rare',['Discovery','Story']);state.log.unshift('You chose investigation before allegiance in '+ch.title+'.');setQuest();saveState()}}
     ]);}
     else if(n.id==='lyra'&&state.quest===0)dialogue(n,'That flame is the last unburned name of a village the Crown erased. The gate can keep it buried, or you can learn whose name it is. Wake the bell, and its keeper will wake too.',[
-      {label:'Seal it until the hamlet is safe',fn:()=>{state.rep.lyra++;state.flags.protectedSanctuary=true;state.quest=1;xp(25);item('Sanctuary Sigil','Relic','Rare',['Ward','Story Bound']);state.log.unshift('You promised to keep the sanctuary safe before seeking the truth.');toastMsg('Lyra trusts your promise');setQuest();saveState()}},
-      {label:'Tell me whose name they erased',fn:()=>{state.rep.lyra+=2;state.flags.truth=true;state.quest=1;xp(30);item('Emberleaf Charm','Trinket','Epic',['Lore','Luck']);state.log.unshift('You chose the truth: the ember carries a village erased from the Crown’s record.');toastMsg('A name stirs inside the ember');setQuest();saveState()}}
+      {label:'Seal it until the hamlet is safe',fn:()=>{state.rep.lyra++;state.flags.protectedSanctuary=true;state.quest=state.chapterGathered>=getChapterRequirements(state.chapter).embers?2:1;xp(25);item('Sanctuary Sigil','Relic','Rare',['Ward','Story Bound']);state.log.unshift('You promised to keep the sanctuary safe before seeking the truth.');toastMsg('Lyra trusts your promise');setQuest();saveState()}},
+      {label:'Tell me whose name they erased',fn:()=>{state.rep.lyra+=2;state.flags.truth=true;state.quest=state.chapterGathered>=getChapterRequirements(state.chapter).embers?2:1;xp(30);item('Emberleaf Charm','Trinket','Epic',['Lore','Luck']);state.log.unshift('You chose the truth: the ember carries a village erased from the Crown’s record.');toastMsg('A name stirs inside the ember');setQuest();saveState()}}
     ]);
-    else if(n.id==='orren'&&state.quest===2)dialogue(n,state.flags.truth?'The cut road leads to the bell chamber. The Crown erased its village, then built a gate over the names.':'I cut the road from my map because every traveler who follows it hears a bell that has no tower.',[
-      {label:'Follow Orren’s marked path',fn:()=>{state.rep.orren+=2;state.quest=3;state.flags.gate=true;xp(35);state.log.unshift('Orren marked the safe path to Hollow.');toastMsg('The Ashen Gate opens');setQuest();saveState()}},
-      {label:'Take the map and choose my own way',fn:()=>{state.rep.orren++;state.quest=3;state.flags.gate=true;item('Tideglass Compass','Relic','Rare',['Discovery']);state.log.unshift('You kept Orren’s map but chose your own route.');toastMsg('A hidden route is marked');setQuest();saveState()}}
-    ]);
+    else if(n.id==='orren'&&state.quest===2){
+      const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
+      if(!hasChapterRecord(state.flags,state.chapter)){
+        toastMsg('Recover '+(chapter.recordName||'the chapter record')+' before choosing a route.');
+        return;
+      }
+      const routes=chapter.routeChoices||['Follow Orren’s marked path','Take the map and choose my own way'];
+      dialogue(n,(chapter.recordClue||'The recovered record points toward the next road.')+' What will you do with this evidence?',[
+        {label:routes[0],fn:()=>{state.rep.orren+=2;state.flags['chapter'+state.chapter+'Route']='marked';state.quest=3;xp(35);state.log.unshift('You chose to '+routes[0].toLowerCase()+' in '+chapter.title+'.');toastMsg('Orren marks the next route');setQuest();saveState()}},
+        {label:routes[1],fn:()=>{state.rep.orren++;state.rep.seer++;state.flags.truth=true;state.flags['chapter'+state.chapter+'Route']='independent';state.quest=3;item(chapter.items?.[2]||chapter.items?.[0]||'Route Relic','Relic','Rare',['Discovery','Chapter '+state.chapter]);state.log.unshift('You chose to '+routes[1].toLowerCase()+' in '+chapter.title+'.');toastMsg('A second route is marked');setQuest();saveState()}}
+      ]);
+    }
     else if(n.id==='lyra'&&state.quest===5&&state.chapter<10)dialogue(n,'Chapter '+String(state.chapter).padStart(2,'0')+' is carried home with you. The Sanctuary can grow stronger before the next road opens.',[{label:'Prepare and begin Chapter '+String(state.chapter+1).padStart(2,'0'),fn:advanceChapter},{label:'Stay at the Sanctuary for now',fn:()=>{openSystemMenu('base')}}]);
     else if(n.id==='lyra'&&state.quest===5&&state.chapter===10)dialogue(n,'Ten roads return to this hearth. The Sanctuary is no longer only a refuge; it is the home you built from every name and choice you carried back.',[{label:'Found the new home',fn:()=>{state.meta.chaptersComplete=10;if(!state.flags.legacyHome)state.meta.legacy++;state.flags.legacyHome=true;updateSanctuaryBuild();state.log.unshift('After ten chapters, you founded a lasting home at the Sanctuary.');saveState();toastMsg('The Sanctuary is your home · 10 chapters complete');openSystemMenu('base')}}]);
     else if(n.id==='lyra'&&state.quest===4&&state.chapter>1){const ch=window.ASHEN_CAMPAIGN[state.chapter-1],options=ch.choice.split(' / ');dialogue(n,ch.summary+' Both paths cost something. Which answer will you carry home?',[
