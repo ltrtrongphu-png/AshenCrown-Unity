@@ -3420,6 +3420,37 @@ if(isLocalE2ESession) {
       canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight
     }),
     prepareVisuals:()=>{state.settings.quality='high';state.settings.reducedMotion=false;applySettings();return true;},
+    stageNpcShowcase:()=>{
+      window.__ASHEN_NPC_SHOWCASE_ORIGINALS__={
+        player:{x:player.position.x,z:player.position.z,yaw,pitch},
+        npcs:npcs.map(n=>({x:n.root.position.x,z:n.root.position.z,visible:n.root.visible})),
+        villagers:villagers.map(v=>({x:v.root.position.x,z:v.root.position.z,visible:v.root.visible}))
+      };
+      // Local-only staging for a close, legible evidence screenshot. The running
+      // game model objects are reused; only their test positions are moved.
+      player.position.set(0,0,5.3);yaw=0;pitch=.22;
+      const layout=[[-3.0,1.2],[.65,.2],[3.2,1.0]];
+      npcs.forEach((n,i)=>{n.root.position.set(layout[i][0],0,layout[i][1]);n.root.visible=true;});
+      const crowd=[
+        [-4.7,-.2],[4.8,-.1],[-5.2,2.6],[5.4,2.7],
+        [-1.7,-1.3],[1.9,-1.5]
+      ];
+      villagers.forEach((v,i)=>{
+        if(i<crowd.length){v.root.position.set(crowd[i][0],0,crowd[i][1]);v.root.visible=true;}
+        else v.root.visible=false;
+      });
+      return {narrative:npcs.filter(n=>n.productionVisual?.parent===n.root).length,
+        villagers:villagers.filter(v=>v.productionVisual?.parent===v.root).length};
+    },
+    restoreNpcHomes:()=>{
+      const saved=window.__ASHEN_NPC_SHOWCASE_ORIGINALS__;
+      if(!saved)return false;
+      player.position.set(saved.player.x,0,saved.player.z);yaw=saved.player.yaw;pitch=saved.player.pitch;
+      npcs.forEach((n,i)=>{n.root.position.set(n.homePosition[0],0,n.homePosition[1]);n.root.visible=saved.npcs[i].visible;});
+      villagers.forEach((v,i)=>{v.root.position.set(saved.villagers[i].x,0,saved.villagers[i].z);v.root.visible=saved.villagers[i].visible;});
+      delete window.__ASHEN_NPC_SHOWCASE_ORIGINALS__;
+      return true;
+    },
     startBossEncounter:()=>{
       if(encounter){disposeEncounterVisuals(encounter);encounter.root.removeFromParent();encounter=null;enemies=[];setEncounterHud(null);}
       state.quest=3;state.echoes=Math.max(state.echoes,getChapterRequirements(state.chapter).echoes);
