@@ -22,7 +22,7 @@ Vercel is configured to deploy only the browser experience:
 
 - `npm install --ignore-scripts --no-audit --no-fund` installs the pinned Three.js runtime; `node tools/build-web.mjs` creates the allow-listed `dist/` artifact.
 - `vercel.json` skips dependency installation, publishes `dist/`, keeps clean URLs, and sets static caching plus baseline security headers.
-- Unity C# sources, GLB models, texture maps, Supabase migrations, backend code, and documentation remain in GitHub and are excluded from the Vercel CLI upload by `.vercelignore`.
+- Unity C# sources, source textures, unused art, Supabase migrations, backend code, and documentation remain in GitHub. The three browser runtime GLBs (Sentinel, Regent, NPC roster) are explicitly allow-listed in `.vercelignore` and shipped by the `dist/` build.
 - No `ignoreCommand` is configured: Vercel marks ignored builds as canceled, and canceled builds still count toward deployment quotas.
 
 Connect the repository root to Vercel and leave install/build/output settings to `vercel.json`. The build depends on the pinned `three@0.186.1` npm package to produce same-origin vendor files. The game tries the self-hosted Three.js module first and retains pinned CDN fallbacks; the optional GLTFLoader example module and Google Fonts still use approved external sources under the existing CSP.
@@ -163,7 +163,7 @@ The upgraded framework supports a long-running ARPG campaign:
 - Persistent world flags, unlocked regions, defeated bosses, and story cycles.
 - Quest graph with prerequisites and Talk, Kill, Collect, Explore, and Boss objectives.
 - NPC interaction with mouse click or E, branching dialogue, story flags, and reputation.
-- Sample NPCs: Lyra, Orren, and The Seer; capsule fallback visuals can be replaced by real 3D prefabs.
+- Sample story NPCs: Lyra, Orren, and The Seer; the browser Resource Pack attaches the 62-model NPC GLB roster. Primitive actor visuals remain as a loading-failure fallback. Unity scene/prefab assignment remains a separate importer workflow.
 - Long-term progression: level/XP, Essence, Prestige, relic slots, and New Game Plus cycles.
 - Crafting, faction reputation, lore codex, and rotating world events.
 - Save/Load v2 persists campaign, quests, reputation, codex, and progression.
