@@ -33,3 +33,10 @@ Generated asset validation on the feature branch:
 - GLB container, material group, embedded texture and animation checks passed.
 
 These checks validate file structure and asset budgets only. They do not replace an in-engine visual review, rig deformation review or target-hardware FPS profiling.
+
+
+## Follow-up polish — Ashen Crown production pass
+
+- Increased deterministic micro-abrasion and pitting on the shared 1024² surface maps, and added branching ember fissures to the emissive map.
+- Added nested gorget/pauldron layers and extra obsidian ridges on the Regent's mantle to improve highlights and character silhouette without cloth simulation or per-rivet draw calls.
+- The GLB validator remains the gate for mesh/material/clip size and structure. In-engine visual deformation and target-device performance still require a real Unity/browser run.
