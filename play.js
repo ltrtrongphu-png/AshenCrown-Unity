@@ -1,4 +1,4 @@
-import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision, backupLocalSave } from './save-utils.js';
+import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision, backupLocalSave, isEncryptedSaveEnvelope, readEncryptedLocalSave, writeEncryptedLocalSave } from './save-utils.js';
 import { getChapterRequirements, chapterRecordKey, hasChapterRecord, isChapterWardenReady, canAdvanceChapter } from './story-progression.js';
 // Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
 // prevent the entire game from starting.
@@ -542,7 +542,7 @@ environmentTexture.colorSpace=THREE.SRGBColorSpace;
 environmentTexture.mapping=THREE.EquirectangularReflectionMapping;
 environmentTexture.needsUpdate=true;
 scene.environment=environmentTexture;
-scene.environmentIntensity=.22;
+scene.environmentIntensity=.34;
 const world=new THREE.Group(), characters=new THREE.Group(), props=new THREE.Group(), effects=new THREE.Group(); scene.add(world);
 const sanctuaryBuild=new THREE.Group();world.add(sanctuaryBuild);
 world.add(characters,props,effects);
@@ -793,7 +793,7 @@ function chapterLevelCap(chapter=state.chapter){return CHAPTER_LEVEL_CAPS[THREE.
 function xpNeededForLevel(level=state.level){const lv=Math.max(1,Math.floor(Number(level)||1));return Math.round(80+48*lv+7*lv*lv)}
 function skillUnlockLevel(index){return index+1}
 function equipmentSlotFor(gear){if(!gear)return null;if(gear.type==='Weapon'||gear.type==='Core')return 'core';if(gear.type==='Armor')return 'armor';if(gear.type==='Trinket')return 'charm';if(['Relic','Quest Relic','Chapter Relic'].includes(gear.type))return 'relic';return null}
-let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0,legacyMapSave=false;
+let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0,legacyMapSave=false,comboIndex=0,comboWindow=0,parryWindow=0,parryCooldown=0,perfectDodgeWindow=0,ownerGodMode=false;
 const player=new THREE.Group(); player.position.set(0,0,7); characters.add(player);
 
 const mat=(c,r=.75,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
@@ -1884,10 +1884,10 @@ function attachProductionBoss(enemy){
   return true;
 }
 
-function spawnEnemy(){
+function spawnEnemy(testOnly=false){
   if(enemies.length)return;
-  if(activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
-  const isBoss=isChapterWardenReady(state);
+  if(!testOnly&&activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
+  const isBoss=Boolean(testOnly)||isChapterWardenReady(state);
   const angle=Math.random()*Math.PI*2;
   const radius=isBoss?10+Math.random()*3:12+Math.random()*15;
   const mapBound=activeMapId==='sanctuary'?92:50;
@@ -1928,25 +1928,31 @@ function spawnEnemy(){
   e1.position.set(-.13,1.08,.35); e2.position.set(.13,1.08,.35);
   g.add(e1,e2);
   characters.add(g);
-  const maxHp=Math.round((isBoss?150:state.quest>=3?90:45)*(1+(state.chapter-1)*.18)+Math.max(0,state.level-1)*4);
-  const baseAttackDamage=(isBoss?17:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2);
-  encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,baseAttackDamage,attackDamage:baseAttackDamage,attackSkill:0,attackCycle:0,body:b,fallbackVisuals:g.children.slice(),isBoss};
+  const maxHp=Math.round((isBoss?175:state.quest>=3?90:45)*(1+(state.chapter-1)*.18)+Math.max(0,state.level-1)*4);
+  const baseAttackDamage=(isBoss?19:state.quest>=3?14:9)+Math.floor((state.chapter-1)*1.2);
+  encounter={root:g,hp:maxHp,maxHp,state:'approach',phase:isBoss?1:0,cooldown:1.1+Math.random(),windup:0,baseAttackDamage,attackDamage:baseAttackDamage,attackSkill:0,attackCycle:0,body:b,fallbackVisuals:g.children.slice(),isBoss,testOnly:Boolean(testOnly),isEnraged:false};
   enemies=[encounter];
   if(isBoss){
     if(productionBossScene)attachProductionBoss(encounter);
     else void ensureProductionBossLoaded().then(()=>{if(encounter?.isBoss)attachProductionBoss(encounter)}).catch(error=>console.warn('[Ashen Crown] Boss model stays on fallback:',error));
   }
   setEncounterHud(encounter);
-  toastMsg(isBoss?((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.wardenName||'The Chapter Warden')+' has answered the evidence.'): 'A wandering shade has entered the wilds.');
+  toastMsg(testOnly?'OWNER QA · Warden trial started; defeat grants no campaign rewards.':isBoss?((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.wardenName||'The Chapter Warden')+' has answered the evidence.'): 'A wandering shade has entered the wilds.');
 }
 function dodge(){
   if(anyOverlayOpen()||dodgeCooldown>0||state.stamina<18)return;
-  dodgeCooldown=.72;dodgeIFrames=.34;state.stamina-=18;
+  dodgeCooldown=.68;dodgeIFrames=.36;perfectDodgeWindow=.16;state.stamina-=18;
   const next=resolveCollisions(
-    THREE.MathUtils.clamp(player.position.x-Math.sin(yaw)*2.6,activeMapId==='sanctuary'?-106:-54,activeMapId==='sanctuary'?106:54),
-    THREE.MathUtils.clamp(player.position.z-Math.cos(yaw)*2.6,activeMapId==='sanctuary'?-106:-54,activeMapId==='sanctuary'?106:54)
+    THREE.MathUtils.clamp(player.position.x-Math.sin(yaw)*2.85,activeMapId==='sanctuary'?-106:-54,activeMapId==='sanctuary'?106:54),
+    THREE.MathUtils.clamp(player.position.z-Math.cos(yaw)*2.85,activeMapId==='sanctuary'?-106:-54,activeMapId==='sanctuary'?106:54)
   );
   player.position.x=next.x;player.position.z=next.z;
+}
+function parry(){
+  if(anyOverlayOpen()||parryCooldown>0||state.stamina<12)return;
+  parryCooldown=.82;parryWindow=.24;state.stamina-=12;playGameSound('parry');
+  if(state.settings.visualEffects!==false)spawnSkillRing(1,0x96d8df,player.position);
+  showCombatCallout('PARRY WINDOW',0);
 }
 let dodgeCooldown=0;
 function recalculateEquipmentStats(){const next={vitality:0,focus:0,ward:0};for(const gear of Object.values(state.equipment)){if(!gear)continue;const stats=gear.stats||{};for(const key of Object.keys(next)){const value=Number(stats[key]||0);if(Number.isFinite(value))next[key]=Math.min(12,next[key]+THREE.MathUtils.clamp(value,0,5))}}state.stats=next;state.maxHp=100+next.vitality*12+Math.min(3,Math.max(0,Number(state.meta.hubLevel)||0))*4;state.hp=THREE.MathUtils.clamp(Number(state.hp)||0,0,state.maxHp)}
@@ -2013,7 +2019,9 @@ function disposeEncounterVisuals(enemy) {
 function finishEncounter(){
   const defeated=encounter;if(!defeated)return;
   const bellWaiting=!defeated.isBoss&&isChapterWardenReady(state);
-  disposeEncounterVisuals(defeated);defeated.root.removeFromParent();enemies=[];recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);
+  disposeEncounterVisuals(defeated);defeated.root.removeFromParent();enemies=[];
+  if(defeated.testOnly){encounter=null;setEncounterHud(null);toastMsg('Owner QA trial ended · campaign progression and rewards unchanged.');return;}
+  recordHuntKill(defeated.isBoss);state.coins+=defeated.isBoss?90:25;xp(defeated.isBoss?90:35);
   if(defeated.isBoss){
     const ch=window.ASHEN_CAMPAIGN[state.chapter-1]||window.ASHEN_CAMPAIGN[0];state.flags.bellWardenDefeated=true;state.quest=4;
     if(state.chapter===1){item('Eda Vey’s Name','Quest Relic','Legendary',['Memory','Identity'],{focus:2});state.log.unshift(ch.wardenReveal||'The Bell Warden was Eda Vey, the keeper who refused to let the Crown erase her village.');toastMsg((ch.wardenName||'The Bell Warden')+' falls — a forgotten name returns.')}
@@ -2062,14 +2070,14 @@ function advanceChapter(){
 function syncRenderQuality(){
   const quality=state.settings.quality||'auto';
   const shadowsAllowed=state.settings.visualEffects!==false&&(
-    quality==='high'||(quality==='auto'&&currentFps>=59&&adaptiveDpr<=1.02)
+    quality==='high'||(quality==='auto'&&currentFps>=30&&adaptiveDpr<=1.16)
   );
   if(renderer.shadowMap.enabled!==shadowsAllowed){
     renderer.shadowMap.enabled=shadowsAllowed;
     renderer.shadowMap.needsUpdate=shadowsAllowed;
   }
   sun.castShadow=shadowsAllowed;
-  renderer.shadowMap.autoUpdate=false;
+  renderer.shadowMap.autoUpdate=shadowsAllowed;
 }
 function applySettings(){
   const settings=state.settings,native=window.devicePixelRatio||1,r=canvas.getBoundingClientRect();
@@ -2099,7 +2107,7 @@ function dropEquipment(isBoss=false){
 }
 function toastMsg(t){$('toast').textContent=t;$('toast').classList.add('show');toastTimer=3}
 let gameAudio=null;
-function playGameSound(kind='ui'){if(!state.settings.sound)return;const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)return;try{gameAudio??=new AudioCtor();if(gameAudio.state==='suspended')gameAudio.resume().catch(()=>{});const presets={ui:[360,.055,'sine'],attack:[145,.075,'triangle'],skill:[520,.13,'sawtooth'],collect:[740,.16,'sine'],hurt:[92,.18,'triangle'],success:[620,.22,'sine']},[frequency,duration,wave]=presets[kind]||presets.ui,osc=gameAudio.createOscillator(),gain=gameAudio.createGain(),now=gameAudio.currentTime,volume=Math.max(0,Math.min(1,Number(state.settings.volume)||0));if(!volume)return;osc.type=wave;osc.frequency.setValueAtTime(frequency,now);if(kind==='skill'||kind==='success')osc.frequency.exponentialRampToValueAtTime(frequency*1.5,now+duration);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(volume*.12,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);osc.connect(gain);gain.connect(gameAudio.destination);osc.start(now);osc.stop(now+duration+.015)}catch{}}
+function playGameSound(kind='ui'){if(!state.settings.sound)return;const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)return;try{gameAudio??=new AudioCtor();if(gameAudio.state==='suspended')gameAudio.resume().catch(()=>{});const presets={ui:[360,.055,'sine'],attack:[145,.075,'triangle'],skill:[520,.13,'sawtooth'],collect:[740,.16,'sine'],hurt:[92,.18,'triangle'],success:[620,.22,'sine'],parry:[960,.11,'triangle'],dodge:[240,.075,'sine']},[frequency,duration,wave]=presets[kind]||presets.ui,osc=gameAudio.createOscillator(),gain=gameAudio.createGain(),now=gameAudio.currentTime,volume=Math.max(0,Math.min(1,Number(state.settings.volume)||0));if(!volume)return;osc.type=wave;osc.frequency.setValueAtTime(frequency,now);if(kind==='skill'||kind==='success')osc.frequency.exponentialRampToValueAtTime(frequency*1.5,now+duration);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(volume*.12,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);osc.connect(gain);gain.connect(gameAudio.destination);osc.start(now);osc.stop(now+duration+.015)}catch{}}
 const RESOURCE_CACHE_PREFIX='ashen-resource-pack-';
 const MODEL_PIPELINE_VERSION='ashen-model-pipeline-2026-10-10-v2';
 let resourcePackLoading=false;
@@ -2217,6 +2225,7 @@ function prepareProductionModel(model,targetHeight,label){
       }
       if('roughness' in material)material.roughness=THREE.MathUtils.clamp(material.roughness,.18,.96);
       if('metalness' in material)material.metalness=THREE.MathUtils.clamp(material.metalness,0,1);
+      if('envMapIntensity' in material)material.envMapIntensity=label==='boss'?1.32:1.12;
       material.needsUpdate=true;
     }
   });
@@ -2267,7 +2276,8 @@ function triggerBossPhase(enemy,phase){
   enemy.attackCycle=0;
   enemy.attackSkill=phase;
   enemy.cooldown=.48;
-  enemy.attackDamage=Math.round(enemy.baseAttackDamage*(phase===1?1:phase===2?1.22:1.48));
+  enemy.attackDamage=Math.round(enemy.baseAttackDamage*(phase===1?1:phase===2?1.22:1.48)*(enemy.isEnraged?1.18:1));
+  enemy.windup=0;enemy.state='approach';enemy.root.scale.setScalar(1);
   createBossTelegraph(enemy,phase===1?2.6:phase===2?4.4:5.8,phase===3?0xd66dff:0xffbd62,.95);
   playBossAnimation(phase===3?'Enrage':'Heavy',1.1);
   toastMsg(phase===2?'Warden Phase II · the arena shockwave is wider.'
@@ -2309,6 +2319,7 @@ async function loadFullResourceModels(manifest,cache){
       productionPlayerActions=Object.fromEntries(sentinel.animations.map(clip=>[clip.name,productionPlayerMixer.clipAction(clip)]));
       activePlayerAction='';
       playPlayerAnimation('Idle');
+      window.dispatchEvent(new CustomEvent('ashen:player-model-ready'));
 
       if(encounter?.isBoss)await ensureProductionBossLoaded();
       return true;
@@ -2336,6 +2347,7 @@ async function ensureProductionBossLoaded(){
     productionBossMixer=new THREE.AnimationMixer(productionBossScene);
     productionBossActions=Object.fromEntries(regent.animations.map(clip=>[clip.name,productionBossMixer.clipAction(clip)]));
     activeBossAction='';
+    window.dispatchEvent(new CustomEvent('ashen:boss-model-ready'));
     if(encounter?.isBoss)attachProductionBoss(encounter);
     return true;
   })();
@@ -2663,16 +2675,34 @@ function interact(){
   else if(a.k==='enemy')pulse();
 }
 function pulse(){
-  if(anyOverlayOpen()||!encounter||attackCooldown>0||state.stamina<15)return;
+  if(anyOverlayOpen()||!encounter||attackCooldown>0||state.stamina<10)return;
   const toEnemy=encounter.root.position.clone().sub(player.position);toEnemy.y=0;
   const distance=toEnemy.length();
-  if(distance>4.6){toastMsg('Too far away — close the distance.');return}
+  if(distance>4.6){comboIndex=0;comboWindow=0;toastMsg('Too far away — close the distance.');return}
   player.rotation.y=Math.PI+yaw;
   const facing=new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y));
-  if(distance>1.35&&facing.dot(toEnemy.normalize())<.12){toastMsg('Turn toward the shade before striking.');return}
-  attackCooldown=.48;state.stamina-=12;encounter.hp-=calcPlayerDamage(18);playGameSound('attack');playPlayerAnimation('Light1',420);
-  if(state.settings.visualEffects!==false){const g=new THREE.Group();g.position.copy(player.position);for(let i=0;i<8;i++){const o=orb(.05,0xff8a4d,true),a=i*Math.PI/4;o.position.set(Math.cos(a),.8,Math.sin(a));g.add(o)}effects.add(g);transientEffects.push({mesh:g,remaining:.28,disposeTree:true})}
-  if(encounter.hp<=0)finishEncounter();else{setEncounterHud(encounter);encounter.cooldown=Math.max(encounter.cooldown,.55)}
+  if(distance>1.35&&facing.dot(toEnemy.normalize())<.12){comboIndex=0;comboWindow=0;toastMsg('Turn toward the shade before striking.');return}
+  if(comboWindow<=0)comboIndex=0;
+  const chain=[
+    {name:'EMBER CUT',damage:18,cost:10,cooldown:.30,animation:'Light1',hold:280},
+    {name:'ASHEN RIPOSTE',damage:25,cost:12,cooldown:.36,animation:'Light1',hold:320},
+    {name:'CROWN BREAKER',damage:38,cost:17,cooldown:.58,animation:'Heavy',hold:620}
+  ];
+  const step=comboIndex,strike=chain[step];
+  if(state.stamina<strike.cost){comboIndex=0;comboWindow=0;toastMsg('Not enough stamina for the next strike.');return}
+  state.stamina-=strike.cost;attackCooldown=strike.cooldown;comboIndex=(step+1)%chain.length;comboWindow=.84;
+  encounter.hp=Math.max(0,encounter.hp-calcPlayerDamage(strike.damage,0,true));
+  playGameSound('attack');playPlayerAnimation(strike.animation,strike.hold);
+  if(step===2){encounter.cooldown=Math.max(encounter.cooldown,1.3);if(encounter.state==='windup'&&(!encounter.isBoss||encounter.attackSkill===1)){encounter.state='approach';encounter.windup=0;encounter.root.scale.setScalar(1);toastMsg('CROWN BREAKER · attack interrupted.')}}
+  if(state.settings.visualEffects!==false){spawnSkillRing(step,step===2?0xffd29a:step===1?0xc77a58:0xf2a06b,player.position);const g=new THREE.Group();g.position.copy(player.position);for(let i=0;i<8;i++){const o=orb(.045,step===2?0xffd29a:0xff8a4d,true),a=i*Math.PI/4;o.position.set(Math.cos(a)*(0.65+step*.1),.78,Math.sin(a)*(0.65+step*.1));g.add(o)}effects.add(g);transientEffects.push({mesh:g,remaining:.28,disposeTree:true})}
+  showCombatCallout(strike.name,step+1);
+  if(encounter.hp<=0)finishEncounter();else{setEncounterHud(encounter);encounter.cooldown=Math.max(encounter.cooldown,.42)}
+}
+let combatCallout=null;
+function showCombatCallout(label,step=0){
+  if(!combatCallout){combatCallout=document.createElement('div');combatCallout.className='combat-callout';combatCallout.setAttribute('aria-live','polite');document.body.appendChild(combatCallout)}
+  combatCallout.textContent=step>0?label+'  ·  '+step+'/3':label;combatCallout.classList.remove('show');void combatCallout.offsetWidth;combatCallout.classList.add('show');
+  if(combatCallout._hideTimer)clearTimeout(combatCallout._hideTimer);combatCallout._hideTimer=window.setTimeout(()=>combatCallout?.classList.remove('show'),820);
 }
 const moveForward=new THREE.Vector3(),moveBack=new THREE.Vector3();
 function move(dt){
@@ -2712,7 +2742,7 @@ function tick(dt){
 
   if(state.settings.animations!==false){nodeSpinAccumulator+=dt;if(nodeSpinAccumulator>=.05){const spin=nodeSpinAccumulator;nodeSpinAccumulator=0;for(const n of nodes)if(n.mapId===activeMapId&&!n.collected)n.root.rotation.y+=spin}}else nodeSpinAccumulator=0;
   if(state.settings.animations!==false)for(const landmark of bellLandmarks){const awakened=!!state.flags.bellAwakened;landmark.clapper.rotation.z=awakened?Math.sin(time*3.4)*.12:Math.sin(time*.35)*.008;landmark.floorRune.material.opacity=awakened ? .34 : .12;landmark.glow.intensity=awakened?1.2+.45*Math.sin(time*5):.12}
-  attackCooldown=Math.max(0,attackCooldown-dt);dodgeIFrames=Math.max(0,dodgeIFrames-dt);for(let i=0;i<3;i++)skillCooldowns[i]=Math.max(0,(skillCooldowns[i]||0)-dt);skillHudAccumulator+=dt;if(skillHudAccumulator>=.1){skillHudAccumulator=0;refreshSkillHud()}nearbyRefresh-=dt;if(nearbyRefresh<=0){nearbyTarget=findNearby();nearbyRefresh=.1}
+  attackCooldown=Math.max(0,attackCooldown-dt);dodgeIFrames=Math.max(0,dodgeIFrames-dt);perfectDodgeWindow=Math.max(0,perfectDodgeWindow-dt);parryWindow=Math.max(0,parryWindow-dt);parryCooldown=Math.max(0,parryCooldown-dt);comboWindow=Math.max(0,comboWindow-dt);if(comboWindow<=0)comboIndex=0;for(let i=0;i<3;i++)skillCooldowns[i]=Math.max(0,(skillCooldowns[i]||0)-dt);skillHudAccumulator+=dt;if(skillHudAccumulator>=.1){skillHudAccumulator=0;refreshSkillHud()}nearbyRefresh-=dt;if(nearbyRefresh<=0){nearbyTarget=findNearby();nearbyRefresh=.1}
   for(const e of enemies){
     if(!e||!e.root)continue;
     const dx=player.position.x-e.root.position.x;
@@ -2728,6 +2758,11 @@ function tick(dt){
       const ratio=e.hp/e.maxHp;
       const phase=ratio<=.33?3:ratio<=.66?2:1;
       if(phase>e.phase)triggerBossPhase(e,phase);
+      if(ratio<=.5&&!e.isEnraged){
+        e.isEnraged=true;e.attackDamage=Math.round(e.attackDamage*1.18);e.cooldown=Math.min(e.cooldown,.38);
+        createBossTelegraph(e,3.15,0xd66dff,.7);playBossAnimation('Enrage',1.25);
+        toastMsg('WARDEN ENRAGED · shorter recovery, heavier hits, new attack patterns.');
+      }
     }
 
     if(e.state==='windup'){
@@ -2739,17 +2774,32 @@ function tick(dt){
 
       if(e.windup<=0){
         e.state='approach';
-        e.cooldown=e.isBoss?1.55+Math.random()*.35:1.25+Math.random()*.45;
+        e.cooldown=e.isBoss?(e.isEnraged ? .95+Math.random()*.18 : 1.55+Math.random()*.35):1.25+Math.random()*.45;
         e.root.scale.setScalar(1);
         if(e.body?.material?.emissive)e.body.material.emissive.setHex(0x684a79);
 
         const reach=e.isBoss?(e.attackSkill===2?4.4:e.attackSkill===3?5.8:2.75):2.75;
-        if(distance<reach&&dodgeIFrames<=0){
-          const mitigation=Math.min(.55,state.stats.ward*.055);
-          const moveScale=e.isBoss?(e.attackSkill===3?1.48:e.attackSkill===2?1.22:1):1;
-          state.hp=Math.max(0,state.hp-e.attackDamage*moveScale*(1-mitigation));
-          playGameSound('hurt');
-          toastMsg(e.isBoss?'Warden Skill '+e.attackSkill+' hit · dodge the next tell':'The shade struck you — dodge when its glow flares.');
+        const arenaWave=e.isBoss&&e.attackSkill===3;
+        const avoided=dodgeIFrames>0&&(!arenaWave||perfectDodgeWindow>0);
+        if(distance<reach&&!avoided){
+          const parryable=!arenaWave&&(!e.isBoss||e.attackSkill===1);
+          if(parryWindow>0&&parryable){
+            parryWindow=0;e.cooldown=Math.max(e.cooldown,1.35);e.state='approach';e.windup=0;e.root.scale.setScalar(1);
+            e.hp=Math.max(0,e.hp-calcPlayerDamage(16));playGameSound('parry');showCombatCallout('PERFECT PARRY',3);
+            if(e.hp<=0){finishEncounter();continue;}
+            setEncounterHud(e);toastMsg('PARRY · the attack is interrupted. Counter while the Warden recovers.');
+          }else if(!ownerGodMode){
+            const mitigation=Math.min(.55,state.stats.ward*.055);
+            const moveScale=e.isBoss?(e.attackSkill===3?1.48:e.attackSkill===2?1.22:1):1;
+            state.hp=Math.max(0,state.hp-e.attackDamage*moveScale*(1-mitigation));
+            playGameSound('hurt');
+            toastMsg(e.isBoss?'Warden Skill '+e.attackSkill+' hit · Skill III needs a perfect dodge.':'The shade struck you — dodge when its glow flares.');
+          }
+        }else if(distance<reach&&dodgeIFrames>0&&perfectDodgeWindow>0){
+          perfectDodgeWindow=0;e.cooldown=Math.max(e.cooldown,1.2);
+          e.hp=Math.max(0,e.hp-calcPlayerDamage(24));playGameSound('parry');showCombatCallout('PERFECT DODGE · RIPOSTE',3);
+          if(e.hp<=0){finishEncounter();continue;}
+          setEncounterHud(e);toastMsg('PERFECT DODGE · time slows; riposte landed.');
         }
       }
     }else{
@@ -2757,7 +2807,7 @@ function tick(dt){
       if(distance<2.15&&e.cooldown<=0){
         e.state='windup';
         if(e.isBoss){
-          const availableSkills=Math.max(1,e.phase);
+          const availableSkills=Math.min(3,e.phase+1);
           e.attackSkill=(e.attackCycle%availableSkills)+1;
           e.attackCycle++;
           e.windup=e.attackSkill===3?1.15:e.attackSkill===2?.98:.76;
@@ -2926,10 +2976,8 @@ function archive(tab='rank'){
 }
 function loadState(){
   try{
-    const raw=localStorage.getItem('ashen-crown-3d');
-    if(raw){
-      const saved=JSON.parse(raw);
-      if(saved&&typeof saved==='object'&&!Array.isArray(saved)){legacyMapSave=saved.mapVersion!==1;
+    const saved=localSavePlaintext;
+    if(saved&&typeof saved==='object'&&!Array.isArray(saved)){legacyMapSave=saved.mapVersion!==1;
         const numeric=['xp','level','hp','stamina','coins','shards','echoes','quest','chapter','day','savedAt','chapterGathered','weaponRank'];
         for(const key of numeric)if(Number.isFinite(Number(saved[key])))state[key]=Number(saved[key]);
         state.xp=Math.max(0,state.xp);state.level=Math.max(1,state.level);state.quest=THREE.MathUtils.clamp(state.quest,0,5);state.hp=Math.max(0,state.hp);state.stamina=THREE.MathUtils.clamp(state.stamina,0,100);state.coins=Math.max(0,state.coins);state.shards=Math.max(0,state.shards);state.echoes=Math.max(0,state.echoes);
@@ -2955,8 +3003,99 @@ function loadState(){
 }
 function nodeKey(n){return n.type+':'+n.x+':'+n.z}
 function restoreCollectedNodes(){const collected=new Set(Array.isArray(state.collectedNodes)?state.collectedNodes:[]);for(const n of nodes){n.collected=collected.has(nodeKey(n));n.root.visible=!n.collected}}
+let localSavePlaintext = null;
+let localSaveCryptoKey = null;
+let localSaveKeyDbPromise = null;
+let localSaveWriteChain = Promise.resolve();
+let localSaveRevision = 0;
+let legacySaveWiped = false;
 let lastSavedComparable = null;
 let idleSavePending = false;
+
+const LOCAL_SAVE_KEY_DB = 'ashen-crown-local-keyring-v1';
+const LOCAL_SAVE_KEY_ID = 'device-aes-gcm-v1';
+
+function openLocalSaveKeyDatabase() {
+  if (!('indexedDB' in window)) return Promise.reject(new Error('IndexedDB is unavailable; encrypted local saves cannot be persisted.'));
+  if (localSaveKeyDbPromise) return localSaveKeyDbPromise;
+  localSaveKeyDbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(LOCAL_SAVE_KEY_DB, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains('keys')) request.result.createObjectStore('keys');
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Could not open the local save keyring.'));
+    request.onblocked = () => reject(new Error('The local save keyring is blocked by another tab.'));
+  }).catch(error => { localSaveKeyDbPromise = null; throw error; });
+  return localSaveKeyDbPromise;
+}
+
+async function getLocalSaveKey(createIfMissing = false) {
+  if (localSaveCryptoKey) return localSaveCryptoKey;
+  if (!window.crypto?.subtle) throw new Error('This browser does not support Web Crypto AES-GCM.');
+  const db = await openLocalSaveKeyDatabase();
+  let key;
+  try {
+    key = await new Promise((resolve, reject) => {
+      const transaction = db.transaction('keys', 'readonly');
+      const request = transaction.objectStore('keys').get(LOCAL_SAVE_KEY_ID);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error || new Error('Could not read the local save key.'));
+    });
+    if (!key && createIfMissing) {
+      key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+      await new Promise((resolve, reject) => {
+        const transaction = db.transaction('keys', 'readwrite');
+        transaction.objectStore('keys').put(key, LOCAL_SAVE_KEY_ID);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error('Could not store the local save key.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Saving the local key was aborted.'));
+      });
+    }
+  } finally {
+    db.close();
+    localSaveKeyDbPromise = null;
+  }
+  if (!key) throw new Error('The local save encryption key is missing.');
+  localSaveCryptoKey = key;
+  return key;
+}
+
+async function deleteLocalSaveKeyDatabase() {
+  localSaveCryptoKey = null;
+  localSaveKeyDbPromise = null;
+  if (!('indexedDB' in window)) return;
+  await new Promise(resolve => {
+    const request = indexedDB.deleteDatabase(LOCAL_SAVE_KEY_DB);
+    request.onsuccess = request.onerror = request.onblocked = () => resolve();
+  });
+}
+
+async function persistEncryptedLocalSave(value) {
+  const snapshot = typeof value === 'string' ? JSON.parse(value) : JSON.parse(JSON.stringify(value));
+  localSavePlaintext = snapshot;
+  const revision = ++localSaveRevision;
+  localSaveWriteChain = localSaveWriteChain.catch(() => {}).then(async () => {
+    const key = await getLocalSaveKey(true);
+    await writeEncryptedLocalSave(localStorage, 'ashen-crown-3d', snapshot, key);
+    if (revision === localSaveRevision) {
+      legacySaveWiped = false;
+      const status = $('saveStatus');
+      if (status) { status.textContent = 'ENCRYPTED · SAVED LOCALLY'; status.dataset.state = 'saved'; }
+      window.AshenAuth?.queueSave?.(snapshot);
+    }
+  }).catch(error => {
+    lastSavedComparable = null;
+    const status = $('saveStatus');
+    if (status) { status.textContent = 'ENCRYPTED SAVE UNAVAILABLE'; status.dataset.state = 'error'; }
+    if (!saveWarningShown) {
+      saveWarningShown = true;
+      toastMsg('Encrypted saving is unavailable in this browser; no plaintext fallback was written.');
+    }
+    console.warn('[Ashen Crown] Encrypted local save failed:', error?.message || error);
+  });
+  return localSaveWriteChain;
+}
 
 function localSaveComparable(save) {
   const snapshot = { ...save };
@@ -2988,14 +3127,14 @@ function saveState(force = false) {
 
     state.savedAt = Date.now();
     const serialized = JSON.stringify(state);
-    localStorage.setItem('ashen-crown-3d', serialized);
+    localSavePlaintext = JSON.parse(serialized);
     lastSavedComparable = comparable;
-    window.AshenAuth?.queueSave?.(state);
+    void persistEncryptedLocalSave(localSavePlaintext);
 
     const status = $('saveStatus');
     if (status) {
-      status.textContent = 'SAVED LOCALLY';
-      status.dataset.state = 'saved';
+      status.textContent = 'ENCRYPTING LOCAL SAVE…';
+      status.dataset.state = 'saving';
     }
     return true;
   } catch (error) {
@@ -3052,8 +3191,8 @@ function openMap(){renderWorldMap();$('worldMap').classList.add('show')}
 let lastWidth=0,lastHeight=0;
 function resize(){const r=canvas.getBoundingClientRect(),w=Math.max(1,Math.round(r.width)),h=Math.max(1,Math.round(r.height));if(w===lastWidth&&h===lastHeight)return;lastWidth=w;lastHeight=h;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 window.addEventListener('resize',resize);window.addEventListener('keydown',e=>{
-  if(e.repeat&&['Space','KeyE','KeyG','KeyF','KeyI','KeyJ','KeyK','KeyL','KeyM','Escape','Digit1','Digit2','Digit3'].includes(e.code))return;
-  if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','Space'].includes(e.code))e.preventDefault();
+  if(e.repeat&&['Space','KeyE','KeyG','KeyF','KeyI','KeyJ','KeyK','KeyL','KeyM','KeyQ','Escape','Digit1','Digit2','Digit3'].includes(e.code))return;
+  if(['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight','Space','KeyQ'].includes(e.code))e.preventDefault();
   if(e.code==='Escape'){
     if(shopMenu?.classList.contains('show'))shopMenu.classList.remove('show');
     else if($('systemMenu').classList.contains('show'))$('systemMenu').classList.remove('show');
@@ -3072,7 +3211,7 @@ window.addEventListener('resize',resize);window.addEventListener('keydown',e=>{
   if(e.code==='KeyL'){archive('rank');return}
   if(anyOverlayOpen())return;
   keys[e.code]=true;
-  if(e.code==='KeyE')openInventory();if(e.code==='KeyG')interact();if(e.code==='KeyF')pulse();if(e.code==='Digit1')useSkill(0);if(e.code==='Digit2')useSkill(1);if(e.code==='Digit3')useSkill(2);if(e.code==='Space')dodge();if(e.code==='KeyC')openSystemMenu('role');if(e.code==='KeyO')openSystemMenu('settings');if(e.code==='KeyB')openSystemMenu('base');if(e.code==='KeyI')openInventory();if(e.code==='KeyM')openMap();if(e.code==='Slash'||e.code==='F1')$('tutorial').classList.add('show');if(e.code==='KeyJ'){$('journal').classList.toggle('open');renderJournal('story')}if(e.code==='KeyK')archive();
+  if(e.code==='KeyE')openInventory();if(e.code==='KeyG')interact();if(e.code==='KeyF')pulse();if(e.code==='KeyQ')parry();if(e.code==='Digit1')useSkill(0);if(e.code==='Digit2')useSkill(1);if(e.code==='Digit3')useSkill(2);if(e.code==='Space')dodge();if(e.code==='KeyC')openSystemMenu('role');if(e.code==='KeyO')openSystemMenu('settings');if(e.code==='KeyB')openSystemMenu('base');if(e.code==='KeyI')openInventory();if(e.code==='KeyM')openMap();if(e.code==='Slash'||e.code==='F1')$('tutorial').classList.add('show');if(e.code==='KeyJ'){$('journal').classList.toggle('open');renderJournal('story')}if(e.code==='KeyK')archive();
 });window.addEventListener('keyup',e=>keys[e.code]=false);window.addEventListener('blur',()=>{Object.keys(keys).forEach(k=>keys[k]=false);drag=false;dragPointerId=null});
 canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0)pulse();drag=true;dragPointerId=e.pointerId;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId)});
 canvas.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==dragPointerId)return;yaw-=(e.clientX-lx)*.005*state.settings.sensitivity;pitch=THREE.MathUtils.clamp(pitch-(e.clientY-ly)*.003*state.settings.sensitivity,-.1,.8);lx=e.clientX;ly=e.clientY});
@@ -3103,7 +3242,7 @@ props.traverse(object=>{
 treeBatchMeshes.forEach(mesh=>{mesh.castShadow=false;mesh.receiveShadow=true;});
 characters.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
 function setupTouchControls(){
-  const controls=document.createElement('div');controls.className='touch-controls';controls.innerHTML='<div class="touch-stick" aria-label="Movement joystick"><i></i></div><div class="touch-actions"><button data-action="interact">USE</button><button data-action="attack">HIT</button><button data-action="dodge">ROLL</button><button data-action="inventory">BAG</button><button data-action="skill" data-skill="0">1</button><button data-action="skill" data-skill="1">2</button><button data-action="skill" data-skill="2">3</button></div>';document.querySelector('.stage').appendChild(controls);
+  const controls=document.createElement('div');controls.className='touch-controls';controls.innerHTML='<div class="touch-stick" aria-label="Movement joystick"><i></i></div><div class="touch-actions"><button data-action="interact">USE</button><button data-action="attack">HIT</button><button data-action="dodge">ROLL</button><button data-action="parry">PARRY</button><button data-action="inventory">BAG</button><button data-action="skill" data-skill="0">1</button><button data-action="skill" data-skill="1">2</button><button data-action="skill" data-skill="2">3</button></div>';document.querySelector('.stage').appendChild(controls);
   const stick=controls.querySelector('.touch-stick'),knob=stick.querySelector('i');let pointerId=null;
   const clearStick=()=>{pointerId=null;keys.KeyW=keys.KeyA=keys.KeyS=keys.KeyD=false;knob.style.transform='translate(0,0)'};
   stick.addEventListener('pointerdown',e=>{e.preventDefault();pointerId=e.pointerId;stick.setPointerCapture(pointerId);moveStick(e)});
@@ -3121,18 +3260,14 @@ async function syncCloudSaveFromAccount() {
     const session = await auth.getSession();
     if (!session?.user) return;
 
+    if (legacySaveWiped) return;
     const cloud = await auth.loadCloudSave();
     const remote = cloud?.save_json;
     const localRaw = localStorage.getItem('ashen-crown-3d');
-    let local = null;
-
-    if (localRaw) {
-      try {
-        local = JSON.parse(localRaw);
-      } catch {
-        toastMsg('Local save is unreadable; cloud sync was stopped to preserve the original data.');
-        return;
-      }
+    const local = localSavePlaintext;
+    if (localRaw && !local) {
+      toastMsg('Encrypted local save could not be read; cloud sync was stopped.');
+      return;
     }
 
     const decision = cloudSaveDecision(local, remote, cloud?.updated_at || '');
@@ -3148,10 +3283,7 @@ async function syncCloudSaveFromAccount() {
         toastMsg('Local save data exists but could not be safely parsed; cloud restore was stopped.');
         return;
       }
-      localStorage.setItem('ashen-crown-3d', JSON.stringify({
-        ...remote,
-        savedAt: decision.remoteStamp || Date.now()
-      }));
+      await persistEncryptedLocalSave({ ...remote, savedAt: decision.remoteStamp || Date.now() });
       location.reload();
       return;
     }
@@ -3178,11 +3310,8 @@ async function syncCloudSaveFromAccount() {
       }
       const backupKey = backupLocalSave(localStorage, localRaw);
 
-      localStorage.setItem('ashen-crown-3d', JSON.stringify({
-        ...remote,
-        savedAt: decision.remoteStamp || Date.now()
-      }));
-      toastMsg('Cloud journey restored. Your previous local save is backed up on this device.');
+      await persistEncryptedLocalSave({ ...remote, savedAt: decision.remoteStamp || Date.now() });
+      toastMsg('Cloud journey restored. Your previous encrypted local save is backed up on this device.');
       location.reload();
       return;
     }
@@ -3194,8 +3323,99 @@ async function syncCloudSaveFromAccount() {
     toastMsg('Cloud sync is unavailable. Your local journey was kept.');
   }
 }
-window.addEventListener('ashen:auth',event=>{if(event.detail?.session?.user&&event.detail?.event!=='PASSWORD_RECOVERY')void syncCloudSaveFromAccount()});
-window.AshenAuth?.ready?.then(()=>syncCloudSaveFromAccount()).catch(()=>{});
+window.addEventListener('ashen:auth',event=>{
+  const user=event.detail?.session?.user||event.detail?.user||null;
+  syncOwnerTools(user);
+  if(event.detail?.session?.user&&event.detail?.event!=='PASSWORD_RECOVERY')void syncCloudSaveFromAccount();
+});
+window.AshenAuth?.ready?.then(async()=>{const session=await window.AshenAuth.getSession();syncOwnerTools(session?.user||null);syncCloudSaveFromAccount()}).catch(()=>{});
+
+async function bootstrapEncryptedSave() {
+  let result={value:null,wipedLegacy:false,corrupt:false};
+  try {
+    result=await readEncryptedLocalSave(localStorage,'ashen-crown-3d',()=>getLocalSaveKey(false));
+  } catch(error) {
+    console.warn('[Ashen Crown] Encrypted save bootstrap failed:',error?.message||error);
+  }
+  localSavePlaintext=result.value;
+  legacySaveWiped=result.wipedLegacy;
+  if(result.wipedLegacy) {
+    await deleteLocalSaveKeyDatabase();
+    toastMsg(result.corrupt
+      ? 'Damaged encrypted save and local backups removed. A fresh local journey will begin.'
+      : 'Legacy plaintext save and all local backup copies removed. A fresh encrypted journey will begin.');
+  }
+  return result;
+}
+
+const isLocalE2ESession=new URLSearchParams(location.search).has('e2e')&&['localhost','127.0.0.1','::1'].includes(location.hostname);
+if(isLocalE2ESession) {
+  window.__ASHEN_TEST__={
+    status:()=>({
+      gameReady:gameRenderReady,playerModelLoaded:Boolean(productionPlayerScene),
+      bossModelLoaded:Boolean(productionBossScene),bossEncounter:Boolean(encounter?.isBoss),
+      bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
+      chapter:state.chapter,level:state.level,fps:Math.round(currentFps||0),
+      canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight
+    }),
+    prepareVisuals:()=>{state.settings.quality='high';state.settings.reducedMotion=false;applySettings();return true;},
+    startBossEncounter:()=>{
+      if(encounter){disposeEncounterVisuals(encounter);encounter.root.removeFromParent();encounter=null;enemies=[];setEncounterHud(null);}
+      state.quest=3;state.echoes=Math.max(state.echoes,getChapterRequirements(state.chapter).echoes);
+      state.flags[chapterRecordKey(state.chapter)]=true;state.flags.bellWardenDefeated=false;
+      state.hp=state.maxHp;state.stamina=100;
+      spawnEnemy(true);return Boolean(encounter?.isBoss);
+    }
+  };
+}
+
+function syncOwnerTools(user) {
+  const allowed=String(user?.email||'').trim().toLowerCase()==='ltrtrongphu@gmail.com';
+  let button=document.getElementById('ownerAccessButton');
+  let panel=document.getElementById('ownerConsole');
+  if(!allowed) {
+    button?.remove();panel?.remove();ownerGodMode=false;return;
+  }
+  if(!button) {
+    button=document.createElement('button');button.id='ownerAccessButton';button.type='button';
+    button.className='top-action-button owner-access';button.textContent='OWNER';
+    button.setAttribute('aria-controls','ownerConsole');button.setAttribute('aria-expanded','false');
+    document.querySelector('.top-actions')?.insertBefore(button,document.getElementById('saveStatus'));
+    panel=document.createElement('section');panel.id='ownerConsole';panel.className='owner-console';
+    panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','false');panel.setAttribute('aria-labelledby','ownerConsoleTitle');
+    panel.innerHTML='<div class="owner-console-head"><div><span>ASHEN CROWN · AUTHORIZED PROFILE</span><h2 id="ownerConsoleTitle">Owner Console</h2><small>ltrtrongphu@gmail.com · local QA tools</small></div><button type="button" data-owner="close" aria-label="Close owner console">×</button></div><div class="owner-diagnostics" id="ownerDiagnostics" aria-live="polite"></div><div class="owner-tools-grid"><button type="button" data-owner="heal">RESTORE HP + STAMINA</button><button type="button" data-owner="god">GOD MODE: OFF</button><button type="button" data-owner="spawn">SPAWN TEST WARDEN</button><button type="button" data-owner="phase">TEST PHASE III</button><button type="button" data-owner="refresh">REFRESH DIAGNOSTICS</button></div><p>These are client-side QA controls only. They do not grant server, account, or deployment administration.</p>';
+    document.body.appendChild(panel);
+    button.addEventListener('click',()=>{const open=panel.classList.toggle('show');button.setAttribute('aria-expanded',String(open));if(open)refreshOwnerDiagnostics()});
+    panel.addEventListener('click',event=>{
+      const control=event.target.closest('[data-owner]');if(!control)return;
+      const action=control.dataset.owner;
+      if(action==='close'){panel.classList.remove('show');button.setAttribute('aria-expanded','false');return;}
+      if(action==='heal'){state.hp=state.maxHp;state.stamina=100;saveState();toastMsg('Owner QA · vitality and stamina restored.');}
+      else if(action==='god'){ownerGodMode=!ownerGodMode;control.textContent='GOD MODE: '+(ownerGodMode?'ON':'OFF');control.classList.toggle('selected',ownerGodMode);toastMsg('Owner QA · damage immunity '+(ownerGodMode?'enabled':'disabled')+'.');}
+      else if(action==='spawn'){if(encounter){toastMsg('Finish or clear the current encounter before spawning the QA Warden.');return;}spawnEnemy(true);}
+      else if(action==='phase'){if(!encounter?.isBoss){toastMsg('Start a test Warden encounter first.');return;}encounter.hp=Math.max(1,Math.floor(encounter.maxHp*.31));setEncounterHud(encounter);toastMsg('Owner QA · forcing the next tick to enter Phase III.');}
+      if(action==='heal'||action==='god'||action==='spawn'||action==='phase')saveState();
+      refreshOwnerDiagnostics();
+    });
+  }
+  refreshOwnerDiagnostics();
+}
+function refreshOwnerDiagnostics() {
+  const el=document.getElementById('ownerDiagnostics');if(!el)return;
+  let encrypted='unavailable';
+  try{encrypted=isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d'))?'AES-GCM encrypted':'no encrypted save yet';}catch{}
+  const rows=[
+    ['RENDER',Math.round(currentFps||0)+' FPS · DPR '+Number(adaptiveDpr||1).toFixed(2)],
+    ['PLAYER MODEL',productionPlayerScene?'GLB + PBR loaded':'fallback mesh / loading'],
+    ['BOSS MODEL',productionBossScene?'GLB + PBR loaded':'cached/lazy load pending'],
+    ['ENCOUNTER',encounter?(encounter.isBoss?'Warden · Phase '+encounter.phase:'Wandering Shade'):'none'],
+    ['LOCAL SAVE',encrypted],
+    ['PROGRESSION','Chapter '+state.chapter+' · Lv '+state.level+' · Quest '+state.quest]
+  ];
+  el.innerHTML=rows.map(([label,value])=>'<div><span>'+escapeHtml(label)+'</span><b>'+escapeHtml(value)+'</b></div>').join('');
+}
+
+await bootstrapEncryptedSave();
 loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
 if(state.tutorial!==false)$('tutorial').classList.add('show');
 time=DAY_LENGTH*.08;
