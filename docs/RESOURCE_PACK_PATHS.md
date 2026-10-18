@@ -10,14 +10,15 @@ The source files are checked into the Unity project and copied unchanged into th
 | --- | --- | --- |
 | Player Sentinel | `Assets/Models/Characters/AshenSentinel.glb` | `/Assets/Models/Characters/AshenSentinel.glb` |
 | Warden / Regent | `Assets/Models/Bosses/AshenRegent.glb` | `/Assets/Models/Bosses/AshenRegent.glb` |
+| NPC production roster (62 roots) | `Assets/Models/NPC/AshenNPCRoster.glb` | `/Assets/Models/NPC/AshenNPCRoster.glb` |
 
 The path casing is intentional. GitHub Actions and the Vercel build run on case-sensitive Linux file systems, so `assets/models/`, `Assets/models/`, and `Assets/Models/` are not interchangeable.
 
 ## How the runtime pack is made
 
-1. `tools/build-web.mjs` owns the web deployment allow-list. It copies the two GLBs to the same case-sensitive relative paths under `dist/`, then generates `dist/resource-pack.json` with a content-derived version and exact byte sizes.
-2. The generated manifest's `files[].url` values are absolute same-origin URLs. `play.js` fetches `./resource-pack.json`, downloads/caches both GLBs under `ashen-resource-pack-<version>`, and verifies each downloaded byte count before parsing.
-3. The Sentinel GLB is parsed at startup. The Regent GLB is retained as a buffer and parsed when a Warden encounter starts. Both GLBs contain their model materials/textures; the runtime does not need separate loose texture URLs for these characters.
+1. `tools/build-web.mjs` owns the web deployment allow-list. It copies the two hero GLBs and the NPC roster GLB to their same case-sensitive relative paths under `dist/`, then generates `dist/resource-pack.json` with a content-derived version and exact byte sizes.
+2. The generated manifest's `files[].url` values are absolute same-origin URLs. `play.js` fetches `./resource-pack.json`, downloads/caches all three GLBs under `ashen-resource-pack-<version>`, and verifies each downloaded byte count before parsing.
+3. The Sentinel and NPC roster are parsed at startup; the Regent GLB is retained as a buffer and parsed when a Warden encounter starts. All three GLBs embed their PBR textures; the runtime does not need separate loose texture URLs.
 4. Model loading uses the pinned Three.js version (`0.186.1`) from local build files. `play.js` imports `./vendor/GLTFLoader.js`; that loader and its helper utilities are rewritten to use local modules:
    - `vendor/GLTFLoader.js`
    - `utils/BufferGeometryUtils.js`
@@ -54,6 +55,6 @@ The smoke-only hooks are enabled only when `?e2e=1` is used on localhost/127.0.0
 ## NPC character roster
 
 - Source and built path: `Assets/Models/NPC/AshenNPCRoster.glb` → `/Assets/Models/NPC/AshenNPCRoster.glb`.
-- The NPC roster is one compact GLB containing 56 named roots (`NPCMODEL_<id>`) with different archetype silhouettes and per-character PBR material factors. It shares the same four embedded 1024x1024 PBR maps inside a single GLB, so the runtime downloads one roster file rather than 56 separate multi-megabyte files.
+- The NPC roster is one GLB containing 62 named roots (`NPCMODEL_<id>`) with different archetype silhouettes and per-character PBR material factors. It embeds the shared four 1024x1024 PBR maps once, so the runtime downloads one roster file rather than 62 separate copies.
 - `play.js` parses the roster once and keeps the named prototype roots off-scene; Lyra/Orren/The Seer and villagers receive clones of their assigned production prototype. Their old procedural meshes remain hidden as a fallback only if pack loading fails.
 - The smoke test confirms that the roster loaded, narrative NPCs and villagers received production-model clones, and the screenshot shows the live scene after those attachments.

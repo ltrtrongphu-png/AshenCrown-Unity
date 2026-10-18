@@ -2,12 +2,13 @@
 
 ## Included character art
 
-The repository includes two original, rigged, stylized dark-fantasy characters. The web viewer normalizes imported models to a known world-space height and centers their feet at the ground plane, while preserving the GLB's material groups and embedded PBR maps:
+The hero-model pipeline includes two original, rigged, stylized dark-fantasy characters; the browser Resource Pack additionally includes a separate static 62-character NPC roster. The web viewer normalizes the two hero models to a known world-space height and centers their feet at the ground plane, while preserving the GLB material groups and embedded PBR maps:
 
 | Asset | Role | Height | Distinguishing details |
 |---|---|---:|---|
 | `Characters/AshenSentinel.glb` | Humanoid player/enemy | 2.0 m | Layered obsidian plate, brass diadem, ember heart, greatsword, short mantle |
 | `Bosses/AshenRegent.glb` | Boss | 2.24 m | Broader armor, seven-spire crown, ember crests and long mantle |
+| `NPC/AshenNPCRoster.glb` | 62 static NPC prototypes | Varies | Per-character palettes, class silhouettes, robes/armor, headwear, cloaks and weapons |
 
 Both models use a 19-joint humanoid rig and six clips: `Idle`, `Walk`, `Run`, `Light1`, `Heavy`, and `Enrage`. The rig joint names follow Unity Humanoid naming conventions. Armor and cloth sections are parented rigidly to their matching joints, which preserves hard-surface silhouettes during motion; they are not skinned meshes. The self-contained GLB files carry their material images and can be imported independently.
 
@@ -27,6 +28,6 @@ Recommended triggers: `Light1`, `Light2`, `Light3`, `Light4`, `Heavy`, `VoidThru
 
 ## NPC production roster
 
-`NPC/AshenNPCRoster.glb` contains 56 distinct reusable NPC character roots based on the supplied dark-fantasy roster concepts. The models have separate material batches for cloth, armor, trim, skin, hair, leather, and emissive accents and embed the shared four-map 1024x1024 PBR atlas. The browser build downloads this one roster asset alongside the Sentinel and Regent hero models, then clones the selected archetype for narrative NPCs and villagers. It is an authored low-poly roster, not 56 copies of the same capsule or a screenshot texture atlas.
+`NPC/AshenNPCRoster.glb` contains 62 distinct reusable NPC character roots based on the supplied dark-fantasy roster concepts. The models have separate material batches for cloth, armor, trim, skin, hair, leather, and emissive accents and embed the shared four-map 1024x1024 PBR atlas. The browser build downloads this one roster asset alongside the Sentinel and Regent hero models, then clones the selected archetype for narrative NPCs and villagers. It is an authored stylized low-poly roster, not 62 copies of the same capsule or a screenshot texture atlas.
 
 The roster generator is `tools/generate_ashen_npc_roster.py`; the asset workflow regenerates it after the common PBR maps and hero models are generated. `tools/validate_ashen_production_assets.py` checks the GLB container, embedded map count, material batches and at least 50 named NPC roots.

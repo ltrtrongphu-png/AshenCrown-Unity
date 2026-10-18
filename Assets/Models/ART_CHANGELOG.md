@@ -35,6 +35,13 @@ Generated asset validation on the feature branch:
 These checks validate file structure and asset budgets only. They do not replace an in-engine visual review, rig deformation review or target-hardware FPS profiling.
 
 
+## NPC production roster pass — 2026-10-18
+
+- Added `NPC/AshenNPCRoster.glb` with 62 named character model roots across knight, priestess, reaper, archer, assassin, warden, nun, hunter, witch, smith, royal, forest, ghost and other archetypes.
+- Each root has separate cloth, armor, trim, skin, hair, leather and emissive material batches with per-character palette factors. The common four-map 1024² PBR atlas is embedded once in the roster GLB.
+- The browser game attaches production-model clones to the three story NPCs and ten villager definitions. Primitive NPCs remain visible only when the resource pack fails to load.
+- The Web/Chromium smoke now asserts the roster count and live model attachment counts, and captures a close-up showcase screenshot from the running scene.
+
 ## Follow-up polish — Ashen Crown production pass
 
 - Increased deterministic micro-abrasion and pitting on the shared 1024² surface maps, and added branching ember fissures to the emissive map.

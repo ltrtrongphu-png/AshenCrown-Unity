@@ -9,6 +9,7 @@ docs/**
 server/**
 supabase/**
 tools/generate_ashen_production_assets.py
+tools/generate_ashen_npc_roster.py
 tools/.gitignore
 *.cs
 *.glb
@@ -18,6 +19,8 @@ tools/.gitignore
 !Assets/Models/Bosses/AshenRegent.glb
 !Assets/Models/Characters/
 !Assets/Models/Characters/AshenSentinel.glb
+!Assets/Models/NPC/
+!Assets/Models/NPC/AshenNPCRoster.glb
 # Unity Editor/project scaffolding is not deployed to the browser site.
 ProjectSettings/**
 Packages/**

@@ -2772,7 +2772,8 @@ function move(dt){
   state.stamina=Math.max(0,state.stamina+(run?-9:16)*dt);
 }
 
-function updateCamera(dt){const target=moveForward.copy(player.position);target.y+=1.15;const back=moveBack.set(Math.sin(yaw),0,Math.cos(yaw));const pos=back.multiplyScalar(7.2).add(target);pos.y+=3.2+pitch*2;const damping=state.settings.reducedMotion ? .02 : .001;camera.position.lerp(pos,1-Math.pow(damping,dt));camera.lookAt(target)}
+let e2eCameraDistance=null,e2eCameraTarget=null;
+function updateCamera(dt){const target=moveForward.copy(player.position);if(e2eCameraTarget)target.copy(e2eCameraTarget);else target.y+=1.15;const back=moveBack.set(Math.sin(yaw),0,Math.cos(yaw));const pos=back.multiplyScalar(e2eCameraDistance??7.2).add(target);pos.y+=3.2+pitch*2;const damping=state.settings.reducedMotion ? .02 : .001;camera.position.lerp(pos,1-Math.pow(damping,dt));camera.lookAt(target)}
 function tick(dt){
   time+=dt;
   if(Math.floor(time/12)!==Math.floor((time-dt)/12))saveState();
@@ -3422,18 +3423,25 @@ if(isLocalE2ESession) {
     prepareVisuals:()=>{state.settings.quality='high';state.settings.reducedMotion=false;applySettings();return true;},
     stageNpcShowcase:()=>{
       window.__ASHEN_NPC_SHOWCASE_ORIGINALS__={
-        player:{x:player.position.x,z:player.position.z,yaw,pitch},
+        player:{x:player.position.x,z:player.position.z,yaw,pitch,visible:player.visible},
+        cameraDistance:e2eCameraDistance,cameraTarget:e2eCameraTarget,
+        nameplateVisibility:nameplateLayer.style.visibility,
+        messageVisibility:$('message').style.visibility,
+        toastVisibility:$('toast').style.visibility,
         npcs:npcs.map(n=>({x:n.root.position.x,z:n.root.position.z,visible:n.root.visible})),
         villagers:villagers.map(v=>({x:v.root.position.x,z:v.root.position.z,visible:v.root.visible}))
       };
       // Local-only staging for a close, legible evidence screenshot. The running
       // game model objects are reused; only their test positions are moved.
-      player.position.set(0,0,5.3);yaw=0;pitch=.22;
-      const layout=[[-3.0,1.2],[.65,.2],[3.2,1.0]];
+      player.position.set(0,0,3.3);yaw=0;pitch=.22;e2eCameraDistance=4.8;e2eCameraTarget=new THREE.Vector3(0,1.15,.3);player.visible=false;
+      nameplateLayer.style.visibility='hidden';
+      $('message').style.visibility='hidden';
+      $('toast').style.visibility='hidden';
+      const layout=[[-2.25,.5],[0,.15],[2.25,.5]];
       npcs.forEach((n,i)=>{n.root.position.set(layout[i][0],0,layout[i][1]);n.root.visible=true;});
       const crowd=[
-        [-4.7,-.2],[4.8,-.1],[-5.2,2.6],[5.4,2.7],
-        [-1.7,-1.3],[1.9,-1.5]
+        [-4.5,-1.6],[-2.8,-1.6],[-1.0,-1.6],[1.0,-1.6],[2.8,-1.6],[4.5,-1.6],
+        [-3.8,-3.1],[-1.3,-3.1],[1.3,-3.1],[3.8,-3.1]
       ];
       villagers.forEach((v,i)=>{
         if(i<crowd.length){v.root.position.set(crowd[i][0],0,crowd[i][1]);v.root.visible=true;}
@@ -3445,8 +3453,12 @@ if(isLocalE2ESession) {
     restoreNpcHomes:()=>{
       const saved=window.__ASHEN_NPC_SHOWCASE_ORIGINALS__;
       if(!saved)return false;
-      player.position.set(saved.player.x,0,saved.player.z);yaw=saved.player.yaw;pitch=saved.player.pitch;
-      npcs.forEach((n,i)=>{n.root.position.set(n.homePosition[0],0,n.homePosition[1]);n.root.visible=saved.npcs[i].visible;});
+      player.position.set(saved.player.x,0,saved.player.z);yaw=saved.player.yaw;pitch=saved.player.pitch;player.visible=saved.player.visible;
+      e2eCameraDistance=saved.cameraDistance;e2eCameraTarget=saved.cameraTarget;
+      nameplateLayer.style.visibility=saved.nameplateVisibility;
+      $('message').style.visibility=saved.messageVisibility;
+      $('toast').style.visibility=saved.toastVisibility;
+      npcs.forEach((n,i)=>{n.root.position.set(saved.npcs[i].x,0,saved.npcs[i].z);n.root.visible=saved.npcs[i].visible;});
       villagers.forEach((v,i)=>{v.root.position.set(saved.villagers[i].x,0,saved.villagers[i].z);v.root.visible=saved.villagers[i].visible;});
       delete window.__ASHEN_NPC_SHOWCASE_ORIGINALS__;
       return true;

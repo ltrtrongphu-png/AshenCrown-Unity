@@ -23,7 +23,7 @@ Connect the repository root and let `vercel.json` define:
 - Build: `node tools/build-web.mjs`
 - Output: `dist`
 
-Do not commit `dist/`, `node_modules/`, Unity `Library/`, or Vercel build output. The existing CSP/security headers are intentionally not relaxed by this setup.
+Do not commit `dist/`, `node_modules/`, Unity `Library/`, or Vercel build output. The `.vercelignore` file intentionally excludes Unity/source art but explicitly allows the three runtime GLBs (Sentinel, Regent, and `NPC/AshenNPCRoster.glb`) through its negative patterns. When a new runtime model is added, update `.vercelignore`, `tools/build-web.mjs`, `tools/check-refs.mjs`, and the deployment asset assertions together. The existing CSP/security headers are intentionally not relaxed by this setup.
 
 ## Verification
 
