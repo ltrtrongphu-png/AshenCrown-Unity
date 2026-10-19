@@ -3319,7 +3319,7 @@ function setupTouchControls(){
   stick.addEventListener('pointermove',e=>{if(e.pointerId===pointerId)moveStick(e)});
   stick.addEventListener('pointerup',e=>{if(e.pointerId===pointerId)clearStick()});stick.addEventListener('pointercancel',clearStick);
   function moveStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,42/len),nx=dx*scale,ny=dy*scale;knob.style.transform='translate('+nx+'px,'+ny+'px)';keys.KeyD=nx>17;keys.KeyA=nx< -17;keys.KeyS=ny>17;keys.KeyW=ny< -17}
-  controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='inventory')openInventory();else if(action==='skill')useSkill(Number(button.dataset.skill))}));
+  controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='parry')parry();else if(action==='inventory')openInventory();else if(action==='skill')useSkill(Number(button.dataset.skill))}));
 }
 async function syncCloudSaveFromAccount() {
   const auth = window.AshenAuth;
@@ -3436,6 +3436,7 @@ if(isLocalE2ESession) {
       requiredEchoes:getChapterRequirements(state.chapter).echoes,
       recordFound:hasChapterRecord(state.flags,state.chapter),wardenDefeated:Boolean(state.flags.bellWardenDefeated),
       encounterActive:Boolean(encounter),encounterHp:encounter?Math.round(encounter.hp):null,
+      stamina:state.stamina,parryWindow,parryCooldown,
       inventoryCount:state.inventory.length,coins:state.coins,
       chaptersComplete:state.meta.chaptersComplete,legacyHome:Boolean(state.flags.legacyHome),
       saveEncrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d')),
