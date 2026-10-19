@@ -3421,8 +3421,7 @@ if(isLocalE2ESession) {
       requiredEmbers:getChapterRequirements(state.chapter).embers,echoes:state.echoes,
       requiredEchoes:getChapterRequirements(state.chapter).echoes,
       recordFound:hasChapterRecord(state.flags,state.chapter),wardenDefeated:Boolean(state.flags.bellWardenDefeated),
-      encounterActive:Boolean(encounter),bossEncounter:Boolean(encounter?.isBoss),
-      bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
+      encounterActive:Boolean(encounter),encounterHp:encounter?Math.round(encounter.hp):null,
       inventoryCount:state.inventory.length,coins:state.coins,
       chaptersComplete:state.meta.chaptersComplete,legacyHome:Boolean(state.flags.legacyHome),
       saveEncrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d')),
@@ -3445,7 +3444,7 @@ if(isLocalE2ESession) {
       else if(state.quest===5){target=npcs.find(n=>n.id==='lyra');type=state.chapter===10?'npc-legacy-home':'npc-next-expedition';}
       if(!target?.root)return {ok:false,reason:'no-target',chapter:state.chapter,quest:state.quest,map:activeMapId,type};
       const position=target.root.getWorldPosition(new THREE.Vector3());
-      player.position.set(position.x,0,position.z+(type.startsWith('npc-')?.6:0));
+      player.position.set(position.x,0,position.z+(type.startsWith('npc-') ? 0.6 : 0));
       yaw=0;
       nearbyTarget=findNearby();
       const actual=nearbyTarget?.k==='npc'?nearbyTarget.n.id:nearbyTarget?.k==='node'?nearbyTarget.n.type:null;
