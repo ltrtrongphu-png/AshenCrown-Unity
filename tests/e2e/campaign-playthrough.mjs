@@ -71,8 +71,8 @@ try{
   await page.goto(baseUrl+'/play.html?e2e=1',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>document.documentElement.dataset.ashenGameReady==='true',null,{timeout:60000});
   const tutorialKeys=await page.locator('.tutorial-grid').innerText();
-  assert.match(tutorialKeys,/G\\s*Interact/i,'tutorial must map G to interaction');
-  assert.doesNotMatch(tutorialKeys,/E\\s+Interact/i,'E must not be documented as interaction because it opens inventory');
+  assert.match(tutorialKeys,/G\s*Interact/i,'tutorial must map G to interaction');
+  assert.doesNotMatch(tutorialKeys,/E\s+Interact/i,'E must not be documented as interaction because it opens inventory');
   await page.locator('#tutorialStart').evaluate(button=>button.click());
   await page.waitForFunction(()=>typeof window.__ASHEN_TEST__?.status==='function',null,{timeout:15000});
   await page.waitForFunction(()=>{
