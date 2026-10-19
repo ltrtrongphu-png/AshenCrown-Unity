@@ -73,6 +73,13 @@ try{
   const tutorialKeys=await page.locator('.tutorial-grid').innerText();
   assert.match(tutorialKeys,/G\s*Interact/i,'tutorial must map G to interaction');
   assert.doesNotMatch(tutorialKeys,/E\s+Interact/i,'E must not be documented as interaction because it opens inventory');
+  await page.locator('#playLanguageSelect').selectOption('vi');
+  await page.waitForFunction(()=>document.querySelector('.tutorial-grid')?.innerText.includes('Tương tác'));
+  await page.waitForFunction(()=>document.querySelector('#questSteps')?.innerText.includes('Nhấn G'));
+  const vietnameseSteps=await page.locator('#questSteps').innerText();
+  assert.doesNotMatch(vietnameseSteps,/Nhấn E/i,'Vietnamese quest hint must not tell players to use the inventory key');
+  await page.locator('#playLanguageSelect').selectOption('en');
+  await page.waitForFunction(()=>document.querySelector('.tutorial-grid')?.innerText.includes('Interact'));
   await page.locator('#tutorialStart').evaluate(button=>button.click());
   await page.waitForFunction(()=>typeof window.__ASHEN_TEST__?.status==='function',null,{timeout:15000});
   await page.waitForFunction(()=>{
@@ -116,6 +123,8 @@ try{
   await page.setViewportSize({width:390,height:844});
   await wait(450);
   await assertLayoutFitsViewport('mobile gameplay');
+  assert.equal(await page.locator('.touch-controls').evaluate(el=>getComputedStyle(el).display==='flex'),true,
+    'touch controls must be visible at the narrow mobile breakpoint');
   await page.keyboard.press('i');
   await page.waitForFunction(()=>document.querySelector('#inventoryMenu')?.classList.contains('show'));
   const inventoryBox=await page.locator('#inventoryMenu .inventory-card').boundingBox();
