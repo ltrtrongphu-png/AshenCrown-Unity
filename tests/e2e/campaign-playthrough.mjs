@@ -179,6 +179,7 @@ try{
     assert.equal(state.wardenDefeated,false);
     assert.equal(state.encounterActive,true);
     await page.waitForFunction(()=>window.__ASHEN_TEST__.status().bossModelLoaded===true,null,{timeout:60000});
+    await page.waitForFunction(()=>window.__ASHEN_TEST__.status().bossVisualAttached===true,null,{timeout:15000});
     const stagedCombat=await page.evaluate(()=>window.__ASHEN_TEST__.prepareCampaignBossFight());
     assert.equal(stagedCombat.ok,true,'a real campaign Warden must be active before combat');
     entry.bossInitialHp=stagedCombat.hp;
@@ -196,7 +197,7 @@ try{
       await page.waitForFunction(()=>window.__ASHEN_TEST__.status().attackCooldown<=0.04,null,{timeout:2500}).catch(()=>{});
       await wait(80);
       state=await getState();
-      if(state.quest===3)assert.ok(state.bossHp<before||state.bossHp>0,'attack loop should retain a living Warden until defeated');
+      if(state.quest===3)assert.ok(state.bossHp<before,'F key attack should deal damage through the real combat handler; before='+before+', after='+state.bossHp);
     }
     state=await getState();
     assert.equal(state.quest,4,'defeating the Warden should unlock the chapter choice');
@@ -230,9 +231,10 @@ try{
       assert.equal(state.chaptersComplete,10,'finale should mark all ten chapters completed');
       assert.equal(state.legacyHome,true,'final home choice should persist');
       entry.completed=true;
+      if(await page.locator('#systemMenu').evaluate(el=>el.classList.contains('show')))await page.locator('#systemClose').click();
       await capture('chapter-10-legacy-complete.png');
     }
-    entry.title=(await page.locator('#chapterTitle').innerText()).trim();
+    entry.title=await page.evaluate(ch=>window.ASHEN_CAMPAIGN?.[ch-1]?.title||('Chapter '+ch),chapter);
     chapterLog.push(entry);
     await writeFile(artifactDir+'/campaign-progress.json',JSON.stringify({chapterLog,state},null,2));
   }
