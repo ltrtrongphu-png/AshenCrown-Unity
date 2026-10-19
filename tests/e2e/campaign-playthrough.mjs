@@ -188,6 +188,38 @@ try{
     assert.equal(state.encounterActive,true);
     await page.waitForFunction(()=>window.__ASHEN_TEST__.status().bossModelLoaded===true,null,{timeout:60000});
     await page.waitForFunction(()=>window.__ASHEN_TEST__.status().bossVisualAttached===true,null,{timeout:15000});
+
+    // Chapter 1 exercises two campaign soft-lock regressions: reloading while a
+    // Warden is mandatory, and dying while that encounter is active.
+    if(chapter===1){
+      const flushed=await page.evaluate(()=>window.__ASHEN_TEST__.flushLocalSave());
+      assert.equal(flushed.encrypted,true,'pre-reload chapter state must be written as encrypted local save');
+      assert.equal(flushed.chapter,1);
+      assert.equal(flushed.quest,3);
+      await page.reload({waitUntil:'domcontentloaded',timeout:45000});
+      await page.waitForFunction(()=>document.documentElement.dataset.ashenGameReady==='true',null,{timeout:60000});
+      await page.waitForFunction(()=>{
+        const s=window.__ASHEN_TEST__?.status?.();
+        return s?.chapter===1&&s?.quest===3&&s?.recordFound&&s?.echoes>=s?.requiredEchoes
+          &&s?.bossEncounter===true&&s?.saveEncrypted===true;
+      },null,{timeout:90000});
+      await page.waitForFunction(()=>window.__ASHEN_TEST__.status().bossVisualAttached===true,null,{timeout:30000});
+      state=await getState();
+      assert.equal(state.wardenDefeated,false,'Warden must resume when reloading mid-chapter');
+      assert.equal(state.bossEncounter,true,'reload must restore the mandatory Warden encounter');
+      assert.equal(state.bossVisualAttached,true,'resumed encounter must use the production boss model');
+      const deathTriggered=await page.evaluate(()=>window.__ASHEN_TEST__.triggerPlayerDeath());
+      assert.equal(deathTriggered,true,'test should trigger the same zero-HP recovery path as a real death');
+      await page.waitForFunction(()=>{
+        const s=window.__ASHEN_TEST__.status();
+        return s.hp===s.maxHp&&s.quest===3&&s.wardenDefeated===false
+          &&s.bossEncounter===true&&s.bossVisualAttached===true;
+      },null,{timeout:15000});
+      state=await getState();
+      assert.equal(state.bossEncounter,true,'dying during a Warden fight must not soft-lock the chapter');
+      assert.equal(state.wardenDefeated,false,'respawning a Warden must not mark it defeated');
+    }
+
     const stagedCombat=await page.evaluate(()=>window.__ASHEN_TEST__.prepareCampaignBossFight());
     assert.equal(stagedCombat.ok,true,'a real campaign Warden must be active before combat');
     entry.bossInitialHp=stagedCombat.hp;
