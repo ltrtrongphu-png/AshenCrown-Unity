@@ -70,6 +70,9 @@ try{
   },{once:true}));
   await page.goto(baseUrl+'/play.html?e2e=1',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>document.documentElement.dataset.ashenGameReady==='true',null,{timeout:60000});
+  const tutorialKeys=await page.locator('.tutorial-grid').innerText();
+  assert.match(tutorialKeys,/G\\s*Interact/i,'tutorial must map G to interaction');
+  assert.doesNotMatch(tutorialKeys,/E\\s+Interact/i,'E must not be documented as interaction because it opens inventory');
   await page.locator('#tutorialStart').evaluate(button=>button.click());
   await page.waitForFunction(()=>typeof window.__ASHEN_TEST__?.status==='function',null,{timeout:15000});
   await page.waitForFunction(()=>{
@@ -125,6 +128,9 @@ try{
   assert.equal(state.chapter,1,'new local session should start in Chapter 1');
   assert.equal(state.quest,0,'new local session should begin at the first story objective');
   assert.equal(state.map,'sanctuary');
+  const questSteps=await page.locator('#questSteps').innerText();
+  assert.match(questSteps,/Press G to hear/i,'quest journal should use the actual interaction key');
+  assert.doesNotMatch(questSteps,/Press E to hear/i,'quest steps must not confuse interaction with inventory');
 
   for(let chapter=1;chapter<=10;chapter++){
     state=await getState();
