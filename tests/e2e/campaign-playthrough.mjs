@@ -76,6 +76,8 @@ try{
     const s=window.__ASHEN_TEST__.status();
     return s.playerModelLoaded&&s.npcRosterLoaded&&s.npcProductionModelCount===3&&s.villagerProductionModelCount===10;
   },null,{timeout:90000});
+  assert.equal(await page.evaluate(()=>window.__ASHEN_TEST__.suppressAmbientSpawns()),true,
+    'the local E2E run should make ambient shade spawning deterministic');
   await assertLayoutFitsViewport('desktop initial layout');
 
   // Exercise the main UI surfaces before the long campaign.
