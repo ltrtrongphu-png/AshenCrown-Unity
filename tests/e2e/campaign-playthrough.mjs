@@ -121,6 +121,15 @@ try{
   const inventoryBox=await page.locator('#inventoryMenu .inventory-card').boundingBox();
   assert.ok(inventoryBox&&inventoryBox.x>=0&&inventoryBox.width<=390+1,'inventory modal should fit a mobile viewport: '+JSON.stringify(inventoryBox));
   await page.locator('#closeInventory').click();
+  const mobileStateBeforeParry=await getState();
+  await page.locator('.touch-controls button[data-action="parry"]').dispatchEvent('pointerdown',{
+    pointerId:41,pointerType:'touch',button:0,clientX:340,clientY:770
+  });
+  const mobileStateAfterParry=await getState();
+  assert.ok(mobileStateAfterParry.stamina<mobileStateBeforeParry.stamina,
+    'touch PARRY button must consume stamina');
+  assert.ok(mobileStateAfterParry.parryWindow>0,
+    'touch PARRY button must open a parry window');
   await page.setViewportSize({width:1440,height:900});
   await wait(350);
 
