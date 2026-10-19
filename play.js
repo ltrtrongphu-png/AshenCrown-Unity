@@ -2503,7 +2503,7 @@ function getQuestSteps(){
   const recordFound=hasChapterRecord(state.flags,state.chapter);
   if(q===0)return [
     ['Go to Lyra at Sanctuary.',false],
-    ['Press E to hear what this chapter is hiding.',false],
+    ['Press G to hear what this chapter is hiding.',false],
     ['Choose how you will investigate the road ahead.',false]
   ];
   if(q===1)return [
@@ -2524,7 +2524,7 @@ function getQuestSteps(){
   if(q===3&&state.echoes<requirements.echoes)return [
     ['Collect '+requirements.echoes+' Memory Echoes',state.echoes>=requirements.echoes],
     ['Look for violet traces scattered across the region.',false],
-    ['Press E near each echo to recover its memory.',false],
+    ['Press G near each echo to recover its memory.',false],
     ['Progress: '+state.echoes+' / '+requirements.echoes,state.echoes>=requirements.echoes]
   ];
   if(q===3)return [
@@ -3417,10 +3417,53 @@ if(isLocalE2ESession) {
       npcProductionModelCount:npcs.filter(n=>n.productionVisual?.parent===n.root).length,
       villagerProductionModelCount:villagers.filter(n=>n.productionVisual?.parent===n.root).length,
       bossEncounter:Boolean(encounter?.isBoss),bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
-      chapter:state.chapter,level:state.level,fps:Math.round(currentFps||0),
+      chapter:state.chapter,quest:state.quest,map:activeMapId,chapterGathered:state.chapterGathered,
+      requiredEmbers:getChapterRequirements(state.chapter).embers,echoes:state.echoes,
+      requiredEchoes:getChapterRequirements(state.chapter).echoes,
+      recordFound:hasChapterRecord(state.flags,state.chapter),wardenDefeated:Boolean(state.flags.bellWardenDefeated),
+      encounterActive:Boolean(encounter),bossEncounter:Boolean(encounter?.isBoss),
+      bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
+      inventoryCount:state.inventory.length,coins:state.coins,
+      chaptersComplete:state.meta.chaptersComplete,legacyHome:Boolean(state.flags.legacyHome),
+      saveEncrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d')),
+      gameReady:gameRenderReady,level:state.level,fps:Math.round(currentFps||0),
       canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight
     }),
     prepareVisuals:()=>{state.settings.quality='high';state.settings.reducedMotion=false;applySettings();return true;},
+    stageNextStoryInteraction:()=>{
+      if(anyOverlayOpen())return {ok:false,reason:'overlay-open'};
+      let target=null,type='';
+      if(state.quest===0){target=npcs.find(n=>n.id==='lyra');type='npc-lyra-intro';}
+      else if(state.quest===1){target=nodes.find(n=>n.type==='ember'&&n.mapId===activeMapId&&!n.collected);type='ember';}
+      else if(state.quest===2&&!hasChapterRecord(state.flags,state.chapter)){target=nodes.find(n=>n.type==='record'&&n.mapId===activeMapId&&!n.collected);type='record';}
+      else if(state.quest===2){target=npcs.find(n=>n.id==='orren');type='npc-orren-route';}
+      else if(state.quest===3&&state.echoes<getChapterRequirements(state.chapter).echoes){target=nodes.find(n=>n.type==='echo'&&n.mapId===activeMapId&&!n.collected);type='echo';}
+      else if(state.quest===3&&encounter?.isBoss)return {ok:true,type:'boss',chapter:state.chapter};
+      else if(state.quest===4){target=npcs.find(n=>n.id==='lyra');type='npc-lyra-choice';}
+      else if(state.quest===5){target=npcs.find(n=>n.id==='lyra');type=state.chapter===10?'npc-legacy-home':'npc-next-expedition';}
+      if(!target?.root)return {ok:false,reason:'no-target',chapter:state.chapter,quest:state.quest,map:activeMapId,type};
+      const position=target.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(position.x,0,position.z+(type.startsWith('npc-')?.6:0));
+      yaw=0;
+      nearbyTarget=findNearby();
+      const actual=nearbyTarget?.k==='npc'?nearbyTarget.n.id:nearbyTarget?.k==='node'?nearbyTarget.n.type:null;
+      return {ok:actual!==null,type,actual,chapter:state.chapter,quest:state.quest,map:activeMapId,x:position.x,z:position.z};
+    },
+    prepareCampaignBossFight:()=>{
+      if(state.quest!==3||!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
+      ownerGodMode=true;state.hp=state.maxHp;state.stamina=100;
+      const boss=encounter.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(boss.x,0,boss.z+2.5);yaw=0;player.rotation.y=Math.PI;
+      return {ok:true,hp:Math.round(encounter.hp),playerHp:state.hp};
+    },
+    alignCampaignAttack:()=>{
+      if(!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
+      const boss=encounter.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(boss.x,0,boss.z+2.5);yaw=0;player.rotation.y=Math.PI;
+      state.stamina=100;
+      return {ok:true,distance:player.position.distanceTo(boss),bossHp:Math.round(encounter.hp)};
+    },
+    campaignInteraction:()=>nearbyTarget?{kind:nearbyTarget.k,id:nearbyTarget.k==='npc'?nearbyTarget.n.id:nearbyTarget.k==='node'?nearbyTarget.n.type:null}:null,
     stageNpcShowcase:()=>{
       window.__ASHEN_NPC_SHOWCASE_ORIGINALS__={
         player:{x:player.position.x,z:player.position.z,yaw,pitch,visible:player.visible},
