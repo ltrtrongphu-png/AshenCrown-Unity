@@ -3427,6 +3427,7 @@ if(isLocalE2ESession) {
       chaptersComplete:state.meta.chaptersComplete,legacyHome:Boolean(state.flags.legacyHome),
       saveEncrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d')),
       gameReady:gameRenderReady,level:state.level,fps:Math.round(currentFps||0),
+      attackCooldown:Math.max(0,attackCooldown),comboIndex,comboWindow,
       canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight
     }),
     prepareVisuals:()=>{state.settings.quality='high';state.settings.reducedMotion=false;applySettings();return true;},
