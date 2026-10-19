@@ -41,6 +41,10 @@ jobs:
         run: node tests/e2e/game-smoke.mjs
         env:
           ASHEN_SMOKE_URL: http://127.0.0.1:4173
+      - name: Play through all 10 chapters and regress gameplay UI
+        run: node tests/e2e/campaign-playthrough.mjs
+        env:
+          ASHEN_SMOKE_URL: http://127.0.0.1:4173
       - name: Upload real gameplay screenshots and diagnostics
         if: always()
         uses: actions/upload-artifact@v4
