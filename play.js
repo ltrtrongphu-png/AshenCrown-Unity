@@ -793,7 +793,7 @@ function chapterLevelCap(chapter=state.chapter){return CHAPTER_LEVEL_CAPS[THREE.
 function xpNeededForLevel(level=state.level){const lv=Math.max(1,Math.floor(Number(level)||1));return Math.round(80+48*lv+7*lv*lv)}
 function skillUnlockLevel(index){return index+1}
 function equipmentSlotFor(gear){if(!gear)return null;if(gear.type==='Weapon'||gear.type==='Core')return 'core';if(gear.type==='Armor')return 'armor';if(gear.type==='Trinket')return 'charm';if(['Relic','Quest Relic','Chapter Relic'].includes(gear.type))return 'relic';return null}
-let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0,legacyMapSave=false,comboIndex=0,comboWindow=0,parryWindow=0,parryCooldown=0,perfectDodgeWindow=0,ownerGodMode=false;
+let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0,legacyMapSave=false,comboIndex=0,comboWindow=0,parryWindow=0,parryCooldown=0,perfectDodgeWindow=0,ownerGodMode=false,suppressAmbientEnemySpawns=false;
 const player=new THREE.Group(); player.position.set(0,0,7); characters.add(player);
 
 const mat=(c,r=.75,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
@@ -3431,6 +3431,7 @@ if(isLocalE2ESession) {
       canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight
     }),
     prepareVisuals:()=>{state.settings.quality='high';state.settings.reducedMotion=false;applySettings();return true;},
+    suppressAmbientSpawns:()=>{suppressAmbientEnemySpawns=true;return true;},
     stageNextStoryInteraction:()=>{
       if(anyOverlayOpen())return {ok:false,reason:'overlay-open'};
       let target=null,type='';
@@ -3587,7 +3588,7 @@ if(activeMapId==='sanctuary')spawnWildlifeBurst(10);
 updateSky();
 const DEVELOPMENT_DAY=9;state.meta.developmentDay=Math.max(Number(state.meta.developmentDay||0),DEVELOPMENT_DAY);toastMsg('Development Day '+state.meta.developmentDay+' — the world wakes, villages stir, and the morning sun rises.');
 setInterval(()=>{
-  if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!isChapterWardenReady(state))spawnEnemy();
+  if(!suppressAmbientEnemySpawns&&!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!isChapterWardenReady(state))spawnEnemy();
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
 setInterval(()=>{if(!document.hidden)scheduleIdleSave()},15000);
