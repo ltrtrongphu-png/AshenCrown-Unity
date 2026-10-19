@@ -2964,9 +2964,22 @@ function tick(dt){
   }
 
   if(state.hp<=0){
-    state.hp=state.maxHp;state.stamina=100;player.position.set(0,0,activeMapId==='sanctuary'?7:14);dodgeIFrames=0;
-    if(encounter){encounter.root.removeFromParent();encounter=null;enemies=[];setEncounterHud(null)}
-    toastMsg('You fell in battle and woke at the sanctuary.');saveState();
+    const retryChapterWarden=isChapterWardenReady(state);
+    state.hp=state.maxHp;state.stamina=100;
+    player.position.set(0,0,activeMapId==='sanctuary'?7:14);dodgeIFrames=0;
+    if(encounter){
+      const fallen=encounter;
+      disposeEncounterVisuals(fallen);
+      fallen.root.removeFromParent();
+      encounter=null;enemies=[];setEncounterHud(null);
+    }
+    toastMsg(activeMapId==='sanctuary'
+      ?'You fell in battle and woke at the sanctuary.'
+      :'You fell in battle and recovered at the field camp.');
+    saveState();
+    // A Warden gate suppresses ambient spawns; preserve the mandatory story
+    // encounter after death so Chapter 1–10 cannot soft-lock on this transition.
+    if(retryChapterWarden)spawnEnemy();
   }
 
   $('playerHp').style.width=Math.max(0,Math.min(100,state.hp/state.maxHp*100))+'%';
@@ -3417,7 +3430,7 @@ if(isLocalE2ESession) {
       npcProductionModelCount:npcs.filter(n=>n.productionVisual?.parent===n.root).length,
       villagerProductionModelCount:villagers.filter(n=>n.productionVisual?.parent===n.root).length,
       bossEncounter:Boolean(encounter?.isBoss),bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
-      chapter:state.chapter,quest:state.quest,map:activeMapId,chapterGathered:state.chapterGathered,
+      chapter:state.chapter,quest:state.quest,map:activeMapId,hp:state.hp,maxHp:state.maxHp,chapterGathered:state.chapterGathered,
       requiredEmbers:getChapterRequirements(state.chapter).embers,echoes:state.echoes,
       requiredEchoes:getChapterRequirements(state.chapter).echoes,
       recordFound:hasChapterRecord(state.flags,state.chapter),wardenDefeated:Boolean(state.flags.bellWardenDefeated),
@@ -3431,6 +3444,11 @@ if(isLocalE2ESession) {
     }),
     prepareVisuals:()=>{state.settings.quality='high';state.settings.reducedMotion=false;applySettings();return true;},
     suppressAmbientSpawns:()=>{suppressAmbientEnemySpawns=true;return true;},
+    flushLocalSave:async()=>{
+      await localSaveWriteChain;
+      return {encrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d')),chapter:localSavePlaintext?.chapter,quest:localSavePlaintext?.quest};
+    },
+    triggerPlayerDeath:()=>{state.hp=0;return true;},
     stageNextStoryInteraction:()=>{
       if(anyOverlayOpen())return {ok:false,reason:'overlay-open'};
       let target=null,type='';
@@ -3579,7 +3597,7 @@ function refreshOwnerDiagnostics() {
 }
 
 await bootstrapEncryptedSave();
-loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
+loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();setQuest();if(isChapterWardenReady(state))spawnEnemy();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
 if(state.tutorial!==false)$('tutorial').classList.add('show');
 time=DAY_LENGTH*.08;
 showChapterTitle((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.title)||'THE LAST EMBER','Explore · meet people · make choices · shape the world');
