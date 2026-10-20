@@ -335,6 +335,8 @@ try{
         const buyButton=page.locator('#shopGrid button[data-buy="0"]');
         assert.equal(await buyButton.isDisabled(),false,'starter armor should be purchasable after the first Warden');
         await buyButton.click();
+        assert.match(await page.locator('#shopTitle').innerText(),/Elen/,
+          'buying an item must keep the same merchant context open');
         const afterPurchase=await getState();
         assert.equal(afterPurchase.inventoryCount,beforeShop.inventoryCount+1,'shop purchase should add exactly one inventory item');
         assert.ok(afterPurchase.coins<merchant.coins,'shop purchase should spend Ashen');
