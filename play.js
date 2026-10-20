@@ -134,6 +134,7 @@ const PLAY_LOCALE_ROWS = [
 ['Ask the gatekeeper why one road on his map has been cut away.','Hỏi người giữ cổng vì sao một con đường trên bản đồ bị xóa bỏ.','門番に、地図から道が消された理由を尋ねよう。','문지기에게 지도에서 길 하나가 지워진 이유를 물으세요.','询问守门人，为什么地图上的一条路被抹去了。'],
 ['Recover the two memories the Crown tried to erase.','Tìm lại hai ký ức mà Vương Miện cố xóa bỏ.','王冠が消そうとした2つの記憶を取り戻そう。','왕관이 지우려 한 두 기억을 되찾으세요.','找回王冠试图抹去的两段记忆。'],
 ['Defeat the chapter warden','Đánh bại hộ vệ chương','章の守護者を倒す','챕터 수호자 처치','击败章节守卫'],
+['WARDEN WAITING','HỘ VỆ ĐANG CHỜ','守護者待機中','수호자 대기 중','守卫等待中'],
 ['Return to Lyra','Trở về gặp Lyra','Lyraのもとへ戻る','Lyra에게 돌아가기','返回 Lyra 身边'],
 ['Gather chapter traces','Thu thập dấu tích chương','章の痕跡を集める','챕터 흔적 수집','收集章节痕迹'],
 ['Find two living embers','Tìm hai tàn lửa còn sống','生きた残り火を2つ見つける','살아 있는 잿불 두 개 찾기','找到两枚活余烬'],
@@ -2630,7 +2631,7 @@ function setQuest(){
     title.textContent=chapter.wardenName||'The Chapter Warden';
     desc.textContent='The recovered evidence has drawn out the keeper. Read the attack tells, evade the marked strike and hit during recovery.';
     obj.textContent='◈ Face '+(chapter.wardenName||'the chapter warden');
-    count.textContent=encounter?'WARDEN PRESENT':'WARDEN APPROACHING';
+    count.textContent=encounter?.isBoss?'WARDEN PRESENT':encounter?'WARDEN WAITING':'WARDEN APPROACHING';
   }else if(q===4){
     title.textContent=state.chapter===1?'A Choice in the Ash':chapter.title+' · The Choice';
     desc.textContent=(chapter.summary||'The truth has surfaced.')+' Return to Lyra and choose: '+String(chapter.choice||'choose what to preserve').replace(' / ',' or ')+'.';
