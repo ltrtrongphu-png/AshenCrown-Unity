@@ -394,7 +394,7 @@ function playTranslateText(source, locale=playLanguage) {
   const trimmed=source.trim();
   if(!trimmed)return source;
   const exact=PLAY_TRANSLATION_MAP.get(trimmed);
-  let value=exact?exact[PLAY_LOCALES.indexOf(locale)+1]:trimmed;
+  let value=exact?exact[PLAY_LOCALES.indexOf(locale)]:trimmed;
   if(!exact){
     for(const row of PLAY_TRANSLATION_ROWS_SORTED){
       const [english,...translations]=row;
