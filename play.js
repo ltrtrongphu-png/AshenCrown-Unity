@@ -3494,6 +3494,23 @@ if(isLocalE2ESession) {
       const actual=nearbyTarget?.k==='npc'?nearbyTarget.n.id:nearbyTarget?.k==='node'?nearbyTarget.n.type:null;
       return {ok:actual!==null,type,actual,chapter:state.chapter,quest:state.quest,map:activeMapId,x:position.x,z:position.z};
     },
+    startAmbientStoryBlocker:()=>{
+      if(state.quest!==3||state.echoes>=getChapterRequirements(state.chapter).echoes||encounter)return {ok:false,reason:'story-blocker-not-eligible'};
+      ownerGodMode=true;state.hp=state.maxHp;state.stamina=100;
+      spawnEnemy();
+      if(!encounter||encounter.isBoss)return {ok:false,reason:'ambient-shade-not-spawned'};
+      encounter.root.position.set(player.position.x,0,player.position.z-2.5);
+      encounter.root.updateMatrixWorld(true);
+      setEncounterHud(encounter);
+      return {ok:true,hp:Math.round(encounter.hp),isBoss:encounter.isBoss};
+    },
+    alignAnyEncounterAttack:()=>{
+      if(!encounter||encounter.testOnly)return {ok:false,reason:'no-active-campaign-encounter'};
+      const target=encounter.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(target.x,0,target.z+2.5);yaw=0;player.rotation.y=Math.PI;
+      state.stamina=100;state.hp=state.maxHp;ownerGodMode=true;
+      return {ok:true,hp:Math.round(encounter.hp),isBoss:Boolean(encounter.isBoss)};
+    },
     prepareCampaignBossFight:()=>{
       if(state.quest!==3||!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
       ownerGodMode=true;state.hp=state.maxHp;state.stamina=100;
