@@ -271,6 +271,39 @@ try{
     if(chapter<10){
       assert.equal(state.map,'sanctuary','chapters 1–9 should return home after their choice');
       await capture('chapter-'+String(chapter).padStart(2,'0')+'-complete.png');
+      if(chapter===1){
+        // A living merchant must be targetable, open the real shop, sell gear,
+        // persist the purchase, and allow that gear to be equipped from Inventory.
+        const beforeShop=await getState();
+        const merchant=await page.evaluate(()=>window.__ASHEN_TEST__.stageMerchant('merchant_01'));
+        assert.equal(merchant.ok,true,'nearby merchant must be found and interactable: '+JSON.stringify(merchant));
+        assert.ok(merchant.coins>=55,'first chapter Warden rewards should fund the starter armor');
+        assert.ok(merchant.level>=1,'starter armor should be unlocked');
+        await page.keyboard.press('g');
+        await page.waitForFunction(()=>document.querySelector('#shopMenu')?.classList.contains('show'));
+        assert.match(await page.locator('#shopTitle').innerText(),/Elen/,'the merchant name should appear in the shop');
+        assert.equal(await page.locator('#shopGrid .shop-card').count(),3,'merchant should show all three stocked items');
+        const buyButton=page.locator('#shopGrid button[data-buy="0"]');
+        assert.equal(await buyButton.isDisabled(),false,'starter armor should be purchasable after the first Warden');
+        await buyButton.click();
+        const afterPurchase=await getState();
+        assert.equal(afterPurchase.inventoryCount,beforeShop.inventoryCount+1,'shop purchase should add exactly one inventory item');
+        assert.ok(afterPurchase.coins<merchant.coins,'shop purchase should spend Ashen');
+        assert.equal(afterPurchase.quest,5,'shopping must not reset campaign progress');
+        await page.locator('#shopMenu .shop-close').click();
+        await page.keyboard.press('i');
+        await page.waitForFunction(()=>document.querySelector('#inventoryMenu')?.classList.contains('show'));
+        const armorButton=page.locator('#inventoryGrid .inventory-item button').filter({hasText:'EQUIP'}).first();
+        await armorButton.click();
+        assert.match(await page.locator('.equip-slot[data-slot="armor"]').innerText(),/Hearthguard Coat/,
+          'armor purchased from the merchant should be equipable');
+        await page.locator('#closeInventory').click();
+        const saveFlush=await page.evaluate(()=>window.__ASHEN_TEST__.flushLocalSave());
+        assert.equal(saveFlush.encrypted,true,'merchant purchase and equipment should be saved in encrypted local state');
+        const afterEquip=await getState();
+        assert.equal(afterEquip.chapter,1);
+        assert.equal(afterEquip.quest,5);
+      }
       const home=await stageAndInteract('npc-next-expedition');
       choice=await clickFirstDialogueChoice();
       entry.choices.push({stage:'next-expedition',label:choice});
