@@ -198,6 +198,32 @@ try{
       state=await getState();
       entry.objectives.push({type:'echo',before,after:state.echoes});
       assert.ok(state.echoes>before,'echo interaction must advance progress');
+      if(chapter===1&&state.echoes===1){
+        const blocker=await page.evaluate(()=>window.__ASHEN_TEST__.startAmbientStoryBlocker());
+        assert.equal(blocker.ok,true,'a wandering shade should be active to cover the competing-encounter edge case');
+        assert.equal(blocker.isBoss,false,'the injected blocker must be an ordinary shade, not a Warden');
+      }
+    }
+    if(chapter===1){
+      state=await getState();
+      assert.equal(state.echoes,state.requiredEchoes,'the final echo should be collected before resolving the blocker');
+      assert.equal(state.encounterActive,true,'the ordinary shade should still be alive after the final echo');
+      assert.equal(state.bossEncounter,false,'the Warden should wait while the ordinary shade is active');
+      let blockerGuard=0;
+      while((state=await getState()).encounterActive&&!state.bossEncounter){
+        assert.ok(blockerGuard++<10,'ordinary shade should be defeatable with the actual attack path');
+        const before=state.encounterHp;
+        const aligned=await page.evaluate(()=>window.__ASHEN_TEST__.alignAnyEncounterAttack());
+        assert.equal(aligned.ok,true,'align the player with the active wandering shade');
+        await page.keyboard.press('f');
+        await wait(420);
+        state=await getState();
+        if(state.encounterActive&&!state.bossEncounter){
+          assert.ok(state.encounterHp<before,'F should damage the shade before the story Warden can appear');
+        }
+      }
+      state=await getState();
+      assert.equal(state.bossEncounter,true,'the mandatory Warden should spawn after the competing shade is defeated');
     }
     await page.waitForFunction(()=>window.__ASHEN_TEST__.status().bossEncounter===true,null,{timeout:12000});
     state=await getState();
