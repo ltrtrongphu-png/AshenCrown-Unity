@@ -3507,6 +3507,16 @@ if(isLocalE2ESession) {
       return {ok:true,distance:player.position.distanceTo(boss),bossHp:Math.round(encounter.hp)};
     },
     campaignInteraction:()=>nearbyTarget?{kind:nearbyTarget.k,id:nearbyTarget.k==='npc'?nearbyTarget.n.id:nearbyTarget.k==='node'?nearbyTarget.n.type:null}:null,
+    stageMerchant:(id)=>{
+      if(!['merchant_01','merchant_02'].includes(id))return {ok:false,reason:'unknown-merchant'};
+      const merchant=villagers.find(v=>v.id===id&&v.root.visible);
+      if(!merchant)return {ok:false,reason:'merchant-not-visible'};
+      const pos=merchant.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(pos.x,0,pos.z+.6);
+      nearbyTarget=findNearby();
+      return {ok:nearbyTarget?.k==='npc'&&nearbyTarget.n.id===id,id:nearbyTarget?.n?.id||null,
+        distance:nearbyTarget?.n?.root?.position.distanceTo(player.position)||null,coins:state.coins,level:state.level};
+    },
     stageNpcShowcase:()=>{
       window.__ASHEN_NPC_SHOWCASE_ORIGINALS__={
         player:{x:player.position.x,z:player.position.z,yaw,pitch,visible:player.visible},
