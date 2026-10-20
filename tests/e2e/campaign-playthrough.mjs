@@ -73,11 +73,23 @@ try{
   const tutorialKeys=await page.locator('.tutorial-grid').innerText();
   assert.match(tutorialKeys,/G\s*Interact/i,'tutorial must map G to interaction');
   assert.doesNotMatch(tutorialKeys,/E\s+Interact/i,'E must not be documented as interaction because it opens inventory');
-  await page.locator('#playLanguageSelect').selectOption('vi');
-  await page.waitForFunction(()=>document.querySelector('.tutorial-grid')?.innerText.includes('Tương tác'));
-  await page.waitForFunction(()=>document.querySelector('#questSteps')?.innerText.includes('Nhấn G'));
-  const vietnameseSteps=await page.locator('#questSteps').innerText();
-  assert.doesNotMatch(vietnameseSteps,/Nhấn E/i,'Vietnamese quest hint must not tell players to use the inventory key');
+  const localeCases=[
+    {code:'en',interaction:'Interact',correct:'Press G',wrong:'Press E'},
+    {code:'vi',interaction:'Tương tác',correct:'Nhấn G',wrong:'Nhấn E'},
+    {code:'ja',interaction:'調べる',correct:'Gキーを押して',wrong:'Eキーを押して'},
+    {code:'ko',interaction:'상호작용',correct:'G 키를 눌러',wrong:'E 키를 눌러'},
+    {code:'zh',interaction:'互动',correct:'按 G',wrong:'按 E'}
+  ];
+  for(const locale of localeCases){
+    await page.locator('#playLanguageSelect').selectOption(locale.code);
+    await page.waitForFunction(({interaction})=>document.querySelector('.tutorial-grid')?.innerText.includes(interaction),locale);
+    await page.waitForFunction(({correct})=>document.querySelector('#questSteps')?.innerText.includes(correct),locale);
+    const tutorialText=await page.locator('.tutorial-grid').innerText();
+    const questText=await page.locator('#questSteps').innerText();
+    assert.ok(tutorialText.includes(locale.interaction),locale.code+' tutorial should use the selected language');
+    assert.ok(questText.includes(locale.correct),locale.code+' quest hint should use the real G interaction key');
+    assert.equal(questText.includes(locale.wrong),false,locale.code+' quest hint must not tell players to use the inventory key');
+  }
   await page.locator('#playLanguageSelect').selectOption('en');
   await page.waitForFunction(()=>document.querySelector('.tutorial-grid')?.innerText.includes('Interact'));
   await page.locator('#tutorialStart').evaluate(button=>button.click());
