@@ -224,11 +224,13 @@ try{
       let blockerGuard=0;
       while((state=await getState()).encounterActive&&!state.bossEncounter){
         assert.ok(blockerGuard++<10,'ordinary shade should be defeatable with the actual attack path');
+        await page.waitForFunction(()=>window.__ASHEN_TEST__.status().attackCooldown<=0.001,null,{timeout:5000});
+        state=await getState();
         const before=state.encounterHp;
         const aligned=await page.evaluate(()=>window.__ASHEN_TEST__.alignAnyEncounterAttack());
         assert.equal(aligned.ok,true,'align the player with the active wandering shade');
         await page.keyboard.press('f');
-        await wait(420);
+        await wait(40);
         state=await getState();
         if(state.encounterActive&&!state.bossEncounter){
           assert.ok(state.encounterHp<before,'F should damage the shade before the story Warden can appear');
@@ -285,13 +287,14 @@ try{
     guard=0;
     while((state=await getState()).quest===3){
       assert.ok(guard++<100,'Warden must be defeatable with the real attack path; hit budget exceeded');
+      await page.waitForFunction(()=>window.__ASHEN_TEST__.status().attackCooldown<=0.001,null,{timeout:5000});
+      state=await getState();
       const before=state.bossHp;
       assert.ok(before>0,'active Warden should have positive HP');
       const aligned=await page.evaluate(()=>window.__ASHEN_TEST__.alignCampaignAttack());
       assert.equal(aligned.ok,true,'attack staging must keep the real boss within range');
       await page.keyboard.press('f');
-      await page.waitForFunction(()=>window.__ASHEN_TEST__.status().attackCooldown<=0.04,null,{timeout:2500}).catch(()=>{});
-      await wait(80);
+      await wait(40);
       state=await getState();
       if(state.quest===3)assert.ok(state.bossHp<before,'F key attack should deal damage through the real combat handler; before='+before+', after='+state.bossHp);
     }
