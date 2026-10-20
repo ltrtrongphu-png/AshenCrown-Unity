@@ -2050,7 +2050,7 @@ function finishEncounter(){
     if(gearUnlocked&&Math.random()<.36)dropEquipment(false);
     else if(!bellWaiting)toastMsg('Shade defeated · Ashen Wisp Fragment + 25 Ashen');
   }
-  encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy(false,true)}saveState()
+  encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy(false,true);setQuest()}saveState()
 }
 function advanceChapter(){
   if(!canAdvanceChapter(state,activeMapId)){
@@ -3005,7 +3005,7 @@ function tick(dt){
     saveState();
     // A Warden gate suppresses ambient spawns; preserve the mandatory story
     // encounter after death so Chapter 1–10 cannot soft-lock on this transition.
-    if(retryChapterWarden)spawnEnemy(false,true);
+    if(retryChapterWarden){spawnEnemy(false,true);setQuest();}
   }
 
   $('playerHp').style.width=Math.max(0,Math.min(100,state.hp/state.maxHp*100))+'%';
@@ -3651,7 +3651,7 @@ function refreshOwnerDiagnostics() {
 }
 
 await bootstrapEncryptedSave();
-loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();setQuest();if(isChapterWardenReady(state))spawnEnemy(false,true);renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
+loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();if(isChapterWardenReady(state))spawnEnemy(false,true);setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
 if(state.tutorial!==false)$('tutorial').classList.add('show');
 time=DAY_LENGTH*.08;
 showChapterTitle((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.title)||'THE LAST EMBER','Explore · meet people · make choices · shape the world');
