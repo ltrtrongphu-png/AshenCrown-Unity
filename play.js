@@ -2657,7 +2657,22 @@ function region(){
   if(Math.abs(p.x)<42&&Math.abs(p.z)<38)return 'Sanctuary';
   return 'Outer Wilds';
 }
-function findNearby(){let best=null,d=3;for(const n of npcs){if(!n.root.visible)continue;const x=n.root.position.distanceTo(player.position);if(x<d){d=x;best={k:'npc',n}}}for(const n of nodes)if(n.mapId===activeMapId&&!n.collected){const x=n.root.position.distanceTo(player.position);if(x<d){d=x;best={k:'node',n}}}if(activeMapId==='sanctuary')for(const g of gates){const x=g.root.position.distanceTo(player.position);if(x<d)best={k:'gate',n:g}}if(encounter){const x=encounter.root.position.distanceTo(player.position);if(x<d)best={k:'enemy',n:encounter}}return best}
+function findNearby(){
+  let best=null,d=3;
+  const consider=(kind,entity)=>{
+    if(!entity?.root?.visible)return;
+    const distance=entity.root.position.distanceTo(player.position);
+    if(distance<d){d=distance;best={k:kind,n:entity};}
+  };
+  for(const n of npcs)consider('npc',n);
+  // Merchants and other visible hamlet villagers use the same interaction
+  // pipeline as story NPCs; skipping this list made the shop impossible to open.
+  if(activeMapId==='sanctuary')for(const villager of villagers)consider('npc',villager);
+  for(const n of nodes)if(n.mapId===activeMapId&&!n.collected)consider('node',n);
+  if(activeMapId==='sanctuary')for(const g of gates)consider('gate',g);
+  if(encounter)consider('enemy',encounter);
+  return best;
+}
 function nearby(){return nearbyTarget}
 function dialogue(n,text,opts){$('dialogue').classList.add('show');$('speakerName').textContent=n.name.toUpperCase();$('speakerRole').textContent=n.role.toUpperCase();$('dialogueText').textContent=text;const c=$('choices');c.innerHTML='';opts.forEach(o=>{const b=document.createElement('button');b.textContent=o.label;b.onclick=()=>{o.fn();$('dialogue').classList.remove('show')};c.appendChild(b)})}
 function anyOverlayOpen(){return state.paused||['dialogue','tutorial','inventoryMenu','worldMap','metaMenu','systemMenu'].some(id=>$(id)?.classList.contains('show'))||shopMenu?.classList.contains('show')}
