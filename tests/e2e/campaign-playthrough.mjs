@@ -221,6 +221,8 @@ try{
       assert.equal(state.echoes,state.requiredEchoes,'the final echo should be collected before resolving the blocker');
       assert.equal(state.encounterActive,true,'the ordinary shade should still be alive after the final echo');
       assert.equal(state.bossEncounter,false,'the Warden should wait while the ordinary shade is active');
+      assert.equal((await page.locator('#questCount').innerText()).trim(),'WARDEN WAITING',
+        'quest UI must not claim a Warden is present while a normal shade blocks the spawn');
       let blockerGuard=0;
       while((state=await getState()).encounterActive&&!state.bossEncounter){
         assert.ok(blockerGuard++<10,'ordinary shade should be defeatable with the actual attack path');
