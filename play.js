@@ -2731,7 +2731,9 @@ function interact(){
         state.flags.bellAwakened=true;
         const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];
         state.log.unshift('The final echo answered. '+(chapter?.wardenName||'The chapter warden')+' has been drawn out.');
-        spawnEnemy();
+        // Chapter 1 and Chapter 10 run in the Sanctuary safe area. A mandatory
+        // story Warden must bypass the ambient-enemy safety restriction.
+        spawnEnemy(false,true);
       }
     }else if(n.type==='record'){
       const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
