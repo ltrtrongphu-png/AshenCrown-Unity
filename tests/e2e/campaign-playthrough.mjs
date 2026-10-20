@@ -240,6 +240,8 @@ try{
       }
       state=await getState();
       assert.equal(state.bossEncounter,true,'the mandatory Warden should spawn after the competing shade is defeated');
+      assert.equal((await page.locator('#questCount').innerText()).trim(),'WARDEN PRESENT',
+        'quest UI must refresh when the Warden replaces the wandering shade');
     }
     await page.waitForFunction(()=>window.__ASHEN_TEST__.status().bossEncounter===true,null,{timeout:12000});
     state=await getState();
@@ -268,6 +270,8 @@ try{
       assert.equal(state.wardenDefeated,false,'Warden must resume when reloading mid-chapter');
       assert.equal(state.bossEncounter,true,'reload must restore the mandatory Warden encounter');
       assert.equal(state.bossVisualAttached,true,'resumed encounter must use the production boss model');
+      assert.equal((await page.locator('#questCount').innerText()).trim(),'WARDEN PRESENT',
+        'reloaded Warden must be reflected in the quest panel');
       const deathTriggered=await page.evaluate(()=>window.__ASHEN_TEST__.triggerPlayerDeath());
       assert.equal(deathTriggered,true,'test should trigger the same zero-HP recovery path as a real death');
       await page.waitForFunction(()=>{
@@ -278,6 +282,8 @@ try{
       state=await getState();
       assert.equal(state.bossEncounter,true,'dying during a Warden fight must not soft-lock the chapter');
       assert.equal(state.wardenDefeated,false,'respawning a Warden must not mark it defeated');
+      assert.equal((await page.locator('#questCount').innerText()).trim(),'WARDEN PRESENT',
+        'respawned Warden must be reflected in the quest panel');
     }
 
     const stagedCombat=await page.evaluate(()=>window.__ASHEN_TEST__.prepareCampaignBossFight());
