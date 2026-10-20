@@ -2049,7 +2049,7 @@ function finishEncounter(){
     if(gearUnlocked&&Math.random()<.36)dropEquipment(false);
     else if(!bellWaiting)toastMsg('Shade defeated · Ashen Wisp Fragment + 25 Ashen');
   }
-  encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy()}saveState()
+  encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy(false,true)}saveState()
 }
 function advanceChapter(){
   if(!canAdvanceChapter(state,activeMapId)){
