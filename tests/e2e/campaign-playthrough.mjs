@@ -54,6 +54,17 @@ async function capture(name){
   await page.screenshot({path,fullPage:false});
   screenshots.push(name);
 }
+async function waitForAttackReady(label){
+  await page.bringToFront();
+  await page.waitForFunction(({label})=>{
+    const s=window.__ASHEN_TEST__?.status?.();
+    return Boolean(s)&&s.documentHidden===false&&s.visibilityState==='visible'
+      &&s.simulationPaused===false&&s.openOverlays.length===0&&s.attackCooldown<=0.001;
+  },{label},{timeout:10000,polling:100}).catch(async error=>{
+    const s=await getState();
+    throw new Error(label+' · combat simulation did not resume: '+JSON.stringify(s)+' · '+String(error));
+  });
+}
 async function assertLayoutFitsViewport(label){
   const bounds=await page.locator('#game').evaluate(canvas=>({
     x:canvas.getBoundingClientRect().x,y:canvas.getBoundingClientRect().y,
@@ -128,6 +139,11 @@ try{
   await page.keyboard.press('Escape');
   await page.waitForFunction(()=>document.querySelector('#pause')?.classList.contains('show'));
   await page.locator('#resume').click();
+  await page.bringToFront();
+  const resumedRuntime=await getState();
+  assert.equal(resumedRuntime.simulationPaused,false,'resume must clear the simulation pause flag');
+  assert.equal(resumedRuntime.documentHidden,false,'the game page must be visible after resume');
+  assert.deepEqual(resumedRuntime.openOverlays,[],'all UI overlays must be closed before gameplay continues');
   await assertLayoutFitsViewport('desktop after UI interactions');
   await capture('play-ui-desktop.png');
 
@@ -152,7 +168,11 @@ try{
   assert.ok(mobileStateAfterParry.parryWindow>0,
     'touch PARRY button must open a parry window');
   await page.setViewportSize({width:1440,height:900});
+  await page.bringToFront();
   await wait(350);
+  const resumedAfterTouch=await getState();
+  assert.equal(resumedAfterTouch.simulationPaused,false,'mobile control test must not leave the game paused');
+  assert.equal(resumedAfterTouch.documentHidden,false,'gameplay page must remain visible after mobile viewport test');
 
   let state=await getState();
   assert.equal(state.chapter,1,'new local session should start in Chapter 1');
@@ -226,7 +246,7 @@ try{
       let blockerGuard=0;
       while((state=await getState()).encounterActive&&!state.bossEncounter){
         assert.ok(blockerGuard++<10,'ordinary shade should be defeatable with the actual attack path');
-        await page.waitForFunction(()=>window.__ASHEN_TEST__.status().attackCooldown<=0.001,null,{timeout:5000});
+        await waitForAttackReady('wandering-shade attack '+(blockerGuard+1));
         state=await getState();
         const before=state.encounterHp;
         const aligned=await page.evaluate(()=>window.__ASHEN_TEST__.alignAnyEncounterAttack());
@@ -295,7 +315,7 @@ try{
     guard=0;
     while((state=await getState()).quest===3){
       assert.ok(guard++<100,'Warden must be defeatable with the real attack path; hit budget exceeded');
-      await page.waitForFunction(()=>window.__ASHEN_TEST__.status().attackCooldown<=0.001,null,{timeout:5000});
+      await waitForAttackReady('chapter '+chapter+' Warden attack '+(guard+1));
       state=await getState();
       const before=state.bossHp;
       assert.ok(before>0,'active Warden should have positive HP');
