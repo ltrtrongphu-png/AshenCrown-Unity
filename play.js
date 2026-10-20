@@ -3456,7 +3456,12 @@ if(isLocalE2ESession) {
       npcProductionModelCount:npcs.filter(n=>n.productionVisual?.parent===n.root).length,
       villagerProductionModelCount:villagers.filter(n=>n.productionVisual?.parent===n.root).length,
       bossEncounter:Boolean(encounter?.isBoss),bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
-      chapter:state.chapter,quest:state.quest,map:activeMapId,hp:state.hp,maxHp:state.maxHp,chapterGathered:state.chapterGathered,
+      chapter:state.chapter,quest:state.quest,map:activeMapId,hp:state.hp,maxHp:state.maxHp,
+      simulationPaused:Boolean(state.paused),documentHidden:Boolean(document.hidden),
+      visibilityState:document.visibilityState,gameTime:Number(time.toFixed(2)),
+      openOverlays:['dialogue','tutorial','inventoryMenu','worldMap','metaMenu','systemMenu','pause','journal','shopMenu']
+        .filter(id=>document.getElementById(id)?.classList.contains('show')),
+      chapterGathered:state.chapterGathered,
       requiredEmbers:getChapterRequirements(state.chapter).embers,echoes:state.echoes,
       requiredEchoes:getChapterRequirements(state.chapter).echoes,
       recordFound:hasChapterRecord(state.flags,state.chapter),wardenDefeated:Boolean(state.flags.bellWardenDefeated),
