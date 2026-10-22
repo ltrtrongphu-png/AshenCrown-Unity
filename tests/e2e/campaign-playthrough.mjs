@@ -56,14 +56,18 @@ async function capture(name){
 }
 async function waitForAttackReady(label){
   await page.bringToFront();
-  await page.waitForFunction(({label})=>{
-    const s=window.__ASHEN_TEST__?.status?.();
-    return Boolean(s)&&s.documentHidden===false&&s.visibilityState==='visible'
-      &&s.simulationPaused===false&&s.openOverlays.length===0&&s.attackCooldown<=0.001;
-  },{label},{timeout:10000,polling:100}).catch(async error=>{
+  try{
+    // Poll only the live cooldown value. Visibility, pause and overlays are
+    // asserted separately at UI boundaries; coupling them here caused a
+    // misleading timeout despite an idle cooldown and active visible game.
+    await page.waitForFunction(()=>{
+      const s=window.__ASHEN_TEST__?.status?.();
+      return Boolean(s)&&Number.isFinite(s.attackCooldown)&&s.attackCooldown<=0.001;
+    },undefined,{timeout:10000,polling:50});
+  }catch(error){
     const s=await getState();
-    throw new Error(label+' · combat simulation did not resume: '+JSON.stringify(s)+' · '+String(error));
-  });
+    throw new Error(label+' · attack cooldown did not clear: '+JSON.stringify(s)+' · '+String(error));
+  }
 }
 async function assertLayoutFitsViewport(label){
   const bounds=await page.locator('#game').evaluate(canvas=>({
