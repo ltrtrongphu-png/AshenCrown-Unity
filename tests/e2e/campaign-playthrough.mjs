@@ -296,6 +296,11 @@ try{
         const diagnostic=await getState();
         throw new Error('Restored Warden never attached its production GLB: '+JSON.stringify(diagnostic)+' · '+String(error));
       });
+      // Reload resets runtime-only QA toggles. Re-apply deterministic spawning
+      // before leaving Chapter 1 so ordinary ambient shades cannot block a later
+      // chapter's mandatory Warden during this ten-chapter regression.
+      assert.equal(await page.evaluate(()=>window.__ASHEN_TEST__.suppressAmbientSpawns()),true,
+        'ambient-spawn suppression must be restored after the mid-chapter reload');
       state=await getState();
       assert.equal(state.wardenDefeated,false,'Warden must resume when reloading mid-chapter');
       assert.equal(state.bossEncounter,true,'reload must restore the mandatory Warden encounter');
