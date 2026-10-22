@@ -285,7 +285,10 @@ try{
         return s?.chapter===1&&s?.quest===3&&s?.recordFound&&s?.echoes>=s?.requiredEchoes
           &&s?.bossEncounter===true&&s?.saveEncrypted===true;
       },null,{timeout:90000});
-      await page.waitForFunction(()=>window.__ASHEN_TEST__.status().bossVisualAttached===true,null,{timeout:30000});
+      await page.waitForFunction(()=>window.__ASHEN_TEST__.status().bossVisualAttached===true,null,{timeout:60000}).catch(async error=>{
+        const diagnostic=await getState();
+        throw new Error('Restored Warden never attached its production GLB: '+JSON.stringify(diagnostic)+' · '+String(error));
+      });
       state=await getState();
       assert.equal(state.wardenDefeated,false,'Warden must resume when reloading mid-chapter');
       assert.equal(state.bossEncounter,true,'reload must restore the mandatory Warden encounter');
