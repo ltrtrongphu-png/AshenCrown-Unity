@@ -1879,6 +1879,25 @@ let encounterHudAccumulator=0;
 let shadowRefreshAccumulator=0;
 let adaptiveDpr=1;
 let currentFps=60;
+async function ensureBossModelForEncounter(){
+  if(productionBossScene)return true;
+
+  // A restored campaign can spawn the Warden before the resource-pack loader
+  // has populated productionBossBuffer. Earlier code called the lazy parser once,
+  // received false and never retried, leaving a procedural Warden forever.
+  if(!productionGltfLoader||!productionBossBuffer)await loadCachedResourcePack();
+
+  // If a download was already in progress, wait for the shared install operation
+  // instead of treating its early-return guard as a completed load.
+  for(let attempt=0;resourcePackLoading&&attempt<600;attempt++){
+    await new Promise(resolve=>setTimeout(resolve,100));
+  }
+
+  if(!productionGltfLoader||!productionBossBuffer)return false;
+  if(!productionBossScene)await ensureProductionBossLoaded();
+  return Boolean(productionBossScene);
+}
+
 function attachProductionBoss(enemy){
   if(!enemy?.isBoss||!enemy.root||!productionBossScene)return false;
   if(productionBossScene.parent===enemy.root)return true;
@@ -1950,7 +1969,9 @@ function spawnEnemy(testOnly=false,forceStoryBoss=false){
   enemies=[encounter];
   if(isBoss){
     if(productionBossScene)attachProductionBoss(encounter);
-    else void ensureProductionBossLoaded().then(()=>{if(encounter?.isBoss)attachProductionBoss(encounter)}).catch(error=>console.warn('[Ashen Crown] Boss model stays on fallback:',error));
+    else void ensureBossModelForEncounter().then(loaded=>{
+      if(loaded&&encounter?.isBoss)attachProductionBoss(encounter);
+    }).catch(error=>console.warn('[Ashen Crown] Boss model stays on fallback:',error));
   }
   setEncounterHud(encounter);
   toastMsg(testOnly?'OWNER QA · Warden trial started; defeat grants no campaign rewards.':isBoss?((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.wardenName||'The Chapter Warden')+' has answered the evidence.'): 'A wandering shade has entered the wilds.');
@@ -3451,6 +3472,8 @@ if(isLocalE2ESession) {
     status:()=>({
       gameReady:gameRenderReady,playerModelLoaded:Boolean(productionPlayerScene),
       bossModelLoaded:Boolean(productionBossScene),bossVisualAttached:Boolean(encounter?.isBoss&&productionBossScene?.parent===encounter.root),
+      bossBufferLoaded:Boolean(productionBossBuffer),productionLoaderReady:Boolean(productionGltfLoader),
+      resourcePackLoading:Boolean(resourcePackLoading),
       npcRosterLoaded:productionNpcModelPrototypes.size>=50,
       npcRosterModelCount:productionNpcModelPrototypes.size,
       npcProductionModelCount:npcs.filter(n=>n.productionVisual?.parent===n.root).length,
