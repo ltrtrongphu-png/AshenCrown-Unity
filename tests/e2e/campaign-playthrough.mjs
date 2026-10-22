@@ -56,18 +56,21 @@ async function capture(name){
 }
 async function waitForAttackReady(label){
   await page.bringToFront();
-  try{
-    // Poll only the live cooldown value. Visibility, pause and overlays are
-    // asserted separately at UI boundaries; coupling them here caused a
-    // misleading timeout despite an idle cooldown and active visible game.
-    await page.waitForFunction(()=>{
-      const s=window.__ASHEN_TEST__?.status?.();
-      return Boolean(s)&&Number.isFinite(s.attackCooldown)&&s.attackCooldown<=0.001;
-    },undefined,{timeout:10000,polling:50});
-  }catch(error){
-    const s=await getState();
-    throw new Error(label+' · attack cooldown did not clear: '+JSON.stringify(s)+' · '+String(error));
+  // Poll from Node instead of page.waitForFunction: Chromium's RAF/polling
+  // loop intermittently timed out although an immediate evaluate reported the
+  // same live cooldown as zero. Each actual attack still has a strict damage
+  // assertion, so the real combat handler cannot be skipped.
+  let state=null;
+  for(let attempt=0;attempt<30;attempt++){
+    state=await getState();
+    if(state&&state.attackCooldown<=0.001){
+      assert.equal(state.simulationPaused,false,label+': simulation is paused');
+      assert.equal(state.documentHidden,false,label+': game tab is hidden');
+      return state;
+    }
+    await wait(100);
   }
+  throw new Error(label+' · attack cooldown did not clear: '+JSON.stringify(state));
 }
 async function assertLayoutFitsViewport(label){
   const bounds=await page.locator('#game').evaluate(canvas=>({
