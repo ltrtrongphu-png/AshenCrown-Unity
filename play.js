@@ -1918,10 +1918,10 @@ function attachProductionBoss(enemy){
   return true;
 }
 
-function spawnEnemy(testOnly=false,forceStoryBoss=false){
+function spawnEnemy(testOnly=false,forceStoryBoss=false,ignoreSanctuarySafety=false){
   if(enemies.length)return;
   if(forceStoryBoss&&!isChapterWardenReady(state))return;
-  if(!testOnly&&!forceStoryBoss&&activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
+  if(!testOnly&&!forceStoryBoss&&!ignoreSanctuarySafety&&activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
   const isBoss=Boolean(testOnly)||isChapterWardenReady(state);
   const angle=Math.random()*Math.PI*2;
   const radius=isBoss?10+Math.random()*3:12+Math.random()*15;
@@ -3526,7 +3526,7 @@ if(isLocalE2ESession) {
     startAmbientStoryBlocker:()=>{
       if(state.quest!==3||state.echoes>=getChapterRequirements(state.chapter).echoes||encounter)return {ok:false,reason:'story-blocker-not-eligible'};
       ownerGodMode=true;state.hp=state.maxHp;state.stamina=100;
-      spawnEnemy();
+      spawnEnemy(false,false,true);
       if(!encounter||encounter.isBoss)return {ok:false,reason:'ambient-shade-not-spawned'};
       encounter.root.position.set(player.position.x,0,player.position.z-2.5);
       encounter.root.updateMatrixWorld(true);
