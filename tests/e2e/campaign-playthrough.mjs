@@ -355,6 +355,10 @@ try{
     entry.completed=true;
     if(chapter<10){
       assert.equal(state.map,'sanctuary','chapters 1–9 should return home after their choice');
+      assert.match(await page.locator('#objective').innerText(),/Speak with Lyra.*Begin Chapter/i,
+        'completed chapter should show the next action instead of telling the player to return to Sanctuary');
+      assert.match(await page.locator('#questSteps').innerText(),/choice recorded/i,
+        'completed chapter checklist should mark the chapter choice as recorded');
       await capture('chapter-'+String(chapter).padStart(2,'0')+'-complete.png');
       if(chapter===1){
         // A living merchant must be targetable, open the real shop, sell gear,
@@ -408,6 +412,14 @@ try{
       assert.equal(state.quest,5);
       assert.equal(state.chaptersComplete,10,'finale should mark all ten chapters completed');
       assert.equal(state.legacyHome,true,'final home choice should persist');
+      assert.match(await page.locator('#objective').innerText(),/Journey complete/i,
+        'the final objective must report that the journey is complete');
+      assert.match(await page.locator('#questCount').innerText(),/10 \/ 10 COMPLETE/i,
+        'the final chapter status must report ten of ten completed');
+      assert.match(await page.locator('#questTarget').innerText(),/JOURNEY COMPLETE/i,
+        'the final target line must not point back to Lyra after completion');
+      assert.match(await page.locator('#questSteps').innerText(),/All 10 chapters completed/i,
+        'the final checklist should show the completed campaign');
       entry.completed=true;
       if(await page.locator('#systemMenu').evaluate(el=>el.classList.contains('show')))await page.locator('#systemClose').click();
       await capture('chapter-10-legacy-complete.png');
