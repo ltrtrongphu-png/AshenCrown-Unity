@@ -11,7 +11,8 @@ jobs:
   gameplay-smoke:
     name: Render game and capture real browser screenshots
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The full campaign intentionally plays ten boss encounters and persists a finale save.
+    timeout-minutes: 35
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -39,6 +40,10 @@ jobs:
           exit 1
       - name: Run browser gameplay smoke and capture screenshots
         run: node tests/e2e/game-smoke.mjs
+        env:
+          ASHEN_SMOKE_URL: http://127.0.0.1:4173
+      - name: Play through all 10 chapters and regress gameplay UI
+        run: node tests/e2e/campaign-playthrough.mjs
         env:
           ASHEN_SMOKE_URL: http://127.0.0.1:4173
       - name: Upload real gameplay screenshots and diagnostics
