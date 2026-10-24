@@ -352,6 +352,7 @@ try{
     entry.choices.push({stage:'ending',label:choice});
     state=await getState();
     assert.equal(state.quest,5,'ending choice should mark the chapter complete');
+    entry.completed=true;
     if(chapter<10){
       assert.equal(state.map,'sanctuary','chapters 1–9 should return home after their choice');
       await capture('chapter-'+String(chapter).padStart(2,'0')+'-complete.png');
@@ -425,7 +426,18 @@ try{
     const s=window.__ASHEN_TEST__?.status?.();
     return s?.chapter===10&&s?.quest===5&&s?.chaptersComplete===10&&s?.legacyHome===true&&s?.saveEncrypted===true;
   },null,{timeout:90000});
+  // A save-state check alone can pass before GLB downloads finish. Wait for the
+  // production models too, then record a screenshot of the fully restored game.
+  await page.waitForFunction(()=>{
+    const s=window.__ASHEN_TEST__?.status?.();
+    return s?.playerModelLoaded===true&&s?.npcRosterLoaded===true
+      &&s?.npcProductionModelCount===3&&s?.villagerProductionModelCount===10;
+  },null,{timeout:90000});
   finalState=await getState();
+  assert.equal(finalState.playerModelLoaded,true,'player production GLB must reload with the save');
+  assert.equal(finalState.npcRosterLoaded,true,'NPC roster must reload with the save');
+  assert.equal(finalState.npcProductionModelCount,3,'all story NPC production clones should return after reload');
+  assert.equal(finalState.villagerProductionModelCount,10,'all villager production clones should return after reload');
   await capture('ten-chapter-finale-after-reload.png');
 
   assert.equal(finalState.chapter,10);
@@ -447,7 +459,7 @@ try{
 }finally{
   finalState ||= await getState().catch(()=>null);
   await writeFile(artifactDir+'/campaign-diagnostics.json',JSON.stringify({
-    baseUrl,completedChapters:chapterLog.filter(x=>x.completed||x.chapter<10&&x.objectives.length>0&&x.choices.some(c=>c.stage==='ending')).length,
+    baseUrl,completedChapters:chapterLog.filter(x=>x.completed).length,
     chapterLog,finalState,failure,pageErrors,consoleErrors,failedRequests,screenshots
   },null,2));
   await browser.close();
