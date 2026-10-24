@@ -2521,6 +2521,7 @@ function getQuestTarget(){
   if(state.quest===3&&encounter)return {kind:'enemy',label:encounter.isBoss?(chapter?.wardenName||'Chapter Warden'):'Wandering Shade',entity:encounter};
   if(state.quest===4)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   if(state.quest>=5){
+    if(state.chapter===10&&state.flags.legacyHome)return null;
     if(activeMapId!=='sanctuary')return {kind:'home',label:'Sanctuary',position:new THREE.Vector3(0,0,7)};
     return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   }
@@ -2567,9 +2568,18 @@ function getQuestSteps(){
     ['Hear what the recovered record means for the people involved.',false],
     ['Choose the consequence you are willing to carry.',false]
   ];
+  if(q>=5&&state.chapter===10&&state.flags.legacyHome)return [
+    ['All 10 chapters completed.',true],
+    ['Your legacy is founded at the Sanctuary.',true],
+    ['Encrypted local progress is saved.',true]
+  ];
   if(activeMapId!=='sanctuary')return [
     ['Return to the Sanctuary.',false],
     ['Speak with Lyra to close this chapter before the next road opens.',false]
+  ];
+  if(q>=5)return [
+    ['Chapter '+String(state.chapter).padStart(2,'0')+' choice recorded.',true],
+    [state.chapter<10?'Speak with Lyra to begin Chapter '+String(state.chapter+1).padStart(2,'0')+'.':'Speak with Lyra to found your new home.',false]
   ];
   return [
     ['Speak with Lyra at the Sanctuary.',false],
@@ -2593,7 +2603,9 @@ function updateQuestGuide(force=false){
   }
   currentQuestTarget=getQuestTarget();
   if(!currentQuestTarget){
-    targetLine.textContent='TARGET · No active target';
+    targetLine.textContent=state.chapter===10&&state.quest>=5&&state.flags.legacyHome
+      ?'JOURNEY COMPLETE · 10 / 10 CHAPTERS'
+      :'TARGET · No active target';
     questWaypoint.visible=false;
     return;
   }
@@ -2658,11 +2670,20 @@ function setQuest(){
     desc.textContent=(chapter.summary||'The truth has surfaced.')+' Return to Lyra and choose: '+String(chapter.choice||'choose what to preserve').replace(' / ',' or ')+'.';
     obj.textContent='◈ Return to Lyra';
     count.textContent='CONSEQUENCE';
+  }else if(state.chapter===10&&state.flags.legacyHome){
+    title.textContent=(chapter?.title||'The New Dawn')+' · Legacy Founded';
+    desc.textContent='You founded a lasting home at the Sanctuary. All ten chapters are complete, and your encrypted local progress is saved.';
+    obj.textContent='◈ Legacy established · Journey complete';
+    count.textContent='10 / 10 COMPLETE';
   }else{
     title.textContent=chapter?.title||'The Hearthbound Vow';
-    desc.textContent=state.chapter===10?'All ten roads return to the Sanctuary. Review the names you restored and decide what the next generation inherits.':state.chapter>1?'The choice in '+chapter.title+' is recorded. Return to the Sanctuary and speak with Lyra before opening another road.':state.flags.sanctuaryOpen?'The lost village has a name again. Its people can begin to return.':'One name remains to guard the last refuge; the others are free.';
-    obj.textContent=state.chapter===10?'◈ Return to Lyra · Found your home':'◈ Chapter '+String(state.chapter).padStart(2,'0')+' complete · Return to Sanctuary';
-    count.textContent='COMPLETE';
+    desc.textContent=state.chapter===10
+      ?'All ten roads return to the Sanctuary. Speak with Lyra to decide what the next generation inherits.'
+      :'The choice in '+chapter.title+' is recorded. Speak with Lyra to prepare the next expedition.';
+    obj.textContent=state.chapter===10
+      ?'◈ Return to Lyra · Found your home'
+      :'◈ Speak with Lyra · Begin Chapter '+String(state.chapter+1).padStart(2,'0');
+    count.textContent=state.chapter===10?'FINALE READY':'CHAPTER COMPLETE';
   }
   $('regionLabel').textContent=region().toUpperCase();
   updateQuestGuide(true);
