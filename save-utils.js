@@ -101,13 +101,9 @@ export function serializeSaveForComparison(save) {
  */
 export function cloudSaveDecision(local, remote, remoteUpdatedAt = '') {
   const localValid = Boolean(local && typeof local === 'object' && !Array.isArray(local));
-  const remoteValid = Boolean(
-    remote &&
-    typeof remote === 'object' &&
-    !Array.isArray(remote) &&
-    Number.isFinite(Number(remote.level)) &&
-    Number(remote.level) >= 1
-  );
+  // Cloud restore is a trust boundary: only import the documented v5
+  // contract. A different/partial payload must never replace a valid local save.
+  const remoteValid = isValidSaveV5(remote);
   if (!remoteValid) return { action: 'invalid-cloud', localStamp: Number(local?.savedAt) || 0, remoteStamp: 0 };
   if (!localValid) return { action: 'use-cloud', localStamp: 0, remoteStamp: Number(remote.savedAt) || Date.parse(remoteUpdatedAt) || 0 };
   const localStamp = Number(local.savedAt) || 0;
@@ -124,7 +120,7 @@ export function cloudSaveDecision(local, remote, remoteUpdatedAt = '') {
  * Back up raw local-save bytes before a cloud conflict may replace them.
  * Keeps a small rolling set to avoid unbounded localStorage growth.
  */
-export function backupLocalSave(storage, rawSave, timestamp = Date.now(), keep = 3) {
+export function backupLocalSave(storage, rawSave, timestamp = Date.now(), keep = 3, prefix = 'ashen-crown-3d.backup.') {
   if (!storage || typeof storage.setItem !== 'function' || typeof storage.getItem !== 'function') {
     throw new TypeError('A writable storage object is required.');
   }
@@ -132,7 +128,7 @@ export function backupLocalSave(storage, rawSave, timestamp = Date.now(), keep =
     throw new TypeError('A non-empty local save is required for backup.');
   }
 
-  const prefix = 'ashen-crown-3d.backup.';
+  if (typeof prefix !== 'string' || prefix.length === 0) throw new TypeError('A non-empty backup prefix is required.');
   const stamp = Number.isFinite(Number(timestamp)) ? Math.max(0, Math.floor(Number(timestamp))) : Date.now();
   let key = prefix + stamp;
   let suffix = 1;

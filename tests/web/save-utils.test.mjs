@@ -105,6 +105,8 @@ test('cloud save conflict never silently selects a newer cloud save over local p
   assert.equal(cloudSaveDecision(local, olderCloud).action, 'ask-local');
   assert.equal(cloudSaveDecision(null, newerCloud).action, 'use-cloud');
   assert.equal(cloudSaveDecision(local, { level: 'invalid' }).action, 'invalid-cloud');
+  assert.equal(cloudSaveDecision(local, { saveVersion: 4, level: 12 }).action, 'invalid-cloud');
+  assert.equal(cloudSaveDecision(local, { saveVersion: 5, level: 1.5 }).action, 'invalid-cloud');
 });
 
 
@@ -131,23 +133,23 @@ test('local save backups verify raw bytes and rotate old conflict copies', async
 
 test('equal save timestamps with different progress still require a user decision', async () => {
   const { cloudSaveDecision } = await import('../../save-utils.js');
-  const local = { level: 5, savedAt: 100, coins: 100 };
-  const remote = { level: 3, savedAt: 100, coins: 20 };
+  const local = { saveVersion: 5, level: 5, savedAt: 100, coins: 100 };
+  const remote = { saveVersion: 5, level: 3, savedAt: 100, coins: 20 };
   assert.equal(cloudSaveDecision(local, remote).action, 'ask-local');
 });
 
 test('save comparison is insensitive to object key order across JSONB round trips', async () => {
   const { serializeSaveForComparison } = await import('../../save-utils.js');
-  const local = { savedAt: 200, level: 4, settings: { volume: 0.5, quality: 'high' }, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] };
-  const cloud = { inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], settings: { quality: 'high', volume: 0.5 }, level: 4, savedAt: 900 };
+  const local = { saveVersion: 5, savedAt: 200, level: 4, settings: { volume: 0.5, quality: 'high' }, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] };
+  const cloud = { saveVersion: 5, inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], settings: { quality: 'high', volume: 0.5 }, level: 4, savedAt: 900 };
   assert.equal(serializeSaveForComparison(local), serializeSaveForComparison(cloud));
 });
 
 test('equivalent local and cloud payloads do not prompt solely because timestamps differ', async () => {
   const { cloudSaveDecision } = await import('../../save-utils.js');
   assert.equal(cloudSaveDecision(
-    { savedAt: 100, level: 4, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] },
-    { savedAt: 300, inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], level: 4 }
+    { saveVersion: 5, savedAt: 100, level: 4, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] },
+    { saveVersion: 5, savedAt: 300, inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], level: 4 }
   ).action, 'keep-local');
 });
 
@@ -327,4 +329,28 @@ test('orphaned plaintext v5 backup restores the save only after encryption succe
   assert.equal(storage.getItem('ashen-crown-3d.backup.100'), null);
   assert.equal(storage.getItem('ashen-crown-3d.backup.200'), null);
   assert.equal(storage.getItem('unrelated-preference'), 'dark');
+});
+
+
+test('cloud conflict ciphertext backups do not trigger legacy-save recovery mode', async () => {
+  const { webcrypto } = await import('node:crypto');
+  const { encryptSavePayload, readEncryptedLocalSave, backupLocalSave } = await import('../../save-utils.js');
+  const values = new Map();
+  const storage = {
+    get length() { return values.size; },
+    key(index) { return [...values.keys()][index] ?? null; },
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(String(key), String(value)); },
+    removeItem(key) { values.delete(key); }
+  };
+  const key = await webcrypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const save = { saveVersion: 5, level: 6, chapter: 2, inventory: [], flags: {}, savedAt: 200 };
+  const envelope = await encryptSavePayload(save, key, webcrypto);
+  storage.setItem('ashen-crown-3d', envelope);
+  backupLocalSave(storage, envelope, 300, 3, 'ashen-crown-3d.cloud-conflict.backup.');
+
+  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
+  assert.deepEqual(result.value, save);
+  assert.equal(result.needsRecovery, undefined);
+  assert.equal(storage.getItem('ashen-crown-3d.cloud-conflict.backup.300'), envelope);
 });

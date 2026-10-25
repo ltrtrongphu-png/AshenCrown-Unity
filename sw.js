@@ -19,6 +19,7 @@ const APP_FILES = [
   './play-boot.js?v=__ASHEN_BUILD_ID__',
   './auth-config.js?v=__ASHEN_BUILD_ID__',
   './auth.js?v=__ASHEN_BUILD_ID__',
+  './cloud-save-queue.js',
   './i18n.js?v=__ASHEN_BUILD_ID__',
   './model3d.js?v=__ASHEN_BUILD_ID__',
   './model3d.css',

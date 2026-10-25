@@ -36,7 +36,7 @@ The repository has a `server/` directory with a package script but no `src/index
 ### Not yet verified
 
 - Whether migration 002 applies cleanly to the real Supabase project and its existing tables/policies.
-- Two-user RLS isolation, signup/email confirmation, sign-in/out, password reset, save, restore on a clean profile, simultaneous sessions, and cloud-save conflict behavior.
+- Live two-user RLS isolation, signup/email confirmation, sign-in/out, password reset, save and restore on clean profiles, and simultaneous-session behavior. The client-side cloud-save conflict decisions, account-bound queue/retry policy, and local conflict-backup namespace have automated unit coverage; that does not substitute for a real two-user staging test.
 - Unity Editor compilation, generated sandbox scene behavior, PlayMode/EditMode tests, or persistent secure token storage.
 - Full `innerHTML` sink audit, XSS regression test, and browser performance/memory soak.
 - Production HTTP headers and real deployment network trace.
@@ -65,3 +65,12 @@ The repository has a `server/` directory with a package script but no `src/index
 - The rollout deliberately deletes plaintext v5 local saves and their rolling backups rather than carrying old cleartext forward. Failed authentication/decryption of an existing envelope also clears that envelope and its local backups. There is no plaintext fallback when Web Crypto or IndexedDB is unavailable.
 - This protects casual inspection of localStorage, not against same-origin script compromise or a player controlling their own browser: code running in the same origin may request the IndexedDB key and decrypt the save. Encryption is not server-side anti-cheat.
 - Optional signed-in cloud backup still sends the in-memory save object to the existing Supabase table; this patch encrypts the browser's localStorage representation, not the Supabase JSONB payload. The current version remains client-trusted.
+
+
+## Sprint 3 — cloud-save reliability
+
+- The browser cloud-write queue binds each queued snapshot to the authenticated user ID, keeps the newest pending same-account snapshot, and retries failed writes with bounded exponential backoff. A stale queued snapshot is not moved to another account after an account switch.
+- Cloud-save status events distinguish pending, syncing, saved, retrying, rejected, signed-out and idle states; the game UI no longer presents a cloud write failure as a successful cloud sync.
+- Cloud restore only accepts the documented v5 save contract. Account identity is checked before applying a remote restore, and the original primary/encrypted-backup bytes are restored if identity changes during the write where storage permits.
+- Cloud-conflict backups use `ashen-crown-3d.cloud-conflict.backup.*`, outside the legacy migration scanner's namespace. This prevents encrypted conflict snapshots from being mistaken for unknown legacy plaintext backups at startup.
+- Unit tests cover queue account isolation, retry behavior, newest-save precedence, v5 validation, and conflict-backup namespace behavior. Live Supabase RLS/account tests remain unverified: they must run in a staging project with two controlled accounts.
