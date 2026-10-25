@@ -1,3 +1,5 @@
+import { CloudSaveQueue } from './cloud-save-queue.js';
+
 const AUTH_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const AUTH_CONFIG = window.ASHEN_SUPABASE_CONFIG || {};
 let supabase = null;
@@ -7,10 +9,11 @@ let modal = null;
 let accountButton = null;
 let mode = 'signin';
 let recoveryMode = false;
-let queuedSave = null;
 let cloudTimer = null;
 let lastCloudWrite = 0;
 let cloudWriteInFlight = false;
+let cloudRetryDelay = 5000;
+const cloudSaveQueue = new CloudSaveQueue();
 
 const authReady = (async () => {
   const url = String(AUTH_CONFIG.url || '').trim();
@@ -35,13 +38,22 @@ const authReady = (async () => {
     currentSession = data.session || null;
     supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') { recoveryMode = true; mode = 'recover'; if (modal) modal.hidden = false; }
+      const previousUserId = currentSession?.user?.id || null;
       currentSession = session || null;
+      const nextUserId = currentSession?.user?.id || null;
+      if (previousUserId !== nextUserId) {
+        cloudSaveQueue.clearForUser(nextUserId);
+        if (cloudTimer) { clearTimeout(cloudTimer); cloudTimer = null; }
+        lastCloudWrite = 0;
+        cloudRetryDelay = 5000;
+        emitCloudSaveStatus(nextUserId ? 'idle' : 'signed-out');
+      }
       updateAccountButton();
       renderAuthModal();
       window.dispatchEvent(new CustomEvent('ashen:auth', {
         detail: { event, session: currentSession, user: currentSession?.user || null }
       }));
-      if (currentSession?.user && queuedSave) scheduleCloudFlush();
+      if (currentSession?.user && cloudSaveQueue.hasPending) scheduleCloudFlush();
     });
     updateAccountButton();
     return supabase;
@@ -224,11 +236,20 @@ async function loadCloudSave() {
   if (error) throw error;
   return data || null;
 }
-async function writeCloudSave(save) {
+function emitCloudSaveStatus(status, message = '') {
+  window.dispatchEvent(new CustomEvent('ashen:cloud-save', {
+    detail: { status, message }
+  }));
+}
+
+async function writeCloudSave(save, expectedUserId = null) {
   const user = await requireUser();
+  if (expectedUserId && user.id !== expectedUserId) {
+    throw new Error('The signed-in account changed before the cloud save began.');
+  }
   const encoded = JSON.stringify(save);
   // Stay comfortably below the server-side JSONB size constraint in migration 002.
-  if (new TextEncoder().encode(encoded).length > 180000) throw new Error('Save is too large to sync.');
+  if (new TextEncoder().encode(encoded).byteLength > 180000) throw new Error('Save is too large to sync.');
   const { error } = await supabase.from('player_web_saves').upsert({
     user_id: user.id,
     save_json: JSON.parse(encoded),
@@ -237,39 +258,80 @@ async function writeCloudSave(save) {
   }, { onConflict: 'user_id' });
   if (error) throw error;
 }
+
 async function flushCloudSave() {
-  if (cloudWriteInFlight || !queuedSave || !currentSession?.user) return;
-  const snapshot = queuedSave;
-  queuedSave = null;
+  if (cloudWriteInFlight) return;
+  const userId = currentSession?.user?.id || null;
+  if (!userId) {
+    cloudSaveQueue.clear();
+    return;
+  }
+  const snapshot = cloudSaveQueue.take(userId);
+  if (!snapshot) return;
+
   cloudWriteInFlight = true;
+  let retryDelay = null;
   try {
-    await writeCloudSave(snapshot);
+    emitCloudSaveStatus('syncing');
+    await writeCloudSave(snapshot.save, snapshot.userId);
+    // A successful response for an account that is no longer active must not
+    // update the visible status for the newly signed-in account.
+    if ((currentSession?.user?.id || null) !== snapshot.userId) return;
     lastCloudWrite = Date.now();
+    cloudRetryDelay = 5000;
+    emitCloudSaveStatus(cloudSaveQueue.hasPending ? 'pending' : 'saved');
   } catch (error) {
+    const activeUserId = currentSession?.user?.id || null;
+    if (activeUserId === snapshot.userId && cloudSaveQueue.retry(snapshot, activeUserId)) {
+      retryDelay = cloudRetryDelay;
+      cloudRetryDelay = Math.min(cloudRetryDelay * 2, 300000);
+      emitCloudSaveStatus('retrying', 'Cloud backup failed; retrying automatically.');
+    }
     console.warn('[Ashen Crown] Cloud save failed:', error?.message || error);
   } finally {
     cloudWriteInFlight = false;
-    if (queuedSave) scheduleCloudFlush();
+    if (cloudSaveQueue.hasPending) scheduleCloudFlush(retryDelay);
   }
 }
-function scheduleCloudFlush() {
-  if (cloudTimer || !currentSession?.user || !queuedSave) return;
-  const wait = Math.max(1500, 30000 - (Date.now() - lastCloudWrite));
-  cloudTimer = setTimeout(() => { cloudTimer = null; void flushCloudSave(); }, wait);
+
+function scheduleCloudFlush(delayOverride = null) {
+  if (cloudTimer || !currentSession?.user || !cloudSaveQueue.hasPending) return;
+  const wait = Number.isFinite(delayOverride)
+    ? Math.max(1000, delayOverride)
+    : Math.max(1500, 30000 - (Date.now() - lastCloudWrite));
+  cloudTimer = setTimeout(() => {
+    cloudTimer = null;
+    void flushCloudSave();
+  }, wait);
 }
-function queueSave(save) {
-  if (!currentSession?.user || !save || typeof save !== 'object') return;
+
+function queueSave(save, expectedUserId = null) {
+  const activeUserId = currentSession?.user?.id || null;
+  if (!activeUserId || (expectedUserId && expectedUserId !== activeUserId)) return false;
+  if (!save || typeof save !== 'object' || Array.isArray(save)) return false;
+
+  let encoded;
   try {
-    const encoded = JSON.stringify(save);
-    if (encoded.length > 900000) return;
-    queuedSave = JSON.parse(encoded);
-    scheduleCloudFlush();
-  } catch {}
+    encoded = JSON.stringify(save);
+  } catch {
+    emitCloudSaveStatus('rejected', 'Cloud backup skipped because this save is invalid.');
+    return false;
+  }
+  if (!encoded || new TextEncoder().encode(encoded).byteLength > 180000) {
+    emitCloudSaveStatus('rejected', 'Cloud backup skipped because this save is too large.');
+    return false;
+  }
+
+  if (!cloudSaveQueue.enqueue(expectedUserId || activeUserId, save)) return false;
+  emitCloudSaveStatus('pending');
+  scheduleCloudFlush();
+  return true;
 }
 
 window.AshenAuth = {
   ready: authReady,
   getSession: async () => { await authReady; return currentSession; },
+  getUserId: () => currentSession?.user?.id || null,
   loadCloudSave,
   saveCloudSave: writeCloudSave,
   queueSave,
