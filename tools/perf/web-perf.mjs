@@ -12,12 +12,18 @@ const durationMs = Math.max(5000, Math.min(900000, Number.parseInt(
 const cpuThrottleRate = Math.max(1, Math.min(6, Number.parseFloat(process.env.ASHEN_PERF_CPU_THROTTLE || '4') || 4));
 const sampleIntervalMs = Math.max(5000, Math.min(60000, Number.parseInt(process.env.ASHEN_PERF_SAMPLE_INTERVAL_MS || '30000', 10) || 30000));
 const artifactDir = process.env.ASHEN_PERF_ARTIFACT_DIR || 'artifacts/perf';
+const rendererMode = process.env.ASHEN_PERF_RENDERER || 'native';
+if (!['native', 'software'].includes(rendererMode)) {
+  throw new Error('ASHEN_PERF_RENDERER must be either "native" or "software".');
+}
 await mkdir(artifactDir, { recursive: true });
 
-const browser = await chromium.launch({
-  headless: true,
-  args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader']
-});
+// Never force SwiftShader for a hardware baseline. CI sets "software" explicitly;
+// local profiling defaults to the machine's normal Chromium/WebGL renderer.
+const rendererArgs = rendererMode === 'software'
+  ? ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader']
+  : ['--enable-webgl'];
+const browser = await chromium.launch({ headless: true, args: rendererArgs });
 
 function percentile(values, ratio) {
   if (!values.length) return null;
@@ -173,6 +179,7 @@ try {
       mode,
       durationMs,
       cpuThrottleRate,
+      rendererMode,
       browser: await page.evaluate(() => navigator.userAgent),
       machine: { platform: process.platform, arch: process.arch, release: os.release(), cpuCount: os.cpus().length },
       navigationMs,
@@ -217,6 +224,7 @@ const summary = {
   runCount: results.length,
   durationMs,
   cpuThrottleRate,
+  rendererMode,
   frameP50MedianMs: median(results.map(result => result.frames.p50Ms)),
   frameP95MedianMs: median(results.map(result => result.frames.p95Ms)),
   frameP99MedianMs: median(results.map(result => result.frames.p99Ms)),
@@ -232,6 +240,7 @@ const markdown = [
   '- Mode: ' + mode,
   '- Base URL: ' + baseUrl,
   '- CPU throttle: ' + cpuThrottleRate + '×',
+  '- Renderer mode: ' + rendererMode + (rendererMode === 'software' ? ' (CI diagnostic; not representative of hardware GPU FPS)' : ' (machine-native Chromium/WebGL)'),
   '- Runs: ' + results.length + ' × ' + Math.round(durationMs / 1000) + 's',
   '- Browser readiness median: ' + summary.gameReadyMedianMs + ' ms',
   '- Frame p50/p95/p99 median: ' + summary.frameP50MedianMs + ' / ' + summary.frameP95MedianMs + ' / ' + summary.frameP99MedianMs + ' ms',
