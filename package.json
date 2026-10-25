@@ -11,6 +11,7 @@
     "test:web": "node --test tests/web/*.test.mjs",
     "test": "node --test tests/web/*.test.mjs",
     "check:syntax": "node tools/check-syntax.mjs",
-    "check:build-cache": "node tools/check-build-cache.mjs"
+    "check:build-cache": "node tools/check-build-cache.mjs",
+    "perf:web": "node tools/perf/web-perf.mjs"
   }
 }

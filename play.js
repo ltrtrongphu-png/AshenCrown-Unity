@@ -1,4 +1,4 @@
-import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision, backupLocalSave, isEncryptedSaveEnvelope, readEncryptedLocalSave, writeEncryptedLocalSave } from './save-utils.js';
+import { escapeHtml, sanitizeItemRecord, serializeSaveForComparison, cloudSaveDecision, backupLocalSave, isEncryptedSaveEnvelope, readEncryptedLocalSave, writeEncryptedLocalSave, decryptSavePayload, parseSaveImport, isValidSaveV5, ENCRYPTED_SAVE_BACKUP_SUFFIX } from './save-utils.js';
 import { getChapterRequirements, chapterRecordKey, hasChapterRecord, isChapterWardenReady, canAdvanceChapter } from './story-progression.js';
 // Load a pinned Three.js build with redundant CDNs. A single blocked CDN must not
 // prevent the entire game from starting.
@@ -31,6 +31,9 @@ const THREE = await loadThreeEngine();
 // One locale setting is shared with the landing page; the DOM translation layer
 // also handles UI/GUI fragments created later by menus, dialogue, shop and journal.
 const PLAY_LOCALE_ROWS = [
+['EXPORT SAVE','XUẤT SAVE','セーブを書き出す','세이브 내보내기','导出存档'],
+['IMPORT SAVE','NHẬP SAVE','セーブを読み込む','세이브 가져오기','导入存档'],
+['Local save stays in this browser. Sign in for cloud backup.','Save chỉ nằm trên trình duyệt này. Hãy đăng nhập để sao lưu đám mây.','ローカルセーブはこのブラウザーに保存されます。クラウド保存にはサインインしてください。','로컬 저장은 이 브라우저에만 보관됩니다. 클라우드 백업은 로그인하세요.','本地存档仅保存在此浏览器中。登录后可使用云端备份。'],
 ['CURRENT JOURNEY','NHIỆM VỤ HIỆN TẠI','現在の旅','현재 여정','当前旅程'],
 ['JOURNAL','NHẬT KÝ','ジャーナル','일지','日志'],
 ['FIRST JOURNEY','HÀNH TRÌNH ĐẦU TIÊN','最初の旅','첫 여정','初次旅程'],
@@ -3146,6 +3149,10 @@ let localSaveKeyDbPromise = null;
 let localSaveWriteChain = Promise.resolve();
 let localSaveRevision = 0;
 let legacySaveWiped = false;
+let localSaveRecoveryRequired = false;
+let localSaveRecoveryReason = '';
+let saveImportInProgress = false;
+let localSaveWriteCount = 0;
 let lastSavedComparable = null;
 let idleSavePending = false;
 
@@ -3210,10 +3217,23 @@ async function deleteLocalSaveKeyDatabase() {
 
 async function persistEncryptedLocalSave(value) {
   const snapshot = typeof value === 'string' ? JSON.parse(value) : JSON.parse(JSON.stringify(value));
+  if (localSaveRecoveryRequired) {
+    throw new Error('Existing local save requires recovery; automatic overwrite is blocked.');
+  }
   localSavePlaintext = snapshot;
   const revision = ++localSaveRevision;
   localSaveWriteChain = localSaveWriteChain.catch(() => {}).then(async () => {
     const key = await getLocalSaveKey(true);
+    const currentRaw = localStorage.getItem('ashen-crown-3d');
+    if (isEncryptedSaveEnvelope(currentRaw)) {
+      // Preserve the last known-good save before replacing it. If the current
+      // ciphertext cannot be decrypted, do not overwrite it with a new save.
+      const previous = await decryptSavePayload(currentRaw, key);
+      if (serializeSaveForComparison(previous) !== serializeSaveForComparison(snapshot)) {
+        await writeEncryptedLocalSave(localStorage, 'ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX, previous, key);
+      }
+    }
+    localSaveWriteCount++;
     await writeEncryptedLocalSave(localStorage, 'ashen-crown-3d', snapshot, key);
     if (revision === localSaveRevision) {
       legacySaveWiped = false;
@@ -3224,10 +3244,10 @@ async function persistEncryptedLocalSave(value) {
   }).catch(error => {
     lastSavedComparable = null;
     const status = $('saveStatus');
-    if (status) { status.textContent = 'ENCRYPTED SAVE UNAVAILABLE'; status.dataset.state = 'error'; }
+    if (status) { status.textContent = 'SAVE RECOVERY NEEDED'; status.dataset.state = 'error'; }
     if (!saveWarningShown) {
       saveWarningShown = true;
-      toastMsg('Encrypted saving is unavailable in this browser; no plaintext fallback was written.');
+      toastMsg('Save was not overwritten because a safe encrypted backup could not be verified. Export a backup or use Import Save.');
     }
     console.warn('[Ashen Crown] Encrypted local save failed:', error?.message || error);
   });
@@ -3241,6 +3261,12 @@ function localSaveComparable(save) {
 }
 
 function saveState(force = false) {
+  if (saveImportInProgress) return false;
+  if (localSaveRecoveryRequired) {
+    const status = $('saveStatus');
+    if (status) { status.textContent = 'SAVE RECOVERY NEEDED'; status.dataset.state = 'error'; }
+    return false;
+  }
   try {
     state.saveVersion = 5;
     state.mapVersion = 1;
@@ -3286,6 +3312,115 @@ function saveState(force = false) {
       console.warn('[Ashen Crown] Local save failed:', error?.message || error);
     }
     return false;
+  }
+}
+
+async function exportLocalSaveFile() {
+  // Capture live gameplay state before waiting for encryption to finish. In
+  // recovery mode saveState deliberately refuses disk writes, but the readable
+  // recovery candidate remains available for export.
+  if (!localSaveRecoveryRequired) saveState(true);
+  await localSaveWriteChain;
+  const save = localSavePlaintext;
+  if (!save || !isValidSaveV5(save)) {
+    toastMsg('No readable v5 save is available to export. The browser data has been preserved; try Import Save with a known backup.');
+    return false;
+  }
+  const confirmed = window.confirm(
+    'Export this save as plain JSON? The file is NOT encrypted and can reveal your game progress. Store it somewhere private.'
+  );
+  if (!confirmed) return false;
+  const blob = new Blob([JSON.stringify(save, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'ashen-crown-save-v5-' + new Date().toISOString().slice(0, 10) + '.json';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toastMsg('Save export created. Keep the unencrypted JSON file private.');
+  return true;
+}
+
+async function importLocalSaveFile(file) {
+  if (!file) return false;
+  let originalPrimaryRaw;
+  let primaryWriteStarted = false;
+  try {
+    if (Number(file.size) > 1_048_576) {
+      throw new Error('Save file is too large (maximum 1 MiB).');
+    }
+    const raw = await file.text();
+    const imported = parseSaveImport(raw);
+    const confirmed = window.confirm(
+      'Replace this browser journey with the selected v5 save? The current local save will be backed up in encrypted form on this device when possible.'
+    );
+    if (!confirmed) return false;
+
+    // Freeze all local-save writes before touching primary storage. In particular,
+    // pagehide/visibilitychange must not serialize the old in-memory journey over
+    // the imported primary while location.reload() is being processed.
+    saveImportInProgress = true;
+    // Drain any save already queued before import began. The guard above blocks
+    // newly requested writes while this awaits, preventing an older async write
+    // from landing after the imported primary.
+    await localSaveWriteChain;
+    const key = await getLocalSaveKey(true);
+    originalPrimaryRaw = localStorage.getItem('ashen-crown-3d');
+    if (originalPrimaryRaw !== null) {
+      let recoveryPayload = localSavePlaintext;
+      if (!recoveryPayload || typeof recoveryPayload !== 'object' || Array.isArray(recoveryPayload)) {
+        recoveryPayload = { kind: 'ashen-crown-recovery-v1', raw: originalPrimaryRaw };
+      }
+      await writeEncryptedLocalSave(
+        localStorage,
+        'ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX,
+        recoveryPayload,
+        key
+      );
+    }
+
+    // Mark the point where primary storage can change. If verification fails,
+    // restore the exact original bytes; the encrypted backup remains as a
+    // second recovery path in case the storage provider also rejects rollback.
+    primaryWriteStarted = true;
+    await writeEncryptedLocalSave(localStorage, 'ashen-crown-3d', imported, key);
+    const verified = await decryptSavePayload(localStorage.getItem('ashen-crown-3d'), key);
+    if (serializeSaveForComparison(verified) !== serializeSaveForComparison(imported)) {
+      throw new Error('Imported save did not match the encrypted read-back.');
+    }
+
+    localSavePlaintext = imported;
+    localSaveRecoveryRequired = false;
+    localSaveRecoveryReason = '';
+    legacySaveWiped = false;
+    lastSavedComparable = null;
+    await window.AshenAuth?.queueSave?.(imported);
+    toastMsg('Imported v5 save encrypted and verified. Reloading the journey.');
+    location.reload();
+    return true;
+  } catch (error) {
+    if (primaryWriteStarted) {
+      try {
+        if (originalPrimaryRaw === null) localStorage.removeItem('ashen-crown-3d');
+        else if (typeof originalPrimaryRaw === 'string') localStorage.setItem('ashen-crown-3d', originalPrimaryRaw);
+        if (localStorage.getItem('ashen-crown-3d') !== originalPrimaryRaw) {
+          throw new Error('Original save rollback verification failed.');
+        }
+      } catch (rollbackError) {
+        localSaveRecoveryRequired = true;
+        localSaveRecoveryReason = 'import-rollback-failed';
+        console.error('[Ashen Crown] Save import rollback failed:', rollbackError?.message || rollbackError);
+      }
+    }
+    saveImportInProgress = false;
+    const status = $('saveStatus');
+    if (status) { status.textContent = 'IMPORT FAILED'; status.dataset.state = 'error'; }
+    toastMsg('Save import failed; the previous save was restored where storage allowed. ' + String(error?.message || error));
+    console.warn('[Ashen Crown] Save import failed:', error?.message || error);
+    return false;
+  } finally {
+    const input = $('importSaveFile');
+    if (input) input.value = '';
   }
 }
 
@@ -3358,6 +3493,9 @@ document.querySelectorAll('.meta-tabs button').forEach(b=>b.addEventListener('cl
 document.querySelectorAll('.equip-slot').forEach(b=>b.addEventListener('click',()=>{const slot=b.dataset.slot;if(state.equipment[slot])unequipSlot(slot);else openInventory()}));
 $('closeMeta').onclick=()=>$('metaMenu').classList.remove('show');$('closeInventory').onclick=()=>$('inventoryMenu').classList.remove('show');$('closeMap').onclick=()=>$('worldMap').classList.remove('show');$('tutorialStart').onclick=()=>{$('tutorial').classList.remove('show');state.tutorial=false;saveState()};$('helpButton').onclick=()=>$('tutorial').classList.add('show');$('closeDialogue').onclick=()=>$('dialogue').classList.remove('show');$('resume').onclick=()=>{$('pause').classList.remove('show');state.paused=false};
 $('baseButton').onclick=()=>openSystemMenu('base');$('roleButton').onclick=()=>openSystemMenu('role');$('settingsButton').onclick=()=>openSystemMenu('settings');$('systemClose').onclick=()=>$('systemMenu').classList.remove('show');
+$('exportSaveButton').onclick=()=>void exportLocalSaveFile();
+$('importSaveButton').onclick=()=>$('importSaveFile').click();
+$('importSaveFile').addEventListener('change',event=>void importLocalSaveFile(event.target.files?.[0]));
 $('systemContent').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='downloadResourcePack'){void installResourcePack();return}if(b.id==='removeResourcePack'){void removeResourcePack();return}if(b.dataset.travel){fastTravel(b.dataset.travel);return}if(b.dataset.role){state.role=b.dataset.role;applyRoleLook();saveState();openSystemMenu('role')}if(b.dataset.appearance){state.appearance=b.dataset.appearance;applyRoleLook();saveState();openSystemMenu('role')}if(b.dataset.upgrade!==undefined)upgradeSkill(Number(b.dataset.upgrade));if(b.dataset.forge!==undefined&&activeMapId==="sanctuary"&&state.shards>0&&(state.weaponRank||0)<12){const cost=90+(state.weaponRank||0)*75;if(state.coins>=cost){state.coins-=cost;state.shards--;state.weaponRank++;saveState();openSystemMenu("base");toastMsg("Weapon reinforced · +2% damage")}}if(b.dataset.claim!==undefined&&Math.floor((state.hunt?.kills||0)/5)>0){state.hunt.kills-=5;state.coins+=100+state.level*15;state.shards++;state.meta.contracts++;xp(65);saveState();openSystemMenu("base");toastMsg("Hunt contract claimed · coins, XP and a forge shard")};if(b.dataset.open)openSystemMenu(b.dataset.open);if(b.dataset.build&&activeMapId==="sanctuary"){const cost=80+state.meta.hubLevel*60;if(state.coins>=cost){state.coins-=cost;state.meta.hubLevel++;state.meta.points+=2;recalculateEquipmentStats();state.hp=state.maxHp;updateSanctuaryBuild();state.log.unshift('You strengthened the Sanctuary hearth to level '+(state.meta.hubLevel+1)+'.');saveState();openSystemMenu('base');toastMsg('Hearth upgraded · +2 growth points')}}if(b.dataset.expedition)advanceChapter()});
 $('systemContent').addEventListener('input',e=>{if(e.target.id==='sensitivitySetting'){state.settings.sensitivity=Number(e.target.value);e.target.nextElementSibling.textContent=state.settings.sensitivity.toFixed(1)+'×';scheduleSave()}if(e.target.id==='volumeSetting'){state.settings.volume=Number(e.target.value);$('volumeValue').textContent=Math.round(state.settings.volume*100)+'%';scheduleSave()}if(e.target.id==='uiScaleSetting'){state.settings.uiScale=Number(e.target.value);$('uiScaleValue').textContent=Math.round(state.settings.uiScale*100)+'%';document.documentElement.style.setProperty('--game-ui-scale',String(state.settings.uiScale));scheduleSave()}if(e.target.id==='cameraFovSetting'){state.settings.cameraFov=Number(e.target.value);$('cameraFovValue').textContent=Math.round(state.settings.cameraFov)+'°';camera.fov=state.settings.cameraFov;camera.updateProjectionMatrix();scheduleSave()}});
 $('systemContent').addEventListener('change',e=>{if(e.target.id==='qualitySetting'){state.settings.quality=e.target.value;applySettings()}if(e.target.id==='motionSetting'){state.settings.reducedMotion=e.target.checked;saveState()}if(e.target.id==='soundSetting'){state.settings.sound=e.target.checked;saveState();if(state.settings.sound)playGameSound('success')}if(e.target.id==='animationsSetting'){state.settings.animations=e.target.checked;applySettings()}if(e.target.id==='effectsSetting'){state.settings.visualEffects=e.target.checked;applySettings()}});
@@ -3389,6 +3527,10 @@ function setupTouchControls(){
   controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='parry')parry();else if(action==='inventory')openInventory();else if(action==='skill')useSkill(Number(button.dataset.skill))}));
 }
 async function syncCloudSaveFromAccount() {
+  if (localSaveRecoveryRequired) {
+    toastMsg('Cloud sync stopped because this browser has a save that needs recovery. Export or import a v5 save first.');
+    return;
+  }
   const auth = window.AshenAuth;
   if (!auth?.loadCloudSave) return;
 
@@ -3470,19 +3612,26 @@ window.AshenAuth?.ready?.then(async()=>{const session=await window.AshenAuth.get
 async function bootstrapEncryptedSave() {
   let result={value:null,wipedLegacy:false,corrupt:false};
   try {
-    result=await readEncryptedLocalSave(localStorage,'ashen-crown-3d',()=>getLocalSaveKey(false));
+    result=await readEncryptedLocalSave(localStorage,'ashen-crown-3d',()=>getLocalSaveKey(true));
   } catch(error) {
+    result={ value:null, wipedLegacy:false, corrupt:false,
+      needsRecovery: localStorage.getItem('ashen-crown-3d') !== null, reason:'bootstrap-exception', error };
     console.warn('[Ashen Crown] Encrypted save bootstrap failed:',error?.message||error);
   }
   localSavePlaintext=result.value;
-  legacySaveWiped=result.wipedLegacy;
-  if(result.wipedLegacy) {
-    await deleteLocalSaveKeyDatabase();
-    toastMsg(result.corrupt
-      ? 'Damaged encrypted save and local backups removed. A fresh local journey will begin.'
-      : 'Legacy plaintext save and all local backup copies removed. A fresh encrypted journey will begin.');
-  } else if(result.removedBackups>0) {
-    toastMsg('Legacy plaintext backup copies removed; only the encrypted local save is retained.');
+  legacySaveWiped=false;
+  localSaveRecoveryRequired=Boolean(result.needsRecovery);
+  localSaveRecoveryReason=result.reason||'';
+  const status=$('saveStatus');
+  if(localSaveRecoveryRequired) {
+    if(status){status.textContent='SAVE RECOVERY NEEDED';status.dataset.state='error';}
+    toastMsg(result.value
+      ? 'Save recovery required. Your readable progress is loaded, but autosave and cloud sync are paused to protect existing backup data. Export or import a v5 save.'
+      : 'Existing save data could not be migrated safely. Nothing was intentionally deleted; import a known v5 backup before continuing to save.');
+  } else if(result.migrated) {
+    toastMsg(result.recoveredFromBackup
+      ? 'Recovered your v5 local backup, encrypted and verified before cleanup.'
+      : 'Legacy v5 save encrypted and verified. Your progress was preserved.');
   }
   return result;
 }
@@ -3522,8 +3671,15 @@ if(isLocalE2ESession) {
     suppressAmbientSpawns:()=>{suppressAmbientEnemySpawns=true;return true;},
     flushLocalSave:async()=>{
       await localSaveWriteChain;
-      return {encrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d')),chapter:localSavePlaintext?.chapter,quest:localSavePlaintext?.quest};
+      return {encrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d')),chapter:localSavePlaintext?.chapter,quest:localSavePlaintext?.quest,recoveryRequired:localSaveRecoveryRequired};
     },
+    perfSnapshot:()=>({
+      fps:Math.round(currentFps||0),geometries:renderer.info.memory.geometries,
+      textures:renderer.info.memory.textures,drawCalls:renderer.info.render.calls,
+      triangles:renderer.info.render.triangles,heapBytes:performance.memory?.usedJSHeapSize??null,
+      chapter:state.chapter,quest:state.quest,map:activeMapId,
+      saveEncrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d'))
+    }),
     triggerPlayerDeath:()=>{state.hp=0;return true;},
     stageNextStoryInteraction:()=>{
       if(anyOverlayOpen())return {ok:false,reason:'overlay-open'};
@@ -3567,6 +3723,16 @@ if(isLocalE2ESession) {
       const boss=encounter.root.getWorldPosition(new THREE.Vector3());
       player.position.set(boss.x,0,boss.z+2.5);yaw=0;player.rotation.y=Math.PI;
       return {ok:true,hp:Math.round(encounter.hp),playerHp:state.hp};
+    },
+    shortenBossForCampaignStep:()=>{
+      if(state.quest!==3||!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
+      // The separate browser smoke already exercises a multi-hit combo against
+      // the production Warden. This ten-chapter harness focuses on story gates,
+      // reload/death recovery, choices and saves; keep every chapter's Warden
+      // alive until the real pulse() handler lands a lethal hit.
+      const lethalTestHp=Math.max(1,calcPlayerDamage(18,0,true));
+      encounter.hp=Math.min(encounter.hp,lethalTestHp);
+      return {ok:true,hp:Math.round(encounter.hp),minimumStrikeDamage:lethalTestHp};
     },
     alignCampaignAttack:()=>{
       if(!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
@@ -3712,8 +3878,49 @@ setInterval(()=>{
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
 setInterval(()=>{if(!document.hidden)scheduleIdleSave()},15000);
-window.addEventListener('pagehide',saveState);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState()});
+window.addEventListener('pagehide',()=>{if(!saveImportInProgress)saveState()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&!saveImportInProgress)saveState()});
+
+const debugPerfEnabled = new URLSearchParams(location.search).get('debug') === '1';
+let debugPerfOverlay = null;
+let debugPerfLastUpdate = 0;
+let debugPerfFrames = [];
+let debugPerfHitches = [];
+if (debugPerfEnabled) {
+  debugPerfOverlay = document.createElement('pre');
+  debugPerfOverlay.id = 'ashenPerfOverlay';
+  debugPerfOverlay.setAttribute('role', 'status');
+  debugPerfOverlay.setAttribute('aria-label', 'Ashen Crown performance diagnostics');
+  debugPerfOverlay.style.cssText = 'position:fixed;z-index:99999;left:8px;bottom:8px;max-width:min(390px,calc(100vw - 16px));max-height:36vh;overflow:auto;margin:0;padding:10px;background:rgba(0,0,0,.86);border:1px solid #c98b5f;color:#f1dec9;font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none';
+  document.body.appendChild(debugPerfOverlay);
+}
+function updateDebugPerfOverlay(rawDt) {
+  if (!debugPerfEnabled || !debugPerfOverlay) return;
+  const frameMs = Math.max(0, Number(rawDt) || 0) * 1000;
+  debugPerfFrames.push(frameMs);
+  if (debugPerfFrames.length > 240) debugPerfFrames.shift();
+  if (frameMs > 33) {
+    debugPerfHitches.push({ ms: Number(frameMs.toFixed(1)), at: Math.round(performance.now()), system: 'frame loop' });
+    if (debugPerfHitches.length > 5) debugPerfHitches.shift();
+  }
+  const now = performance.now();
+  if (now - debugPerfLastUpdate < 500) return;
+  debugPerfLastUpdate = now;
+  const sorted = [...debugPerfFrames].sort((a,b)=>a-b);
+  const p95 = sorted.length ? sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * .95) - 1)] : 0;
+  const h=performance.memory?.usedJSHeapSize;
+  const r=renderer.info;
+  debugPerfOverlay.textContent = [
+    'ASHEN CROWN · DEBUG PERF (?debug=1)',
+    'FPS: ' + Math.round(currentFps||0) + ' · frame p95: ' + p95.toFixed(1) + ' ms',
+    'Draw calls: ' + r.render.calls + ' · triangles: ' + r.render.triangles,
+    'Geometries: ' + r.memory.geometries + ' · textures: ' + r.memory.textures,
+    'JS heap: ' + (Number.isFinite(h) ? (h/1048576).toFixed(1)+' MiB' : 'n/a'),
+    'Save write attempts: ' + localSaveWriteCount,
+    'Hitches >33ms: ' + (debugPerfHitches.length ? debugPerfHitches.map(x=>x.ms+'ms@'+x.at).join(', ') : 'none')
+  ].join('\n');
+}
+
 let last=performance.now(),gameRenderReady=false;
 function frame(t){
   const elapsed=(t-last)/1000;
@@ -3734,6 +3941,7 @@ function frame(t){
   if(!anyOverlayOpen())tick(dt);
   // Keep rendering the world while menus/tutorials are open; only the simulation pauses.
   renderer.render(scene,camera);
+  updateDebugPerfOverlay(rawDt);
   if(!gameRenderReady){gameRenderReady=true;window.dispatchEvent(new Event('ashen:game-ready'))}
   if(toastTimer>0&&(toastTimer-=dt)<=0)$('toast').classList.remove('show');
   if(!document.hidden)requestAnimationFrame(frame);

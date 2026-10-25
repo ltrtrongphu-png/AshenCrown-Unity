@@ -26,3 +26,22 @@ No Unity Editor, browser session with CPU throttling, Performance panel, Memory 
 2. Warm up shader/model paths before timing. Run the same map/encounter script three times.
 3. Record every run's p50/p95/p99, max frame time, >33 ms spike count, GC bytes/frame, long-task count, and renderer geometry/texture counts.
 4. Publish samples and median here. Do not infer performance gains from source changes alone.
+
+## Reproducible browser harness (added Sprint 1)
+
+The Playwright harness is `tools/perf/web-perf.mjs` and is exposed as `npm run perf:web`. Reuse the existing pinned e2e test runner without adding it as a permanent project dependency: run `npm install --no-save --package-lock=false playwright@1.56.0`, then install Chromium with `npx playwright install chromium`. It defaults to `ASHEN_PERF_RENDERER=native` to use the machine's normal Chromium/WebGL renderer. CI explicitly sets `ASHEN_PERF_RENDERER=software` (SwiftShader) because hosted runners have no GPU; those numbers are **diagnostic-only** and must not be used to claim the desktop/mobile FPS targets are met.
+
+Pull requests run a short 15-second instrumented encounter to validate the harness. Scheduled/manual runs execute three 60-second runs at 4× CPU throttle and a separate 10-minute soak; JSON, Markdown tables and screenshots are uploaded as workflow artifacts. The soak fails if post-warmup geometry or texture counts increase strictly at every sample, or if uncaught page errors occur.
+
+Manual reproduction after building the allow-listed web artifact:
+
+```sh
+node tools/build-web.mjs
+python3 -m http.server 4173 --directory dist
+# In a second terminal, with Playwright + Chromium installed:
+ASHEN_PERF_URL=http://127.0.0.1:4173 ASHEN_PERF_MODE=baseline \
+  ASHEN_PERF_RUNS=3 ASHEN_PERF_DURATION_MS=60000 ASHEN_PERF_CPU_THROTTLE=4 \
+  ASHEN_PERF_ARTIFACT_DIR=artifacts/perf/baseline npm run perf:web
+```
+
+No benchmark numbers are recorded in this source change. Populate the tables above only from uploaded results with the machine/browser/build and per-run samples attached; the three-run median is the comparison point, not an assumed improvement.

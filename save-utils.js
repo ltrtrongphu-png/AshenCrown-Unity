@@ -206,53 +206,248 @@ export async function decryptSavePayload(envelope, key, cryptoApi = globalThis.c
   return value;
 }
 
-function removeLocalSaveBackups(storage, keyName) {
-  const remove = new Set();
-  const backupPrefix = keyName + '.backup.';
+
+const LEGACY_BACKUP_PREFIX = 'ashen-crown-3d.backup.';
+export const ENCRYPTED_SAVE_BACKUP_SUFFIX = '.encrypted-backup.v1';
+
+function legacyBackupKeys(storage, keyName) {
+  const keys = [];
   for (let index = 0; index < storage.length; index++) {
     const key = storage.key(index);
-    if (typeof key === 'string' && (key.startsWith(backupPrefix) || key.startsWith('ashen-crown-3d.backup.'))) {
-      remove.add(key);
+    if (typeof key === 'string' &&
+        (key.startsWith(keyName + '.backup.') || key.startsWith(LEGACY_BACKUP_PREFIX))) {
+      keys.push(key);
     }
   }
-  // Collect keys before deleting so an index shift cannot skip a backup.
-  for (const key of remove) storage.removeItem(key);
-  return remove.size;
+  return keys;
 }
 
-function removeLocalSaveAndBackups(storage, keyName) {
-  storage.removeItem(keyName);
-  removeLocalSaveBackups(storage, keyName);
+function canonicalJson(value) {
+  return JSON.stringify(sortObjectKeys(value));
+}
+
+/** Validate the public v5 browser-save contract without trusting arbitrary imported JSON. */
+export function isValidSaveV5(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || value.saveVersion !== 5) return false;
+  const level = Number(value.level);
+  if (!Number.isInteger(level) || level < 1 || level > 10000) return false;
+  if (value.chapter !== undefined) {
+    const chapter = Number(value.chapter);
+    if (!Number.isInteger(chapter) || chapter < 1 || chapter > 10) return false;
+  }
+  if (value.inventory !== undefined && (!Array.isArray(value.inventory) || value.inventory.length > 500)) return false;
+  if (value.flags !== undefined && (!value.flags || typeof value.flags !== 'object' || Array.isArray(value.flags))) return false;
+  return true;
+}
+
+/** Parse a deliberately unencrypted JSON export, with a hard size limit and v5 shape check. */
+export function parseSaveImport(raw, maxBytes = 1_048_576) {
+  if (typeof raw !== 'string') throw new TypeError('Save import must be text.');
+  if (new TextEncoder().encode(raw).byteLength > maxBytes) throw new Error('Save file is too large (maximum 1 MiB).');
+  let value;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw new Error('Save file is not valid JSON.');
+  }
+  if (!isValidSaveV5(value)) throw new Error('Save file is not a valid Ashen Crown v5 save.');
+  return value;
+}
+
+function latestValidLegacyBackup(storage, keys) {
+  const candidates = [];
+  for (const key of keys) {
+    const raw = storage.getItem(key);
+    if (!raw || isEncryptedSaveEnvelope(raw)) continue;
+    try {
+      const value = JSON.parse(raw);
+      if (isValidSaveV5(value)) candidates.push({ key, raw, value, savedAt: Number(value.savedAt) || 0 });
+    } catch {
+      // Leave malformed backups untouched until a verified replacement exists.
+    }
+  }
+  candidates.sort((left, right) => right.savedAt - left.savedAt || right.key.localeCompare(left.key));
+  return candidates[0] || null;
+}
+
+async function setAndVerifyEncrypted(storage, keyName, envelope, key, expectedValue, cryptoApi) {
+  storage.setItem(keyName, envelope);
+  const stored = storage.getItem(keyName);
+  if (stored !== envelope) throw new Error('Encrypted save verification failed for ' + keyName + '.');
+  const roundTrip = await decryptSavePayload(stored, key, cryptoApi);
+  if (canonicalJson(roundTrip) !== canonicalJson(expectedValue)) {
+    throw new Error('Encrypted save read-back did not match the source payload.');
+  }
+}
+
+async function verifiedEnvelope(value, key, cryptoApi) {
+  const envelope = await encryptSavePayload(value, key, cryptoApi);
+  const roundTrip = await decryptSavePayload(envelope, key, cryptoApi);
+  if (canonicalJson(roundTrip) !== canonicalJson(value)) {
+    throw new Error('Encrypted save round-trip verification failed.');
+  }
+  return envelope;
 }
 
 /**
- * Plaintext v5 records are intentionally not migrated: on first encrypted-save
- * rollout, remove them and their rolling backups instead of leaving cleartext.
- * A corrupt envelope is also cleared so the next save starts cleanly.
+ * Load an encrypted v5 save or migrate a plaintext v5 save safely.
+ *
+ * Migration is transactional at the application level: preserve the source,
+ * encrypt and verify a temporary record, create/verify the encrypted backup,
+ * replace and read back the primary record, and only then remove plaintext
+ * backup keys. On any error, existing user data is kept and recovery is
+ * required instead of silently starting a new journey.
  */
 export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi = globalThis.crypto) {
-  if (!storage || typeof storage.getItem !== 'function' || typeof storage.removeItem !== 'function') {
+  if (!storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function' ||
+      typeof storage.removeItem !== 'function' || typeof storage.key !== 'function') {
     throw new TypeError('A readable and writable local storage object is required.');
   }
-  // Backups are from the previous plaintext implementation. Remove them on
-  // every boot, even if the primary record is missing or already encrypted.
-  const removedBackups = removeLocalSaveBackups(storage, keyName);
+  const backupKeys = legacyBackupKeys(storage, keyName);
   const raw = storage.getItem(keyName);
-  if (raw === null || raw === undefined || raw === '') {
-    return { value: null, wipedLegacy: false, corrupt: false, removedBackups };
-  }
-  if (!isEncryptedSaveEnvelope(raw)) {
-    storage.removeItem(keyName);
-    return { value: null, wipedLegacy: true, corrupt: false, reason: 'plaintext', removedBackups };
-  }
+  // Unknown backup formats may contain recoverable progress. Do not clean them
+  // up unless they can be parsed as the documented v5 save contract.
+  const unrecognizedBackup = backupKeys.find(backupKey => {
+    const backupRaw = storage.getItem(backupKey);
+    if (typeof backupRaw !== 'string' || isEncryptedSaveEnvelope(backupRaw)) return true;
+    try { return !isValidSaveV5(JSON.parse(backupRaw)); } catch { return true; }
+  });
+  const encryptedBackupKey = keyName + ENCRYPTED_SAVE_BACKUP_SUFFIX;
+  const tempKey = keyName + '.migration.tmp';
+  let key;
+  let value = null;
+  let candidate = null;
+  let migrated = false;
+  let recoveredFromBackup = false;
+  let primaryEncrypted = isEncryptedSaveEnvelope(raw);
+
   try {
+    if (primaryEncrypted) {
+      key = await getKey();
+      try {
+        value = await decryptSavePayload(raw, key, cryptoApi);
+      } catch (error) {
+        // Never silently replace a corrupt primary with a backup. Offer the most
+        // useful readable v5 recovery candidate to the UI while preserving both
+        // the corrupt primary and its backup until the player exports/imports.
+        candidate = latestValidLegacyBackup(storage, backupKeys);
+        if (candidate) {
+          return {
+            value: candidate.value, wipedLegacy: false, corrupt: true, needsRecovery: true,
+            reason: 'corrupt-envelope-legacy-backup-available', backupKey: candidate.key, error, removedBackups: 0
+          };
+        }
+        const encryptedRecoveryRaw = storage.getItem(encryptedBackupKey);
+        if (isEncryptedSaveEnvelope(encryptedRecoveryRaw)) {
+          try {
+            const encryptedRecovery = await decryptSavePayload(encryptedRecoveryRaw, key, cryptoApi);
+            if (isValidSaveV5(encryptedRecovery)) {
+              return {
+                value: encryptedRecovery, wipedLegacy: false, corrupt: true, needsRecovery: true,
+                reason: 'corrupt-envelope-encrypted-backup-available', error, removedBackups: 0
+              };
+            }
+          } catch {}
+        }
+        return { value: null, wipedLegacy: false, corrupt: true, needsRecovery: true, reason: 'corrupt-envelope', error, removedBackups: 0 };
+      }
+    } else if (raw !== null && raw !== undefined && raw !== '') {
+      try {
+        candidate = { raw, value: JSON.parse(raw), key: keyName };
+      } catch (error) {
+        return { value: null, wipedLegacy: false, corrupt: false, needsRecovery: true, reason: 'invalid-plaintext', error, removedBackups: 0 };
+      }
+      if (!isValidSaveV5(candidate.value)) {
+        return { value: null, wipedLegacy: false, corrupt: false, needsRecovery: true, reason: 'unsupported-plaintext', removedBackups: 0 };
+      }
+      value = candidate.value;
+      migrated = true;
+    } else {
+      candidate = latestValidLegacyBackup(storage, backupKeys);
+      if (!candidate) {
+        if (backupKeys.length) {
+          return { value: null, wipedLegacy: false, corrupt: false, needsRecovery: true, reason: 'unreadable-backup', removedBackups: 0 };
+        }
+        return { value: null, wipedLegacy: false, corrupt: false, removedBackups: 0 };
+      }
+      value = candidate.value;
+      migrated = true;
+      recoveredFromBackup = true;
+    }
+
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return { value: null, wipedLegacy: false, corrupt: false, needsRecovery: true, reason: 'invalid-save', removedBackups: 0 };
+    }
+    if (unrecognizedBackup) {
+      return { value, wipedLegacy: false, corrupt: Boolean(primaryEncrypted), needsRecovery: true, reason: 'unrecognized-backup', backupKey: unrecognizedBackup, removedBackups: 0 };
+    }
     if (typeof getKey !== 'function') throw new Error('The local save key provider is unavailable.');
-    const key = await getKey();
-    const value = await decryptSavePayload(raw, key, cryptoApi);
-    return { value, wipedLegacy: false, corrupt: false, removedBackups };
+    key = key || await getKey();
+
+    // Preserve an existing encrypted backup across ordinary boots. Rewrite it
+    // only when migrating legacy backups, recovering a save, or repairing a
+    // missing/invalid backup slot; otherwise each launch would roll it forward
+    // and erase the last known-good pre-change save.
+    const legacyCandidate = latestValidLegacyBackup(storage, backupKeys);
+    const existingEncryptedBackup = storage.getItem(encryptedBackupKey);
+    let encryptedBackupValid = false;
+    if (isEncryptedSaveEnvelope(existingEncryptedBackup)) {
+      try {
+        const previousBackup = await decryptSavePayload(existingEncryptedBackup, key, cryptoApi);
+        encryptedBackupValid = Boolean(previousBackup && typeof previousBackup === 'object' && !Array.isArray(previousBackup));
+      } catch {}
+    }
+    const shouldRefreshBackup = backupKeys.length > 0 || !encryptedBackupValid || !primaryEncrypted || recoveredFromBackup;
+    const backupValue = legacyCandidate?.value || value;
+    const backupEnvelope = shouldRefreshBackup ? await verifiedEnvelope(backupValue, key, cryptoApi) : null;
+
+    // Persist and verify a temporary envelope before touching the source record.
+    if (!primaryEncrypted || recoveredFromBackup) {
+      await setAndVerifyEncrypted(storage, tempKey, await verifiedEnvelope(value, key, cryptoApi), key, value, cryptoApi);
+    }
+    if (shouldRefreshBackup) {
+      await setAndVerifyEncrypted(storage, encryptedBackupKey, backupEnvelope, key, backupValue, cryptoApi);
+    }
+
+    if (!primaryEncrypted || recoveredFromBackup) {
+      const oldRaw = raw;
+      const primaryEnvelope = storage.getItem(tempKey);
+      try {
+        await setAndVerifyEncrypted(storage, keyName, primaryEnvelope, key, value, cryptoApi);
+      } catch (error) {
+        // Best effort restore. Never intentionally delete the original source on a failed write.
+        if (oldRaw !== null && oldRaw !== undefined) {
+          try { storage.setItem(keyName, oldRaw); } catch {}
+        }
+        throw error;
+      }
+      migrated = true;
+    }
+
+    // Do not remove recovery candidates until both the primary and encrypted
+    // backup have been read back and verified.
+    for (const backupKey of backupKeys) storage.removeItem(backupKey);
+    storage.removeItem(tempKey);
+    return {
+      value,
+      wipedLegacy: false,
+      corrupt: false,
+      migrated,
+      recoveredFromBackup,
+      removedBackups: backupKeys.length
+    };
   } catch (error) {
-    removeLocalSaveAndBackups(storage, keyName);
-    return { value: null, wipedLegacy: true, corrupt: true, reason: 'corrupt', error, removedBackups };
+    // Any failed operation leaves existing source records in place where possible.
+    try {
+      if (storage.getItem(tempKey) && !storage.getItem(keyName)) {
+        // A verified temporary record is kept for manual recovery.
+      } else {
+        storage.removeItem(tempKey);
+      }
+    } catch {}
+    return { value: primaryEncrypted && !recoveredFromBackup ? null : value, wipedLegacy: false,
+      corrupt: Boolean(primaryEncrypted), needsRecovery: true, reason: 'migration-failed', error,
+      removedBackups: 0 };
   }
 }
 
@@ -262,8 +457,13 @@ export async function writeEncryptedLocalSave(storage, keyName, value, key, cryp
   }
   const envelope = await encryptSavePayload(value, key, cryptoApi);
   storage.setItem(keyName, envelope);
-  if (storage.getItem(keyName) !== envelope || !isEncryptedSaveEnvelope(storage.getItem(keyName))) {
+  const stored = storage.getItem(keyName);
+  if (stored !== envelope || !isEncryptedSaveEnvelope(stored)) {
     throw new Error('Encrypted local-save verification failed.');
+  }
+  const roundTrip = await decryptSavePayload(stored, key, cryptoApi);
+  if (canonicalJson(roundTrip) !== canonicalJson(value)) {
+    throw new Error('Encrypted local-save read-back did not match the original payload.');
   }
   return true;
 }

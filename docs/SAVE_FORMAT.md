@@ -39,10 +39,10 @@ Do not switch either contract to v6 without a reviewed migration plan. Required 
 
 ## Encrypted local-save rollout
 
-- The browser keeps the current key `ashen-crown-3d` and the save-object schema at v5, but the stored value is now an `ASHEN-AESGCM-v1:` envelope containing a random 96-bit IV and AES-256-GCM ciphertext.
-- The non-extractable AES-GCM `CryptoKey` is stored separately in IndexedDB (`ashen-crown-local-keyring-v1`); it is not stored beside the ciphertext in localStorage. Saves are verified after each write.
-- On the first run after this change, any plaintext save at `ashen-crown-3d` and all `ashen-crown-3d.backup.*` copies are intentionally deleted rather than migrated. An unreadable/tampered encrypted envelope is also cleared. A fresh encrypted v5 save is then created as the player progresses.
-- A browser-local keyring means clearing site data, losing IndexedDB, or moving only the localStorage ciphertext to another device makes that local save unrecoverable. This is deliberate rather than silently writing plaintext. Optional signed-in cloud backup remains an in-memory v5 payload sent to the existing Supabase table; localStorage itself stores only ciphertext.
-
-
-- Boot also sweeps old plaintext backup keys even when the primary key is missing or already encrypted. If a current valid encrypted record exists, removing stale backups does not delete its keyring entry.
+- The browser keeps the current key \`ashen-crown-3d\` and the save-object schema at v5. The primary value is an \`ASHEN-AESGCM-v1:\` envelope containing a random 96-bit IV and AES-256-GCM ciphertext.
+- The non-extractable AES-GCM \`CryptoKey\` is stored separately in IndexedDB (\`ashen-crown-local-keyring-v1\`); it is not stored beside the ciphertext in localStorage.
+- On first boot with a known plaintext v5 save, the loader parses and validates v5, writes an encrypted temporary value, decrypts it and compares the complete payload, writes and verifies an encrypted restore backup, replaces the primary slot, reads/decrypts the primary back for comparison, and only then removes recognized plaintext backup keys. The key, public storage key and schema remain unchanged.
+- If the primary slot is absent but a recognized plaintext v5 backup exists, the loader encrypts/verifies that backup before restoring it. A verified encrypted backup slot is retained and is not rolled forward on every ordinary boot; it is refreshed when a new save replaces the current primary.
+- Unsupported plaintext, corrupt ciphertext, unknown legacy-backup formats, blocked IndexedDB, or failed encryption/read-back verification are **not deleted**. The UI enters recovery mode and pauses autosave/cloud sync so a fresh save cannot silently overwrite the original data. The player can export a readable v5 save when available or import a known-good v5 JSON backup.
+- Export is plain JSON and requires an explicit warning confirmation; players should keep the file private. Import is limited to 1 MiB, validates the v5 structure, stores the current record as an encrypted on-device backup where possible, encrypts and verifies the imported save, then reloads the game.
+- A browser-local keyring means clearing site data, losing IndexedDB, or moving only the localStorage ciphertext to another device makes the local save unrecoverable unless the player has a separate export or authenticated cloud copy. Sign in for cloud backup; local saves still belong to this browser/device.
