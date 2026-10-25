@@ -124,7 +124,7 @@ export function cloudSaveDecision(local, remote, remoteUpdatedAt = '') {
  * Back up raw local-save bytes before a cloud conflict may replace them.
  * Keeps a small rolling set to avoid unbounded localStorage growth.
  */
-export function backupLocalSave(storage, rawSave, timestamp = Date.now(), keep = 3) {
+export function backupLocalSave(storage, rawSave, timestamp = Date.now(), keep = 3, prefix = 'ashen-crown-3d.backup.') {
   if (!storage || typeof storage.setItem !== 'function' || typeof storage.getItem !== 'function') {
     throw new TypeError('A writable storage object is required.');
   }
@@ -132,7 +132,7 @@ export function backupLocalSave(storage, rawSave, timestamp = Date.now(), keep =
     throw new TypeError('A non-empty local save is required for backup.');
   }
 
-  const prefix = 'ashen-crown-3d.backup.';
+  if (typeof prefix !== 'string' || prefix.length === 0) throw new TypeError('A non-empty backup prefix is required.');
   const stamp = Number.isFinite(Number(timestamp)) ? Math.max(0, Math.floor(Number(timestamp))) : Date.now();
   let key = prefix + stamp;
   let suffix = 1;
