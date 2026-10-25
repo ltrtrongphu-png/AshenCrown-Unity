@@ -3151,6 +3151,7 @@ let localSaveRevision = 0;
 let legacySaveWiped = false;
 let localSaveRecoveryRequired = false;
 let localSaveRecoveryReason = '';
+let saveImportInProgress = false;
 let localSaveWriteCount = 0;
 let lastSavedComparable = null;
 let idleSavePending = false;
@@ -3260,6 +3261,7 @@ function localSaveComparable(save) {
 }
 
 function saveState(force = false) {
+  if (saveImportInProgress) return false;
   if (localSaveRecoveryRequired) {
     const status = $('saveStatus');
     if (status) { status.textContent = 'SAVE RECOVERY NEEDED'; status.dataset.state = 'error'; }
@@ -3354,6 +3356,10 @@ async function importLocalSaveFile(file) {
     );
     if (!confirmed) return false;
 
+    // Freeze all local-save writes before touching primary storage. In particular,
+    // pagehide/visibilitychange must not serialize the old in-memory journey over
+    // the imported primary while location.reload() is being processed.
+    saveImportInProgress = true;
     const key = await getLocalSaveKey(true);
     originalPrimaryRaw = localStorage.getItem('ashen-crown-3d');
     if (originalPrimaryRaw !== null) {
@@ -3402,6 +3408,7 @@ async function importLocalSaveFile(file) {
         console.error('[Ashen Crown] Save import rollback failed:', rollbackError?.message || rollbackError);
       }
     }
+    saveImportInProgress = false;
     const status = $('saveStatus');
     if (status) { status.textContent = 'IMPORT FAILED'; status.dataset.state = 'error'; }
     toastMsg('Save import failed; the previous save was restored where storage allowed. ' + String(error?.message || error));
@@ -3857,8 +3864,8 @@ setInterval(()=>{
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
 setInterval(()=>{if(!document.hidden)scheduleIdleSave()},15000);
-window.addEventListener('pagehide',saveState);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)saveState()});
+window.addEventListener('pagehide',()=>{if(!saveImportInProgress)saveState()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&!saveImportInProgress)saveState()});
 
 const debugPerfEnabled = new URLSearchParams(location.search).get('debug') === '1';
 let debugPerfOverlay = null;
