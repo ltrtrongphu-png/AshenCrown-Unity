@@ -253,7 +253,7 @@ test('encrypted local-save adapter preserves a corrupt envelope for manual recov
   assert.equal(storage.getItem('unrelated-preference'), 'dark');
 });
 
-test('encrypted local-save adapter verifies ciphertext and clears a tampered envelope', async () => {
+test('encrypted local-save adapter offers a verified backup without overwriting corrupt ciphertext', async () => {
   const { webcrypto } = await import('node:crypto');
   const { writeEncryptedLocalSave, readEncryptedLocalSave, encryptSavePayload } = await import('../../save-utils.js');
   const values = new Map();
@@ -269,7 +269,8 @@ test('encrypted local-save adapter verifies ciphertext and clears a tampered env
   assert.equal(await writeEncryptedLocalSave(storage, 'ashen-crown-3d', save, key, webcrypto), true);
   const savedEnvelope = storage.getItem('ashen-crown-3d');
   assert.equal(savedEnvelope.includes('"level"'), false);
-  storage.setItem('ashen-crown-3d.backup.legacy', JSON.stringify({ saveVersion: 5, level: 3, chapter: 1, inventory: [], flags: {}, savedAt: 10 }));
+  const legacyBackup = { saveVersion: 5, level: 3, chapter: 1, inventory: [], flags: {}, savedAt: 10 };
+  storage.setItem('ashen-crown-3d.backup.legacy', JSON.stringify(legacyBackup));
   const loaded = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
   assert.deepEqual(loaded.value, save);
   assert.equal(loaded.removedBackups, 1);
@@ -281,11 +282,12 @@ test('encrypted local-save adapter verifies ciphertext and clears a tampered env
     (badEnvelope[middle] === 'A' ? 'B' : 'A') + badEnvelope.slice(middle + 1);
   values.set('ashen-crown-3d', tamperedEnvelope);
   const bad = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
-  assert.equal(bad.value, null);
+  assert.deepEqual(bad.value, legacyBackup, 'the readable encrypted backup should be offered as recoverable progress');
   assert.equal(bad.wipedLegacy, false);
   assert.equal(bad.corrupt, true);
   assert.equal(bad.needsRecovery, true);
-  assert.equal(storage.getItem('ashen-crown-3d'), tamperedEnvelope, 'corrupt ciphertext must be retained for recovery');
+  assert.equal(bad.reason, 'corrupt-envelope-encrypted-backup-available');
+  assert.equal(storage.getItem('ashen-crown-3d'), tamperedEnvelope, 'corrupt ciphertext must be retained until explicit recovery');
 });
 
 
