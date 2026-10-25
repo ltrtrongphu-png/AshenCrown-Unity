@@ -19,6 +19,14 @@ export function escapeHtml(value) {
   })[character]);
 }
 
+export function sanitizeJournalEntry(value, maxLength = 1000) {
+  if (typeof value !== 'string') return '';
+  const safeLimit = Number.isInteger(maxLength) ? Math.max(0, Math.min(maxLength, 1000)) : 1000;
+  return value.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, safeLimit);
+}
+
+
+
 function clampInteger(value, min, max) {
   return Math.min(max, Math.max(min, Math.floor(value)));
 }
