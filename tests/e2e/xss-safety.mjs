@@ -14,9 +14,9 @@ const consoleErrors = [];
 page.on('pageerror', error => pageErrors.push(String(error?.stack || error)));
 page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
 
-const hostileName = '<img id="xss-inventory-name" src=x onerror=window.xss=true>';
-const hostileAttr = '<svg onload=window.xss=true>';
-const hostileLog = '<img id="xss-journal-log" src=x onerror=window.xss=true>';
+const hostileName = '<img id=xss-inventory-name src=x onerror="window.xss=1">';
+const hostileAttr = '<svg onload="window.xss=1">';
+const hostileLog = '<img id=xss-journal-log src=x onerror="window.xss=1">';
 const fixture = {
   saveVersion: 5, mapVersion: 1, savedAt: 220, level: 1, xp: 0, hp: 100, stamina: 100,
   coins: 40, shards: 0, echoes: 0, quest: 0, chapter: 1, day: 1, chapterGathered: 0,
