@@ -269,7 +269,7 @@ test('encrypted local-save adapter verifies ciphertext and clears a tampered env
   assert.equal(await writeEncryptedLocalSave(storage, 'ashen-crown-3d', save, key, webcrypto), true);
   const savedEnvelope = storage.getItem('ashen-crown-3d');
   assert.equal(savedEnvelope.includes('"level"'), false);
-  storage.setItem('ashen-crown-3d.backup.legacy', '{"level":1}');
+  storage.setItem('ashen-crown-3d.backup.legacy', JSON.stringify({ saveVersion: 5, level: 3, chapter: 1, inventory: [], flags: {}, savedAt: 10 }));
   const loaded = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
   assert.deepEqual(loaded.value, save);
   assert.equal(loaded.removedBackups, 1);
