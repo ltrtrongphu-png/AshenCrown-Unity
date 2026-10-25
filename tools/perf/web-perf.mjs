@@ -108,7 +108,7 @@ try {
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpuThrottleRate });
 
     const navStarted = Date.now();
-    await page.goto(baseUrl + '/play.html?e2e=1&debug=1', { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.goto(baseUrl + '/play.html?e2e=1', { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.waitForFunction(() => document.documentElement.dataset.ashenGameReady === 'true', null, { timeout: 120000 });
     await page.locator('#tutorialStart').evaluate(button => button.click());
     await page.waitForFunction(() => typeof window.__ASHEN_TEST__?.perfSnapshot === 'function', null, { timeout: 20000 });
