@@ -3724,6 +3724,16 @@ if(isLocalE2ESession) {
       player.position.set(boss.x,0,boss.z+2.5);yaw=0;player.rotation.y=Math.PI;
       return {ok:true,hp:Math.round(encounter.hp),playerHp:state.hp};
     },
+    shortenBossForCampaignStep:()=>{
+      if(state.quest!==3||!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
+      // Chapter 1 owns the full Warden combat/soft-lock regression. Later chapters
+      // still kill each actual spawned Warden through pulse() so story flags,
+      // death transitions, choices and saves are exercised, but avoid hundreds
+      // of redundant swings on hosted SwiftShader.
+      const lethalTestHp=Math.max(1,calcPlayerDamage(18,0,true));
+      encounter.hp=Math.min(encounter.hp,lethalTestHp);
+      return {ok:true,hp:Math.round(encounter.hp),minimumStrikeDamage:lethalTestHp};
+    },
     alignCampaignAttack:()=>{
       if(!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
       const boss=encounter.root.getWorldPosition(new THREE.Vector3());
