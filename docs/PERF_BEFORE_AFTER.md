@@ -45,4 +45,3 @@ ASHEN_PERF_URL=http://127.0.0.1:4173 ASHEN_PERF_MODE=baseline \
 ```
 
 No benchmark numbers are recorded in this source change. Populate the tables above only from uploaded results with the machine/browser/build and per-run samples attached; the three-run median is the comparison point, not an assumed improvement.
-
