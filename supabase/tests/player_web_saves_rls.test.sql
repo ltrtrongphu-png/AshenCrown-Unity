@@ -132,12 +132,12 @@ select is(
 );
 
 select lives_ok(
-  $
+  $$
     update public.player_web_saves
     set save_json = save_json || '{"level":8}'::jsonb,
         updated_at = now()
     where user_id = 'a4e10000-0000-4000-8000-000000000002'
-  $,
+  $$,
   'user B can update their own cloud save'
 );
 
