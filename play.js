@@ -3215,16 +3215,30 @@ async function deleteLocalSaveKeyDatabase() {
   });
 }
 
-async function persistEncryptedLocalSave(value) {
+async function persistEncryptedLocalSave(value, options = {}) {
   const snapshot = typeof value === 'string' ? JSON.parse(value) : JSON.parse(JSON.stringify(value));
   if (localSaveRecoveryRequired) {
     throw new Error('Existing local save requires recovery; automatic overwrite is blocked.');
   }
-  localSavePlaintext = snapshot;
   const revision = ++localSaveRevision;
-  localSaveWriteChain = localSaveWriteChain.catch(() => {}).then(async () => {
+  const queueCloud = options.queueCloud !== false;
+  const expectedCloudUserId = Object.prototype.hasOwnProperty.call(options, 'expectedCloudUserId')
+    ? options.expectedCloudUserId
+    : (window.AshenAuth?.getUserId?.() || null);
+  const requireCloudUserId = options.requireCloudUserId === true;
+  let persisted = false;
+
+  const writePromise = localSaveWriteChain.catch(() => {}).then(async () => {
+    if (revision !== localSaveRevision) return;
+    if (requireCloudUserId && (!expectedCloudUserId ||
+        window.AshenAuth?.getUserId?.() !== expectedCloudUserId)) return;
+
     const key = await getLocalSaveKey(true);
+    if (revision !== localSaveRevision) return;
+    if (requireCloudUserId && window.AshenAuth?.getUserId?.() !== expectedCloudUserId) return;
+
     const currentRaw = localStorage.getItem('ashen-crown-3d');
+    const originalBackupRaw = localStorage.getItem('ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX);
     if (isEncryptedSaveEnvelope(currentRaw)) {
       // Preserve the last known-good save before replacing it. If the current
       // ciphertext cannot be decrypted, do not overwrite it with a new save.
@@ -3233,15 +3247,47 @@ async function persistEncryptedLocalSave(value) {
         await writeEncryptedLocalSave(localStorage, 'ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX, previous, key);
       }
     }
+    if (revision !== localSaveRevision) return;
+    if (requireCloudUserId && window.AshenAuth?.getUserId?.() !== expectedCloudUserId) return;
+
     localSaveWriteCount++;
     await writeEncryptedLocalSave(localStorage, 'ashen-crown-3d', snapshot, key);
+
+    // Cloud restore must still belong to the account which initiated it. If a
+    // different account signed in while encryption was awaiting, restore exact
+    // previous bytes rather than leaving the previous account's cloud save local.
+    if (requireCloudUserId && window.AshenAuth?.getUserId?.() !== expectedCloudUserId) {
+      try {
+        if (currentRaw === null) localStorage.removeItem('ashen-crown-3d');
+        else localStorage.setItem('ashen-crown-3d', currentRaw);
+        if (originalBackupRaw === null) localStorage.removeItem('ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX);
+        else localStorage.setItem('ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX, originalBackupRaw);
+        if (localStorage.getItem('ashen-crown-3d') !== currentRaw ||
+            localStorage.getItem('ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX) !== originalBackupRaw) {
+          throw new Error('Previous local save could not be restored after an account switch.');
+        }
+      } catch (rollbackError) {
+        localSaveRecoveryRequired = true;
+        localSaveRecoveryReason = 'cloud-account-rollback-failed';
+        throw rollbackError;
+      }
+      return;
+    }
+
     if (revision === localSaveRevision) {
+      localSavePlaintext = snapshot;
       legacySaveWiped = false;
       const status = $('saveStatus');
       if (status) { status.textContent = 'ENCRYPTED · SAVED LOCALLY'; status.dataset.state = 'saved'; }
-      window.AshenAuth?.queueSave?.(snapshot);
+      if (queueCloud && expectedCloudUserId &&
+          window.AshenAuth?.getUserId?.() === expectedCloudUserId) {
+        window.AshenAuth?.queueSave?.(snapshot, expectedCloudUserId);
+      }
+      persisted = true;
     }
-  }).catch(error => {
+  });
+
+  localSaveWriteChain = writePromise.catch(error => {
     lastSavedComparable = null;
     const status = $('saveStatus');
     if (status) { status.textContent = 'SAVE RECOVERY NEEDED'; status.dataset.state = 'error'; }
@@ -3251,7 +3297,8 @@ async function persistEncryptedLocalSave(value) {
     }
     console.warn('[Ashen Crown] Encrypted local save failed:', error?.message || error);
   });
-  return localSaveWriteChain;
+  await localSaveWriteChain;
+  return persisted;
 }
 
 function localSaveComparable(save) {
@@ -3342,6 +3389,7 @@ async function exportLocalSaveFile() {
 }
 
 async function importLocalSaveFile(file) {
+  const importCloudUserId = window.AshenAuth?.getUserId?.() || null;
   if (!file) return false;
   let originalPrimaryRaw;
   let primaryWriteStarted = false;
@@ -3394,7 +3442,9 @@ async function importLocalSaveFile(file) {
     localSaveRecoveryReason = '';
     legacySaveWiped = false;
     lastSavedComparable = null;
-    await window.AshenAuth?.queueSave?.(imported);
+    if (importCloudUserId && window.AshenAuth?.getUserId?.() === importCloudUserId) {
+      window.AshenAuth?.queueSave?.(imported, importCloudUserId);
+    }
     toastMsg('Imported v5 save encrypted and verified. Reloading the journey.');
     location.reload();
     return true;
@@ -3526,7 +3576,16 @@ function setupTouchControls(){
   function moveStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,42/len),nx=dx*scale,ny=dy*scale;knob.style.transform='translate('+nx+'px,'+ny+'px)';keys.KeyD=nx>17;keys.KeyA=nx< -17;keys.KeyS=ny>17;keys.KeyW=ny< -17}
   controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='parry')parry();else if(action==='inventory')openInventory();else if(action==='skill')useSkill(Number(button.dataset.skill))}));
 }
+let cloudSyncGeneration = 0;
+
+async function isCurrentCloudSync(generation, userId) {
+  if (generation !== cloudSyncGeneration || !userId) return false;
+  const session = await window.AshenAuth?.getSession?.();
+  return generation === cloudSyncGeneration && session?.user?.id === userId;
+}
+
 async function syncCloudSaveFromAccount() {
+  const generation = ++cloudSyncGeneration;
   if (localSaveRecoveryRequired) {
     toastMsg('Cloud sync stopped because this browser has a save that needs recovery. Export or import a v5 save first.');
     return;
@@ -3537,10 +3596,12 @@ async function syncCloudSaveFromAccount() {
   try {
     await auth.ready;
     const session = await auth.getSession();
-    if (!session?.user) return;
-
+    const syncUserId = session?.user?.id || null;
+    if (!syncUserId) return;
     if (legacySaveWiped) return;
+
     const cloud = await auth.loadCloudSave();
+    if (!await isCurrentCloudSync(generation, syncUserId)) return;
     const remote = cloud?.save_json;
     const localRaw = localStorage.getItem('ashen-crown-3d');
     const local = localSavePlaintext;
@@ -3551,18 +3612,29 @@ async function syncCloudSaveFromAccount() {
 
     const decision = cloudSaveDecision(local, remote, cloud?.updated_at || '');
     if (decision.action === 'invalid-cloud') {
-      if (local) auth.queueSave?.(local);
-      else toastMsg('Cloud save is invalid; it was not imported.');
+      if (local && await isCurrentCloudSync(generation, syncUserId)) auth.queueSave?.(local, syncUserId);
+      else if (!local) toastMsg('Cloud save is invalid; it was not imported.');
       return;
     }
 
     if (decision.action === 'use-cloud') {
-      // An empty local slot may safely restore from the account.
+      // An empty local slot may safely restore from the account, but only while
+      // the same account remains active. The restore is not queued for re-upload.
       if (localRaw) {
         toastMsg('Local save data exists but could not be safely parsed; cloud restore was stopped.');
         return;
       }
-      await persistEncryptedLocalSave({ ...remote, savedAt: decision.remoteStamp || Date.now() });
+      if (!await isCurrentCloudSync(generation, syncUserId)) return;
+      const restored = await persistEncryptedLocalSave(
+        { ...remote, savedAt: decision.remoteStamp || Date.now() },
+        { queueCloud: false, expectedCloudUserId: syncUserId, requireCloudUserId: true }
+      );
+      if (!restored) {
+        if (await isCurrentCloudSync(generation, syncUserId)) {
+          toastMsg('Cloud restore was cancelled because the account changed or local storage could not be verified.');
+        }
+        return;
+      }
       location.reload();
       return;
     }
@@ -3571,43 +3643,99 @@ async function syncCloudSaveFromAccount() {
       const conflictMessage = decision.action === 'ask-cloud'
         ? 'Your account has a newer Ashen Crown save.'
         : 'Your local Ashen Crown save is newer than the cloud copy.';
+      if (!await isCurrentCloudSync(generation, syncUserId)) return;
       const useCloud = window.confirm(
         conflictMessage + '\n\n' +
         'OK: use the cloud save (your current local save will be backed up on this device).\n' +
         'Cancel: keep this local save and sync it to your account.'
       );
+      if (!await isCurrentCloudSync(generation, syncUserId)) return;
       if (!useCloud) {
-        auth.queueSave?.(local);
+        auth.queueSave?.(local, syncUserId);
         toastMsg('Kept your local journey. It will sync to your account.');
         return;
       }
 
-      // Never overwrite local progress until the byte-for-byte original is backed up.
+      // Store ciphertext under a dedicated namespace so the v5 migration loader
+      // does not confuse this conflict copy with an unknown legacy plaintext backup.
       if (typeof localRaw !== 'string' || !localRaw) {
         toastMsg('Could not back up the local save; cloud restore was cancelled.');
         return;
       }
-      const backupKey = backupLocalSave(localStorage, localRaw);
-
-      await persistEncryptedLocalSave({ ...remote, savedAt: decision.remoteStamp || Date.now() });
+      backupLocalSave(localStorage, localRaw, Date.now(), 3, 'ashen-crown-3d.cloud-conflict.backup.');
+      const restored = await persistEncryptedLocalSave(
+        { ...remote, savedAt: decision.remoteStamp || Date.now() },
+        { queueCloud: false, expectedCloudUserId: syncUserId, requireCloudUserId: true }
+      );
+      if (!restored) {
+        if (await isCurrentCloudSync(generation, syncUserId)) {
+          toastMsg('Cloud restore failed; your previous local save was kept where storage allowed.');
+        }
+        return;
+      }
       toastMsg('Cloud journey restored. Your previous encrypted local save is backed up on this device.');
       location.reload();
       return;
     }
 
-    // Equal timestamps and older cloud saves default to local, never the reverse.
-    if (local) auth.queueSave?.(local);
+    // Equal or older cloud saves default to local, never the reverse.
+    if (local && await isCurrentCloudSync(generation, syncUserId)) auth.queueSave?.(local, syncUserId);
   } catch (error) {
+    if (generation !== cloudSyncGeneration) return;
     console.warn('[Ashen Crown] Cloud save sync unavailable:', error?.message || error);
     toastMsg('Cloud sync is unavailable. Your local journey was kept.');
   }
 }
-window.addEventListener('ashen:auth',event=>{
-  const user=event.detail?.session?.user||event.detail?.user||null;
-  syncOwnerTools(user);
-  if(event.detail?.session?.user&&event.detail?.event!=='PASSWORD_RECOVERY')void syncCloudSaveFromAccount();
+
+let cloudSaveFailureToastShown = false;
+window.addEventListener('ashen:cloud-save', event => {
+  const { status: cloudStatus, message = '' } = event.detail || {};
+  const saveStatus = $('saveStatus');
+  if (saveStatus && !localSaveRecoveryRequired) {
+    if (cloudStatus === 'pending') {
+      saveStatus.textContent = 'LOCAL SAVED · CLOUD PENDING';
+      saveStatus.dataset.state = 'saving';
+    } else if (cloudStatus === 'syncing') {
+      saveStatus.textContent = 'SYNCING CLOUD SAVE…';
+      saveStatus.dataset.state = 'saving';
+    } else if (cloudStatus === 'saved') {
+      saveStatus.textContent = 'ENCRYPTED · LOCAL + CLOUD';
+      saveStatus.dataset.state = 'saved';
+      cloudSaveFailureToastShown = false;
+    } else if (cloudStatus === 'retrying' || cloudStatus === 'rejected') {
+      saveStatus.textContent = 'LOCAL SAVED · CLOUD NOT SYNCED';
+      saveStatus.dataset.state = 'error';
+      if (!cloudSaveFailureToastShown) {
+        cloudSaveFailureToastShown = true;
+        toastMsg(message || 'Your local save is safe, but cloud backup is not synced yet.');
+      }
+    } else if (cloudStatus === 'idle' || cloudStatus === 'signed-out') {
+      saveStatus.textContent = 'ENCRYPTED · SAVED LOCALLY';
+      saveStatus.dataset.state = 'saved';
+    }
+  }
 });
-window.AshenAuth?.ready?.then(async()=>{const session=await window.AshenAuth.getSession();syncOwnerTools(session?.user||null);syncCloudSaveFromAccount()}).catch(()=>{});
+
+let observedCloudUserId = null;
+window.addEventListener('ashen:auth', event => {
+  const user = event.detail?.session?.user || event.detail?.user || null;
+  const nextUserId = user?.id || null;
+  syncOwnerTools(user);
+  if (nextUserId !== observedCloudUserId) {
+    observedCloudUserId = nextUserId;
+    cloudSyncGeneration++;
+    if (nextUserId && event.detail?.event !== 'PASSWORD_RECOVERY') void syncCloudSaveFromAccount();
+  }
+});
+window.AshenAuth?.ready?.then(async () => {
+  const session = await window.AshenAuth.getSession();
+  syncOwnerTools(session?.user || null);
+  const userId = session?.user?.id || null;
+  if (userId !== observedCloudUserId) {
+    observedCloudUserId = userId;
+    if (userId) void syncCloudSaveFromAccount();
+  }
+}).catch(() => {});
 
 async function bootstrapEncryptedSave() {
   let result={value:null,wipedLegacy:false,corrupt:false};
