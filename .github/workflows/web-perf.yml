@@ -53,6 +53,7 @@ jobs:
           ASHEN_PERF_RUNS: 1
           ASHEN_PERF_DURATION_MS: 15000
           ASHEN_PERF_CPU_THROTTLE: 4
+          ASHEN_PERF_RENDERER: software
           ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/pr-smoke
       - name: Run three repeatable 60-second baselines at 4x CPU throttle
         if: github.event_name != 'pull_request'
@@ -63,6 +64,7 @@ jobs:
           ASHEN_PERF_RUNS: 3
           ASHEN_PERF_DURATION_MS: 60000
           ASHEN_PERF_CPU_THROTTLE: 4
+          ASHEN_PERF_RENDERER: software
           ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/baseline
       - name: Run 10-minute GPU resource soak
         if: github.event_name != 'pull_request'
@@ -73,6 +75,7 @@ jobs:
           ASHEN_PERF_RUNS: 1
           ASHEN_PERF_DURATION_MS: 600000
           ASHEN_PERF_CPU_THROTTLE: 4
+          ASHEN_PERF_RENDERER: software
           ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/soak
       - name: Upload performance JSON, tables and screenshots
         if: always()
