@@ -277,12 +277,15 @@ test('encrypted local-save adapter verifies ciphertext and clears a tampered env
   assert.equal(storage.getItem('ashen-crown-3d.backup.legacy'), null);
   const badEnvelope = await encryptSavePayload(save, key, webcrypto);
   const middle = badEnvelope.length - 6;
-  values.set('ashen-crown-3d', badEnvelope.slice(0, middle) + (badEnvelope[middle] === 'A' ? 'B' : 'A') + badEnvelope.slice(middle + 1));
+  const tamperedEnvelope = badEnvelope.slice(0, middle) +
+    (badEnvelope[middle] === 'A' ? 'B' : 'A') + badEnvelope.slice(middle + 1);
+  values.set('ashen-crown-3d', tamperedEnvelope);
   const bad = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
   assert.equal(bad.value, null);
-  assert.equal(bad.wipedLegacy, true);
+  assert.equal(bad.wipedLegacy, false);
   assert.equal(bad.corrupt, true);
-  assert.equal(storage.getItem('ashen-crown-3d'), null);
+  assert.equal(bad.needsRecovery, true);
+  assert.equal(storage.getItem('ashen-crown-3d'), tamperedEnvelope, 'corrupt ciphertext must be retained for recovery');
 });
 
 
