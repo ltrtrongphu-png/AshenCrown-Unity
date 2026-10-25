@@ -1,0 +1,72 @@
+name: Web performance baseline and soak
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-performance:
+    name: Measure browser performance and GPU resource soak
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install project and Playwright dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Build allow-listed browser artifact
+        run: node tools/build-web.mjs
+      - name: Serve the built game
+        run: |
+          python3 -m http.server 4173 --directory dist > /tmp/ashen-crown-perf-http.log 2>&1 &
+          echo $! > /tmp/ashen-crown-perf-http.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/play.html > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/ashen-crown-perf-http.log
+          exit 1
+      - name: Run three repeatable 60-second baselines at 4x CPU throttle
+        run: node tools/perf/web-perf.mjs
+        env:
+          ASHEN_PERF_URL: http://127.0.0.1:4173
+          ASHEN_PERF_MODE: baseline
+          ASHEN_PERF_RUNS: 3
+          ASHEN_PERF_DURATION_MS: 60000
+          ASHEN_PERF_CPU_THROTTLE: 4
+          ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/baseline
+      - name: Run 10-minute GPU resource soak
+        run: node tools/perf/web-perf.mjs
+        env:
+          ASHEN_PERF_URL: http://127.0.0.1:4173
+          ASHEN_PERF_MODE: soak
+          ASHEN_PERF_RUNS: 1
+          ASHEN_PERF_DURATION_MS: 600000
+          ASHEN_PERF_CPU_THROTTLE: 4
+          ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/soak
+      - name: Upload performance JSON, tables and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashen-crown-web-performance
+          path: artifacts/perf/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload static-server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashen-crown-web-performance-server-log
+          path: /tmp/ashen-crown-perf-http.log
+          if-no-files-found: warn
+          retention-days: 7
