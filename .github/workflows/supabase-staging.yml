@@ -55,7 +55,7 @@ jobs:
           const projectRef = process.env.ASHEN_S4_ALLOWED_PROJECT_REF;
           const key = process.env.ASHEN_S4_SUPABASE_PUBLISHABLE_KEY;
           if (url.protocol !== 'https:' ||
-              !/^[a-z0-9-]+\\.supabase\\.co$/i.test(url.hostname) ||
+              !/^[a-z0-9-]+\.supabase\.co$/i.test(url.hostname) ||
               url.hostname.split('.')[0] !== projectRef ||
               !key || /^sb_secret_/i.test(key)) {
             throw new Error('Staging URL/key failed the local browser config allowlist.');
@@ -63,7 +63,7 @@ jobs:
           const config = 'window.ASHEN_SUPABASE_CONFIG = Object.freeze({' +
             'url: ' + JSON.stringify(url.origin) + ',' +
             'publishableKey: ' + JSON.stringify(key) +
-            '});\\n';
+            '});\n';
           writeFileSync('dist/auth-config.js', config, { mode: 0o600 });
           NODE
       - name: Serve the local browser build
