@@ -3726,10 +3726,10 @@ if(isLocalE2ESession) {
     },
     shortenBossForCampaignStep:()=>{
       if(state.quest!==3||!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
-      // Chapter 1 owns the full Warden combat/soft-lock regression. Later chapters
-      // still kill each actual spawned Warden through pulse() so story flags,
-      // death transitions, choices and saves are exercised, but avoid hundreds
-      // of redundant swings on hosted SwiftShader.
+      // The separate browser smoke already exercises a multi-hit combo against
+      // the production Warden. This ten-chapter harness focuses on story gates,
+      // reload/death recovery, choices and saves; keep every chapter's Warden
+      // alive until the real pulse() handler lands a lethal hit.
       const lethalTestHp=Math.max(1,calcPlayerDamage(18,0,true));
       encounter.hp=Math.min(encounter.hp,lethalTestHp);
       return {ok:true,hp:Math.round(encounter.hp),minimumStrikeDamage:lethalTestHp};
