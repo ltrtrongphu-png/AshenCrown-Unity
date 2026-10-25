@@ -2,6 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { escapeHtml, sanitizeItemRecord } from '../../save-utils.js';
 
+test('saved journal entries strip controls and cap display length', async () => {
+  const { sanitizeJournalEntry } = await import('../../save-utils.js');
+  assert.equal(sanitizeJournalEntry('line\u0000\u0008\u001f\u007f end'), 'line end');
+  assert.equal(sanitizeJournalEntry('<img id="xss">'), '<img id="xss">', 'HTML must be escaped at the DOM sink, not destroyed as text');
+  assert.equal(sanitizeJournalEntry('x'.repeat(1500)).length, 1000);
+  assert.equal(sanitizeJournalEntry('<svg>', 3), '<sv');
+  assert.equal(sanitizeJournalEntry(null), '');
+});
+
 test('escapeHtml converts markup and attribute-sensitive characters to text', () => {
   assert.equal(
     escapeHtml('<img src=x onerror="alert(1)"> & \'Ashen\''),
