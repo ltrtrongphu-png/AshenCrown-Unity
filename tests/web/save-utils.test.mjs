@@ -105,6 +105,8 @@ test('cloud save conflict never silently selects a newer cloud save over local p
   assert.equal(cloudSaveDecision(local, olderCloud).action, 'ask-local');
   assert.equal(cloudSaveDecision(null, newerCloud).action, 'use-cloud');
   assert.equal(cloudSaveDecision(local, { level: 'invalid' }).action, 'invalid-cloud');
+  assert.equal(cloudSaveDecision(local, { saveVersion: 4, level: 12 }).action, 'invalid-cloud');
+  assert.equal(cloudSaveDecision(local, { saveVersion: 5, level: 1.5 }).action, 'invalid-cloud');
 });
 
 
@@ -131,23 +133,23 @@ test('local save backups verify raw bytes and rotate old conflict copies', async
 
 test('equal save timestamps with different progress still require a user decision', async () => {
   const { cloudSaveDecision } = await import('../../save-utils.js');
-  const local = { level: 5, savedAt: 100, coins: 100 };
-  const remote = { level: 3, savedAt: 100, coins: 20 };
+  const local = { saveVersion: 5, level: 5, savedAt: 100, coins: 100 };
+  const remote = { saveVersion: 5, level: 3, savedAt: 100, coins: 20 };
   assert.equal(cloudSaveDecision(local, remote).action, 'ask-local');
 });
 
 test('save comparison is insensitive to object key order across JSONB round trips', async () => {
   const { serializeSaveForComparison } = await import('../../save-utils.js');
-  const local = { savedAt: 200, level: 4, settings: { volume: 0.5, quality: 'high' }, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] };
-  const cloud = { inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], settings: { quality: 'high', volume: 0.5 }, level: 4, savedAt: 900 };
+  const local = { saveVersion: 5, savedAt: 200, level: 4, settings: { volume: 0.5, quality: 'high' }, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] };
+  const cloud = { saveVersion: 5, inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], settings: { quality: 'high', volume: 0.5 }, level: 4, savedAt: 900 };
   assert.equal(serializeSaveForComparison(local), serializeSaveForComparison(cloud));
 });
 
 test('equivalent local and cloud payloads do not prompt solely because timestamps differ', async () => {
   const { cloudSaveDecision } = await import('../../save-utils.js');
   assert.equal(cloudSaveDecision(
-    { savedAt: 100, level: 4, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] },
-    { savedAt: 300, inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], level: 4 }
+    { saveVersion: 5, savedAt: 100, level: 4, inventory: [{ name: 'Blade', stats: { ward: 2, focus: 1 } }] },
+    { saveVersion: 5, savedAt: 300, inventory: [{ stats: { focus: 1, ward: 2 }, name: 'Blade' }], level: 4 }
   ).action, 'keep-local');
 });
 
