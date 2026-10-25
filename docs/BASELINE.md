@@ -122,7 +122,7 @@ Phase 0 ghi nhận xong audit tĩnh và baseline tĩnh. Để báo cáo build/pe
 
 ## Refresh 2026-10-25 — remote-source baseline (Sprint 0)
 
-**Reviewed commit:** `cd34e5ec2f0442238040a32e2c40ef258f4b987e` (`main`)  
+**Reviewed commit:** `cd34e5ec2f0442238040a32e2c40ef258f4b987e` (`main`)
 **Review type:** GitHub remote source and metadata inspection only; not a clean checkout or runtime baseline.
 
 ### Verified from repository source / metadata
