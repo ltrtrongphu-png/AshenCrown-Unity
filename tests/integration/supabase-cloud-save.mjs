@@ -147,7 +147,11 @@ function makeFixture(level, runId) {
     level,
     chapter: 1,
     inventory: [],
-    flags: {},
+    flags: {
+      __ashen_s4_test: true,
+      __ashen_s4_fixture: FIXTURE_MARKER,
+      __ashen_s4_run: runId
+    },
     savedAt: Date.now(),
     __ashen_s4_test: true,
     __ashen_s4_fixture: FIXTURE_MARKER,
@@ -156,8 +160,9 @@ function makeFixture(level, runId) {
 }
 
 function isOwnedTestFixture(row) {
-  return row?.save_json?.__ashen_s4_test === true &&
-    row?.save_json?.__ashen_s4_fixture === FIXTURE_MARKER;
+  const save = row?.save_json;
+  return save?.__ashen_s4_test === true && save?.__ashen_s4_fixture === FIXTURE_MARKER ||
+    save?.flags?.__ashen_s4_test === true && save?.flags?.__ashen_s4_fixture === FIXTURE_MARKER;
 }
 
 async function run() {
@@ -186,8 +191,8 @@ async function run() {
   const [ownA, ownB] = await Promise.all([readOwn(accountA), readOwn(accountB)]);
   assert.equal(ownA.length, 1, 'Account A must read back its own row.');
   assert.equal(ownB.length, 1, 'Account B must read back its own row.');
-  assert.equal(ownA[0].save_json.__ashen_s4_run, runId);
-  assert.equal(ownB[0].save_json.__ashen_s4_run, runId);
+  assert.equal(ownA[0].save_json.__ashen_s4_run || ownA[0].save_json.flags?.__ashen_s4_run, runId);
+  assert.equal(ownB[0].save_json.__ashen_s4_run || ownB[0].save_json.flags?.__ashen_s4_run, runId);
   assert.equal(ownA[0].save_json.level, 2);
   assert.equal(ownB[0].save_json.level, 7);
 
@@ -244,8 +249,8 @@ async function run() {
   const [finalA, finalB] = await Promise.all([readOwn(accountA), readOwn(accountB)]);
   assert.equal(finalA.length, 1, 'Account A test fixture should remain available.');
   assert.equal(finalB.length, 1, 'Account B test fixture should remain available.');
-  assert.equal(finalA[0].save_json.__ashen_s4_run, runId);
-  assert.equal(finalB[0].save_json.__ashen_s4_run, runId);
+  assert.equal(finalA[0].save_json.__ashen_s4_run || finalA[0].save_json.flags?.__ashen_s4_run, runId);
+  assert.equal(finalB[0].save_json.__ashen_s4_run || finalB[0].save_json.flags?.__ashen_s4_run, runId);
   if (failedChecks.length) throw new Error(failedChecks.join(' '));
 
   console.log('S4 live staging checks passed for project ref ' + config.projectRef + '.');
