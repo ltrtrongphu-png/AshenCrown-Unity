@@ -38,6 +38,7 @@ try {
 
   await page.goto(baseUrl + '/play.html?e2e=1', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.documentElement.dataset.ashenGameReady === 'true');
+  await page.locator('#tutorialStart').evaluate(button => button.click());
   await page.waitForFunction(() => typeof window.__ASHEN_TEST__?.flushLocalSave === 'function');
   const migrated = await page.evaluate(() => window.__ASHEN_TEST__.flushLocalSave());
   const initialState = await page.evaluate(() => window.__ASHEN_TEST__.status());
