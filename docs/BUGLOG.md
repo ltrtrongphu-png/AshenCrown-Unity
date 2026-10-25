@@ -27,3 +27,26 @@ Scope: source analysis and targeted fixes for the uploaded BUG-HUNT / STABILIZE 
 - Reviewed existing source/infrastructure: B-003, B-007, B-011, B-014, B-015.
 - Still needs real environments or a product decision: Unity Editor/PlayMode/Release, browser interactions and soak, live Supabase refresh/RLS, full Unity event audit, complete renderer leak audit, and the purpose of server/.
 - This log is not release certification until those verification gaps are closed.
+
+
+## Master synthesis triage — 2026-10-25
+
+This section records the Sprint 0 status of the additional N-1…N-13 findings. It does not replace existing B-xxx records. Full evidence boundaries, decision recommendations and Sprint 1 plan: [`docs/SPRINT0_REPORT.md`](SPRINT0_REPORT.md).
+
+| ID | Severity | Status at Sprint 0 | Required next action |
+|---|---|---|---|
+| N-1 | P0 | Confirmed by `docs/SAVE_FORMAT.md`: legacy plaintext and backups are deleted rather than migrated. | Add v5 fixture and migrate/verify/backup before cleanup; export/import and clear local-only warning. |
+| N-2 | P1 | Partly confirmed: owner email is hard-coded in `play.js`; production exposure of QA helpers is not yet browser-verified. | Remove personal email; gate preview/dev QA code; assert no production hook and mark QA-tainted state. |
+| N-3 | P1 | Static asset/bundle overhead is a risk; prompt-provided counts have not been independently remeasured in this pass. | Recalculate artifact metrics, profile first, then lazy-load/optimize with before/after screenshots. |
+| N-4 | P2 | Confirmed: CSP allows three script CDNs and inline styles; `auth.js` still imports Supabase from jsDelivr. | Replace/self-host the dependency before removing origins; add CSP-violation browser test. |
+| N-5 | P1/P2 | Monolithic `play.js` and lifecycle risks remain; counts and repeated-menu behavior need current-source/e2e proof. | Audit HTML sinks and listeners; add XSS and repeated open/close regression tests before module split. |
+| N-6 | P1 | Unity runtime verification gap remains; EditMode workflow is license-gated. | Run Unity 2021.3.45f1 compile/EditMode and deterministic sandbox test; record actual logs. |
+| N-7 | P1 | Confirmed: `docs/PERF_BEFORE_AFTER.md` still reports metrics as not measured. | Build repeatable browser/Unity instrumentation; report ≥3 runs and median. |
+| N-8 | P2 | Audio/VFX gap is prompt-reported; production feel and asset review not yet validated. | Audit pipelines, license sources, then implement a small measured slice. |
+| N-9 | P3 | Potential documentation drift; not all counts were recalculated. | Add deterministic docs-facts check after defining artifact-derived sources of truth. |
+| N-10 | P2 | Listener duplication not reproduced from static evidence; lifecycle behavior remains unverified. | Playwright test opens/closes each menu 20× and asserts one action per click. |
+| N-11 | P2 | Unity/web data divergence remains an architecture risk. | Define shared-data scope and importer plan before creating/migrating `data/`. |
+| N-12 | P2 | Unity refresh-token persistence/backoff/mock HTTP remain open per existing B-010 notes. | Choose platform secure-storage adapter and add mock HTTP tests; verify in Unity. |
+| N-13 | P3 | Confirmed: `server/package.json` references `server/src/index.js`, which is absent on `main`. | Owner to decide whether the backend has a required purpose before implementation or deletion. |
+
+**Verification rule:** none of these source observations is evidence of a real-browser, Unity-runtime or live-Supabase pass.
