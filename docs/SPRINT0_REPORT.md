@@ -1,8 +1,8 @@
 # Sprint 0 — Baseline refresh and decision records
 
-**Date:** 2026-10-25  
-**Repository:** `ltrtrongphu-png/AshenCrown-Unity`  
-**Reviewed ref:** `main` @ `cd34e5ec2f0442238040a32e2c40ef258f4b987e`  
+**Date:** 2026-10-25
+**Repository:** `ltrtrongphu-png/AshenCrown-Unity`
+**Reviewed ref:** `main` @ `cd34e5ec2f0442238040a32e2c40ef258f4b987e`
 **Purpose:** complete Sprint 0 of `AshenCrown_MASTER_SYNTHESIS_Prompt_v2.md`; this is a source/metadata audit, not a runtime verification.
 
 ## Verification boundary
