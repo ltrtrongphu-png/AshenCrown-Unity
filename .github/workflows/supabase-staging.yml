@@ -1,0 +1,41 @@
+name: Supabase isolated staging integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_staging:
+        description: 'This writes marked test saves to two dedicated accounts in the selected staging project.'
+        required: true
+        type: choice
+        default: 'NO - cancel'
+        options:
+          - 'NO - cancel'
+          - 'YES - isolated staging only'
+
+permissions:
+  contents: read
+
+jobs:
+  two-account-integration:
+    if: inputs.confirm_staging == 'YES - isolated staging only'
+    name: Verify two-account cloud-save isolation against staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ASHEN_S4_STAGING_CONFIRM: I_CONFIRM_THIS_IS_AN_ISOLATED_STAGING_PROJECT
+      ASHEN_S4_SUPABASE_URL: ${{ secrets.ASHEN_S4_SUPABASE_URL }}
+      ASHEN_S4_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.ASHEN_S4_SUPABASE_PUBLISHABLE_KEY }}
+      ASHEN_S4_ALLOWED_PROJECT_REF: ${{ secrets.ASHEN_S4_ALLOWED_PROJECT_REF }}
+      ASHEN_S4_USER_A_EMAIL: ${{ secrets.ASHEN_S4_USER_A_EMAIL }}
+      ASHEN_S4_USER_A_PASSWORD: ${{ secrets.ASHEN_S4_USER_A_PASSWORD }}
+      ASHEN_S4_USER_B_EMAIL: ${{ secrets.ASHEN_S4_USER_B_EMAIL }}
+      ASHEN_S4_USER_B_PASSWORD: ${{ secrets.ASHEN_S4_USER_B_PASSWORD }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run guarded two-account staging probes
+        run: node tests/integration/supabase-cloud-save.mjs
