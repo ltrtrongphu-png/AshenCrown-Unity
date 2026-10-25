@@ -3152,6 +3152,7 @@ let legacySaveWiped = false;
 let localSaveRecoveryRequired = false;
 let localSaveRecoveryReason = '';
 let saveImportInProgress = false;
+let cloudRestoreInProgress = false;
 let localSaveWriteCount = 0;
 let lastSavedComparable = null;
 let idleSavePending = false;
@@ -3308,7 +3309,7 @@ function localSaveComparable(save) {
 }
 
 function saveState(force = false) {
-  if (saveImportInProgress) return false;
+  if (saveImportInProgress || cloudRestoreInProgress) return false;
   if (localSaveRecoveryRequired) {
     const status = $('saveStatus');
     if (status) { status.textContent = 'SAVE RECOVERY NEEDED'; status.dataset.state = 'error'; }
@@ -3578,6 +3579,25 @@ function setupTouchControls(){
 }
 let cloudSyncGeneration = 0;
 
+async function persistCloudRestore(save, userId) {
+  // Pagehide, visibility changes and regular autosaves can fire during local
+  // encryption. Prevent the previous in-memory journey replacing the cloud
+  // snapshot immediately before the page reload.
+  cloudRestoreInProgress = true;
+  try {
+    const restored = await persistEncryptedLocalSave(save, {
+      queueCloud: false,
+      expectedCloudUserId: userId,
+      requireCloudUserId: true
+    });
+    if (!restored) cloudRestoreInProgress = false;
+    return restored;
+  } catch (error) {
+    cloudRestoreInProgress = false;
+    throw error;
+  }
+}
+
 async function isCurrentCloudSync(generation, userId) {
   if (generation !== cloudSyncGeneration || !userId) return false;
   const session = await window.AshenAuth?.getSession?.();
@@ -3625,9 +3645,9 @@ async function syncCloudSaveFromAccount() {
         return;
       }
       if (!await isCurrentCloudSync(generation, syncUserId)) return;
-      const restored = await persistEncryptedLocalSave(
+      const restored = await persistCloudRestore(
         { ...remote, savedAt: decision.remoteStamp || Date.now() },
-        { queueCloud: false, expectedCloudUserId: syncUserId, requireCloudUserId: true }
+        syncUserId
       );
       if (!restored) {
         if (await isCurrentCloudSync(generation, syncUserId)) {
@@ -3663,9 +3683,9 @@ async function syncCloudSaveFromAccount() {
         return;
       }
       backupLocalSave(localStorage, localRaw, Date.now(), 3, 'ashen-crown-3d.cloud-conflict.backup.');
-      const restored = await persistEncryptedLocalSave(
+      const restored = await persistCloudRestore(
         { ...remote, savedAt: decision.remoteStamp || Date.now() },
-        { queueCloud: false, expectedCloudUserId: syncUserId, requireCloudUserId: true }
+        syncUserId
       );
       if (!restored) {
         if (await isCurrentCloudSync(generation, syncUserId)) {
@@ -4006,8 +4026,8 @@ setInterval(()=>{
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
 setInterval(()=>{if(!document.hidden)scheduleIdleSave()},15000);
-window.addEventListener('pagehide',()=>{if(!saveImportInProgress)saveState()});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&!saveImportInProgress)saveState()});
+window.addEventListener('pagehide',()=>{if(!saveImportInProgress&&!cloudRestoreInProgress)saveState()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&!saveImportInProgress&&!cloudRestoreInProgress)saveState()});
 
 const debugPerfEnabled = new URLSearchParams(location.search).get('debug') === '1';
 let debugPerfOverlay = null;
@@ -4075,7 +4095,7 @@ function frame(t){
   if(!document.hidden)requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){Object.keys(keys).forEach(k=>keys[k]=false);saveState()}
+  if(document.hidden){Object.keys(keys).forEach(k=>keys[k]=false);if(!saveImportInProgress&&!cloudRestoreInProgress)saveState()}
   else{last=performance.now();requestAnimationFrame(frame)}
 });
 requestAnimationFrame(frame);
