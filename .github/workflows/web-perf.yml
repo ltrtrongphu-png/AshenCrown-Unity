@@ -81,7 +81,7 @@ jobs:
           ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/soak
       - name: Upload performance JSON, tables and screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ashen-crown-web-performance
           path: artifacts/perf/
@@ -89,7 +89,7 @@ jobs:
           retention-days: 14
       - name: Upload static-server log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ashen-crown-web-performance-server-log
           path: /tmp/ashen-crown-perf-http.log
