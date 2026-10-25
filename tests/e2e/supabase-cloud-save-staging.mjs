@@ -150,8 +150,7 @@ try {
   assert.equal(afterB.cloud?.save_json?.level, 4, 'Account B cloud row must remain separate from account A.');
   assert.deepEqual(pageErrors, [], 'Cloud restore and account switching should not create uncaught browser errors.');
 
-  process.stdout.write('S4 browser staging regression passed: cloud conflict restore, encrypted local backup, and two-account switching.
-');
+  process.stdout.write('S4 browser staging regression passed: cloud conflict restore, encrypted local backup, and two-account switching.\n');
 } finally {
   await context.close();
   await browser.close();
