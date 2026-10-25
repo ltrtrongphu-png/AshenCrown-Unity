@@ -159,12 +159,16 @@ test('encrypted local saves round-trip with AES-GCM and use a fresh IV', async (
   await assert.rejects(() => decryptSavePayload(tampered, key, webcrypto));
 });
 
-test('plaintext v5 saves and every local backup are deleted instead of migrated', async () => {
-  const { readEncryptedLocalSave } = await import('../../save-utils.js');
+test('plaintext v5 save migrates only after verified encrypted primary and backup writes', async () => {
+  const { webcrypto } = await import('node:crypto');
+  const { readEncryptedLocalSave, decryptSavePayload, ENCRYPTED_SAVE_BACKUP_SUFFIX } = await import('../../save-utils.js');
+  const primary = { saveVersion: 5, level: 22, chapter: 3, coins: 999, savedAt: 220, inventory: [] };
+  const olderBackup = { saveVersion: 5, level: 18, chapter: 2, coins: 500, savedAt: 180, inventory: [] };
+  const newestBackup = { saveVersion: 5, level: 23, chapter: 4, coins: 1000, savedAt: 230, inventory: [] };
   const values = new Map([
-    ['ashen-crown-3d', JSON.stringify({ saveVersion: 5, level: 22, coins: 999 })],
-    ['ashen-crown-3d.backup.100', '{"level":22}'],
-    ['ashen-crown-3d.backup.200', '{"level":18}'],
+    ['ashen-crown-3d', JSON.stringify(primary)],
+    ['ashen-crown-3d.backup.100', JSON.stringify(olderBackup)],
+    ['ashen-crown-3d.backup.200', JSON.stringify(newestBackup)],
     ['unrelated-preference', 'dark']
   ]);
   const storage = {
@@ -174,15 +178,78 @@ test('plaintext v5 saves and every local backup are deleted instead of migrated'
     setItem(key, value) { values.set(String(key), String(value)); },
     removeItem(key) { values.delete(key); }
   };
-  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => {
-    throw new Error('plaintext must not attempt key restoration');
-  });
-  assert.equal(result.value, null);
-  assert.equal(result.wipedLegacy, true);
-  assert.equal(result.reason, 'plaintext');
-  assert.equal(storage.getItem('ashen-crown-3d'), null);
+  const key = await webcrypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
+  assert.deepEqual(result.value, primary);
+  assert.equal(result.migrated, true);
+  assert.equal(result.wipedLegacy, false);
+  assert.equal(result.needsRecovery, undefined);
+  const encryptedPrimary = storage.getItem('ashen-crown-3d');
+  assert.equal(encryptedPrimary.startsWith('ASHEN-AESGCM-v1:'), true);
+  assert.deepEqual(await decryptSavePayload(encryptedPrimary, key, webcrypto), primary);
+  assert.deepEqual(
+    await decryptSavePayload(storage.getItem('ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX), key, webcrypto),
+    newestBackup,
+    'retain the newest prior v5 backup in encrypted form'
+  );
   assert.equal(storage.getItem('ashen-crown-3d.backup.100'), null);
   assert.equal(storage.getItem('ashen-crown-3d.backup.200'), null);
+  assert.equal(storage.getItem('unrelated-preference'), 'dark');
+});
+
+test('invalid plaintext save is preserved and requires recovery rather than being wiped', async () => {
+  const { readEncryptedLocalSave } = await import('../../save-utils.js');
+  const raw = '{"saveVersion":4,"level":22}';
+  const values = new Map([['ashen-crown-3d', raw], ['ashen-crown-3d.backup.bad', 'not-json']]);
+  const storage = {
+    get length() { return values.size; },
+    key(index) { return [...values.keys()][index] ?? null; },
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(String(key), String(value)); },
+    removeItem(key) { values.delete(key); }
+  };
+  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => {
+    throw new Error('must not create a key for unsupported data');
+  });
+  assert.equal(result.needsRecovery, true);
+  assert.equal(result.reason, 'unsupported-plaintext');
+  assert.equal(storage.getItem('ashen-crown-3d'), raw);
+  assert.equal(storage.getItem('ashen-crown-3d.backup.bad'), 'not-json');
+});
+
+test('save import rejects oversized, corrupt, wrong-version and malformed payloads', async () => {
+  const { parseSaveImport } = await import('../../save-utils.js');
+  const save = { saveVersion: 5, level: 4, chapter: 2, inventory: [], flags: {} };
+  assert.deepEqual(parseSaveImport(JSON.stringify(save)), save);
+  assert.throws(() => parseSaveImport('{bad json'), /valid JSON/);
+  assert.throws(() => parseSaveImport(JSON.stringify({ ...save, saveVersion: 4 })), /v5 save/);
+  assert.throws(() => parseSaveImport(JSON.stringify(save), 10), /too large/);
+});
+
+test('encrypted local-save adapter preserves a corrupt envelope for manual recovery', async () => {
+  const { webcrypto } = await import('node:crypto');
+  const { readEncryptedLocalSave, encryptSavePayload } = await import('../../save-utils.js');
+  const values = new Map();
+  const storage = {
+    get length() { return values.size; },
+    key(index) { return [...values.keys()][index] ?? null; },
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(String(key), String(value)); },
+    removeItem(key) { values.delete(key); }
+  };
+  const key = await webcrypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const save = { saveVersion: 5, level: 4, chapter: 2, inventory: [], flags: {} };
+  const envelope = await encryptSavePayload(save, key, webcrypto);
+  const middle = envelope.length - 6;
+  const tampered = envelope.slice(0, middle) + (envelope[middle] === 'A' ? 'B' : 'A') + envelope.slice(middle + 1);
+  storage.setItem('ashen-crown-3d', tampered);
+  storage.setItem('unrelated-preference', 'dark');
+  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
+  assert.equal(result.value, null);
+  assert.equal(result.wipedLegacy, false);
+  assert.equal(result.corrupt, true);
+  assert.equal(result.needsRecovery, true);
+  assert.equal(storage.getItem('ashen-crown-3d'), tampered);
   assert.equal(storage.getItem('unrelated-preference'), 'dark');
 });
 
@@ -219,11 +286,13 @@ test('encrypted local-save adapter verifies ciphertext and clears a tampered env
 });
 
 
-test('orphaned plaintext backups are wiped even when the primary local save is missing', async () => {
-  const { readEncryptedLocalSave } = await import('../../save-utils.js');
+test('orphaned plaintext v5 backup restores the save only after encryption succeeds', async () => {
+  const { webcrypto } = await import('node:crypto');
+  const { readEncryptedLocalSave, decryptSavePayload, ENCRYPTED_SAVE_BACKUP_SUFFIX } = await import('../../save-utils.js');
+  const recovery = { saveVersion: 5, level: 22, chapter: 8, coins: 999, savedAt: 500, inventory: [], flags: {} };
   const values = new Map([
-    ['ashen-crown-3d.backup.100', '{"level":22,"coins":999}'],
-    ['ashen-crown-3d.backup.200', '{"level":18,"coins":500}'],
+    ['ashen-crown-3d.backup.100', JSON.stringify({ saveVersion: 5, level: 18, chapter: 6, coins: 500, savedAt: 300, inventory: [], flags: {} })],
+    ['ashen-crown-3d.backup.200', JSON.stringify(recovery)],
     ['unrelated-preference', 'dark']
   ]);
   const storage = {
@@ -233,12 +302,13 @@ test('orphaned plaintext backups are wiped even when the primary local save is m
     setItem(key, value) { values.set(String(key), String(value)); },
     removeItem(key) { values.delete(key); }
   };
-  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => {
-    throw new Error('no encryption key should be requested for an empty primary slot');
-  });
-  assert.equal(result.value, null);
-  assert.equal(result.wipedLegacy, false);
-  assert.equal(result.removedBackups, 2);
+  const key = await webcrypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
+  assert.deepEqual(result.value, recovery);
+  assert.equal(result.recoveredFromBackup, true);
+  assert.equal(result.migrated, true);
+  assert.deepEqual(await decryptSavePayload(storage.getItem('ashen-crown-3d'), key, webcrypto), recovery);
+  assert.deepEqual(await decryptSavePayload(storage.getItem('ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX), key, webcrypto), recovery);
   assert.equal(storage.getItem('ashen-crown-3d.backup.100'), null);
   assert.equal(storage.getItem('ashen-crown-3d.backup.200'), null);
   assert.equal(storage.getItem('unrelated-preference'), 'dark');
