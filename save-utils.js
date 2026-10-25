@@ -327,12 +327,29 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
       try {
         value = await decryptSavePayload(raw, key, cryptoApi);
       } catch (error) {
+        // Never silently replace a corrupt primary with a backup. Offer the most
+        // useful readable v5 recovery candidate to the UI while preserving both
+        // the corrupt primary and its backup until the player exports/imports.
         candidate = latestValidLegacyBackup(storage, backupKeys);
-        if (!candidate) {
-          return { value: null, wipedLegacy: false, corrupt: true, needsRecovery: true, reason: 'corrupt-envelope', error, removedBackups: 0 };
+        if (candidate) {
+          return {
+            value: candidate.value, wipedLegacy: false, corrupt: true, needsRecovery: true,
+            reason: 'corrupt-envelope-legacy-backup-available', backupKey: candidate.key, error, removedBackups: 0
+          };
         }
-        value = candidate.value;
-        recoveredFromBackup = true;
+        const encryptedRecoveryRaw = storage.getItem(encryptedBackupKey);
+        if (isEncryptedSaveEnvelope(encryptedRecoveryRaw)) {
+          try {
+            const encryptedRecovery = await decryptSavePayload(encryptedRecoveryRaw, key, cryptoApi);
+            if (isValidSaveV5(encryptedRecovery)) {
+              return {
+                value: encryptedRecovery, wipedLegacy: false, corrupt: true, needsRecovery: true,
+                reason: 'corrupt-envelope-encrypted-backup-available', error, removedBackups: 0
+              };
+            }
+          } catch {}
+        }
+        return { value: null, wipedLegacy: false, corrupt: true, needsRecovery: true, reason: 'corrupt-envelope', error, removedBackups: 0 };
       }
     } else if (raw !== null && raw !== undefined && raw !== '') {
       try {
@@ -440,8 +457,13 @@ export async function writeEncryptedLocalSave(storage, keyName, value, key, cryp
   }
   const envelope = await encryptSavePayload(value, key, cryptoApi);
   storage.setItem(keyName, envelope);
-  if (storage.getItem(keyName) !== envelope || !isEncryptedSaveEnvelope(storage.getItem(keyName))) {
+  const stored = storage.getItem(keyName);
+  if (stored !== envelope || !isEncryptedSaveEnvelope(stored)) {
     throw new Error('Encrypted local-save verification failed.');
+  }
+  const roundTrip = await decryptSavePayload(stored, key, cryptoApi);
+  if (canonicalJson(roundTrip) !== canonicalJson(value)) {
+    throw new Error('Encrypted local-save read-back did not match the original payload.');
   }
   return true;
 }
