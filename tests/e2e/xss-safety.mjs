@@ -14,9 +14,9 @@ const consoleErrors = [];
 page.on('pageerror', error => pageErrors.push(String(error?.stack || error)));
 page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
 
-const hostileName = '<img id="xss-inventory-name" src="invalid-image" onerror="window.__ASHEN_XSS_EXECUTED__=true">';
-const hostileAttr = '<svg id="xss-inventory-attr" onload="window.__ASHEN_XSS_EXECUTED__=true">';
-const hostileLog = '<img id="xss-journal-log" src="invalid-image" onerror="window.__ASHEN_XSS_EXECUTED__=true">';
+const hostileName = '<img id="xss-inventory-name" src=x onerror=window.xss=true>';
+const hostileAttr = '<svg onload=window.xss=true>';
+const hostileLog = '<img id="xss-journal-log" src=x onerror=window.xss=true>';
 const fixture = {
   saveVersion: 5, mapVersion: 1, savedAt: 220, level: 1, xp: 0, hp: 100, stamina: 100,
   coins: 40, shards: 0, echoes: 0, quest: 0, chapter: 1, day: 1, chapterGathered: 0,
@@ -40,6 +40,7 @@ const fixture = {
 try {
   await page.addInitScript(save => {
     window.__ASHEN_XSS_EXECUTED__ = false;
+    window.xss = false;
     window.addEventListener('ashen:game-ready', () => {
       document.documentElement.dataset.ashenGameReady = 'true';
     }, { once: true });
@@ -97,7 +98,7 @@ try {
   await page.locator('.meta-tabs button[data-meta="collection"]').click();
   assert.equal(await page.locator('#metaContent img, #metaContent svg').count(), 0);
   assert.ok((await page.locator('#metaContent').innerText()).includes(hostileName));
-  assert.equal(await page.evaluate(() => window.__ASHEN_XSS_EXECUTED__), false,
+  assert.equal(await page.evaluate(() => window.__ASHEN_XSS_EXECUTED__ === true || window.xss === true), false,
     'no event handler from untrusted save data may execute');
   assert.deepEqual(pageErrors, [], 'the XSS regression should not cause uncaught browser errors');
   assert.deepEqual(consoleErrors, [], 'the XSS regression should not cause browser console errors');
