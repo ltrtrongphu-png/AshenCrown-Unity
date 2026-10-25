@@ -116,3 +116,26 @@ Màu tham chiếu dùng trong lần rà soát thiết kế này: **`#211B24FF`**
 ## Cổng qua Phase 1
 
 Phase 0 ghi nhận xong audit tĩnh và baseline tĩnh. Để báo cáo build/performance thực, cần môi trường có checkout hoạt động và quyền chạy build/browser tests. Giữ các cổng quyết định từ master prompt; đặc biệt **không tự chọn** hoàn thiện/xóa backend, di chuyển web, bật Git LFS hoặc đổi schema save.
+
+
+---
+
+## Refresh 2026-10-25 — remote-source baseline (Sprint 0)
+
+**Reviewed commit:** `cd34e5ec2f0442238040a32e2c40ef258f4b987e` (`main`)  
+**Review type:** GitHub remote source and metadata inspection only; not a clean checkout or runtime baseline.
+
+### Verified from repository source / metadata
+- Latest commit message: “Fix and verify the full 10-chapter /play campaign”.
+- Combined commit status returned a successful Vercel check; this is not the complete GitHub Actions run matrix.
+- `.github/workflows/game-smoke.yml` defines Chromium smoke and a 10-chapter Playwright campaign. Its latest run result was not returned by the available workflow lookup.
+- `.github/workflows/unity.yml` conditionally skips EditMode tests when `UNITY_LICENSE` is absent; a successful workflow conclusion must not be interpreted as tests having executed.
+- `vercel.json` still allows jsDelivr, esm.sh, unpkg and inline styles in CSP. `auth.js` currently imports Supabase from jsDelivr, so simply removing the CDN from CSP would break authentication until that dependency is replaced/self-hosted.
+- `docs/SAVE_FORMAT.md` explicitly states the encrypted-save rollout deletes plaintext v5 and legacy backup keys rather than migrating them. This is a P0 data-retention risk that needs a regression fixture and safe migration before a public release.
+- `server/package.json` starts `node src/index.js`; lookup of `server/src/index.js` returned 404.
+- Public save contracts remain web key `localStorage['ashen-crown-3d']`, web schema v5, and Unity `AshenSaveData.version = 5`.
+
+### Not measured / not run in this environment
+A clean `git clone` failed because the environment could not resolve `github.com`. Therefore `npm ci`, `npm test`, syntax/reference/build-cache checks, `node tools/build-web.mjs`, local Playwright, Lighthouse, FPS/heap/renderer soak, Unity compile/EditMode/PlayMode and live Supabase RLS tests were not executed in this pass. The GLB and bundle figures in the master prompt remain prompt-reported static figures until recalculated from the current artifacts.
+
+See [Sprint 0 report](SPRINT0_REPORT.md) for N-1…N-13 triage, DR-1…DR-10 recommendations, and the Sprint 1 ticket plan.
