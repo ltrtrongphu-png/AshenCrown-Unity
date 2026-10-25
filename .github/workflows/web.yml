@@ -46,7 +46,7 @@ jobs:
       - name: Check patch whitespace
         run: git diff --check origin/main...HEAD
       - name: Upload deployment artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ashencrown-web-dist
           path: dist/
