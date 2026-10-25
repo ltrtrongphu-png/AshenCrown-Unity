@@ -3338,6 +3338,9 @@ async function exportLocalSaveFile() {
 async function importLocalSaveFile(file) {
   if (!file) return false;
   try {
+    if (Number(file.size) > 1_048_576) {
+      throw new Error('Save file is too large (maximum 1 MiB).');
+    }
     const raw = await file.text();
     const imported = parseSaveImport(raw);
     const confirmed = window.confirm(
