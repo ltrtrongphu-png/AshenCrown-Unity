@@ -305,6 +305,13 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
   }
   const backupKeys = legacyBackupKeys(storage, keyName);
   const raw = storage.getItem(keyName);
+  // Unknown backup formats may contain recoverable progress. Do not clean them
+  // up unless they can be parsed as the documented v5 save contract.
+  const unrecognizedBackup = backupKeys.find(backupKey => {
+    const backupRaw = storage.getItem(backupKey);
+    if (typeof backupRaw !== 'string' || isEncryptedSaveEnvelope(backupRaw)) return true;
+    try { return !isValidSaveV5(JSON.parse(backupRaw)); } catch { return true; }
+  });
   const encryptedBackupKey = keyName + ENCRYPTED_SAVE_BACKUP_SUFFIX;
   const tempKey = keyName + '.migration.tmp';
   let key;
@@ -353,6 +360,9 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
 
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return { value: null, wipedLegacy: false, corrupt: false, needsRecovery: true, reason: 'invalid-save', removedBackups: 0 };
+    }
+    if (unrecognizedBackup) {
+      return { value, wipedLegacy: false, corrupt: Boolean(primaryEncrypted), needsRecovery: true, reason: 'unrecognized-backup', backupKey: unrecognizedBackup, removedBackups: 0 };
     }
     if (typeof getKey !== 'function') throw new Error('The local save key provider is unavailable.');
     key = key || await getKey();
