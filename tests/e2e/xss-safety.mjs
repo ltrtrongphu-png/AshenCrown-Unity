@@ -53,7 +53,10 @@ try {
   await page.waitForFunction(() => document.documentElement.dataset.ashenGameReady === 'true', null, { timeout: 60000 });
   await page.locator('#tutorialStart').evaluate(button => button.click());
   await page.waitForFunction(() => typeof window.__ASHEN_TEST__?.status === 'function', null, { timeout: 15000 });
-  await page.waitForFunction(() => window.__ASHEN_TEST__.status().saveEncrypted === true, null, { timeout: 30000 });
+  await page.waitForFunction(() => {
+    const state = window.__ASHEN_TEST__.status();
+    return state.saveEncrypted === true && state.inventoryCount === 1;
+  }, null, { timeout: 30000 });
   await page.waitForTimeout(100);
 
   // Inventory and equipped-slot sinks: stored JSON may be edited by the player,
