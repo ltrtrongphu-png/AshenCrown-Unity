@@ -335,6 +335,12 @@ try{
     const stagedCombat=await page.evaluate(()=>window.__ASHEN_TEST__.prepareCampaignBossFight());
     assert.equal(stagedCombat.ok,true,'a real campaign Warden must be active before combat');
     entry.bossInitialHp=stagedCombat.hp;
+    if(chapter>1){
+      const shortened=await page.evaluate(()=>window.__ASHEN_TEST__.shortenBossForCampaignStep());
+      assert.equal(shortened.ok,true,'later campaign chapters should stage a deterministic but real Warden death');
+      assert.ok(shortened.hp>0&&shortened.hp<=shortened.minimumStrikeDamage,
+        'later Warden should remain active until the real attack handler hits it');
+    }
 
     // 5) Attack via the real keyboard handler; E2E grants temporary invulnerability only
     // on localhost so the test can exercise all ten story gates without repeated resets.
