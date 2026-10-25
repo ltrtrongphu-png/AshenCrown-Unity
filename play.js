@@ -3314,6 +3314,10 @@ function saveState(force = false) {
 }
 
 async function exportLocalSaveFile() {
+  // Capture live gameplay state before waiting for encryption to finish. In
+  // recovery mode saveState deliberately refuses disk writes, but the readable
+  // recovery candidate remains available for export.
+  if (!localSaveRecoveryRequired) saveState(true);
   await localSaveWriteChain;
   const save = localSavePlaintext;
   if (!save || !isValidSaveV5(save)) {
@@ -3337,6 +3341,8 @@ async function exportLocalSaveFile() {
 
 async function importLocalSaveFile(file) {
   if (!file) return false;
+  let originalPrimaryRaw;
+  let primaryWriteStarted = false;
   try {
     if (Number(file.size) > 1_048_576) {
       throw new Error('Save file is too large (maximum 1 MiB).');
@@ -3349,11 +3355,11 @@ async function importLocalSaveFile(file) {
     if (!confirmed) return false;
 
     const key = await getLocalSaveKey(true);
-    const currentRaw = localStorage.getItem('ashen-crown-3d');
-    if (currentRaw !== null) {
+    originalPrimaryRaw = localStorage.getItem('ashen-crown-3d');
+    if (originalPrimaryRaw !== null) {
       let recoveryPayload = localSavePlaintext;
       if (!recoveryPayload || typeof recoveryPayload !== 'object' || Array.isArray(recoveryPayload)) {
-        recoveryPayload = { kind: 'ashen-crown-recovery-v1', raw: currentRaw };
+        recoveryPayload = { kind: 'ashen-crown-recovery-v1', raw: originalPrimaryRaw };
       }
       await writeEncryptedLocalSave(
         localStorage,
@@ -3362,7 +3368,17 @@ async function importLocalSaveFile(file) {
         key
       );
     }
+
+    // Mark the point where primary storage can change. If verification fails,
+    // restore the exact original bytes; the encrypted backup remains as a
+    // second recovery path in case the storage provider also rejects rollback.
+    primaryWriteStarted = true;
     await writeEncryptedLocalSave(localStorage, 'ashen-crown-3d', imported, key);
+    const verified = await decryptSavePayload(localStorage.getItem('ashen-crown-3d'), key);
+    if (serializeSaveForComparison(verified) !== serializeSaveForComparison(imported)) {
+      throw new Error('Imported save did not match the encrypted read-back.');
+    }
+
     localSavePlaintext = imported;
     localSaveRecoveryRequired = false;
     localSaveRecoveryReason = '';
@@ -3373,9 +3389,22 @@ async function importLocalSaveFile(file) {
     location.reload();
     return true;
   } catch (error) {
+    if (primaryWriteStarted) {
+      try {
+        if (originalPrimaryRaw === null) localStorage.removeItem('ashen-crown-3d');
+        else if (typeof originalPrimaryRaw === 'string') localStorage.setItem('ashen-crown-3d', originalPrimaryRaw);
+        if (localStorage.getItem('ashen-crown-3d') !== originalPrimaryRaw) {
+          throw new Error('Original save rollback verification failed.');
+        }
+      } catch (rollbackError) {
+        localSaveRecoveryRequired = true;
+        localSaveRecoveryReason = 'import-rollback-failed';
+        console.error('[Ashen Crown] Save import rollback failed:', rollbackError?.message || rollbackError);
+      }
+    }
     const status = $('saveStatus');
     if (status) { status.textContent = 'IMPORT FAILED'; status.dataset.state = 'error'; }
-    toastMsg('Save import failed; the existing browser record was not intentionally deleted. ' + String(error?.message || error));
+    toastMsg('Save import failed; the previous save was restored where storage allowed. ' + String(error?.message || error));
     console.warn('[Ashen Crown] Save import failed:', error?.message || error);
     return false;
   } finally {
