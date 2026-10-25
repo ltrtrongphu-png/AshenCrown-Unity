@@ -182,7 +182,7 @@ async function run() {
 
   const runId = 's4-' + randomUUID();
   const saveA = makeFixture(2, runId);
-  const saveB = makeFixture(7, runId);
+  const saveB = makeFixture(4, runId);
   const stampedAt = new Date().toISOString();
 
   await upsertOwn(accountA, saveA, stampedAt);
@@ -194,7 +194,7 @@ async function run() {
   assert.equal(ownA[0].save_json.__ashen_s4_run || ownA[0].save_json.flags?.__ashen_s4_run, runId);
   assert.equal(ownB[0].save_json.__ashen_s4_run || ownB[0].save_json.flags?.__ashen_s4_run, runId);
   assert.equal(ownA[0].save_json.level, 2);
-  assert.equal(ownB[0].save_json.level, 7);
+  assert.equal(ownB[0].save_json.level, 4);
 
   const [aReadingB, bReadingA] = await Promise.all([
     requestJson(rowsUrl(accountB.userId), { token: accountA.accessToken }),
