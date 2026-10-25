@@ -28,7 +28,7 @@ This file distinguishes code changes completed in this branch from work still re
 ### Save, authentication, and online safety
 - Keep existing save schema v5. A future v6 requires user-approved schema, a v5 fixture, migration code, and round-trip/corruption tests.
 - Add platform-specific secure refresh-token persistence/session restoration, request cancellation/backoff/retry policy, and mock HTTP tests to the Unity Supabase client. Timeout and friendly error mapping, correct email-confirmation handling, and in-memory refresh are now in source.
-- Test migration 002 against a real/local Supabase environment, especially two-user row isolation, size limits, and browser cloud-restore behavior. Do not infer RLS runtime behavior from SQL source alone.
+- Run migration 002 against a real/local Supabase environment, especially two-user row isolation, size limits, account switches during restore, and cloud-save retries. Client queue/conflict regression tests exist, but do not infer live RLS/runtime behavior from SQL source or unit tests alone.
 - Decide explicitly whether online leaderboards/trading exist. Client saves must not be trusted as authoritative competitive state.
 - Decide whether `server/` should be completed or removed; this branch does not silently delete it or invent an OpenAI endpoint.
 
