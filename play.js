@@ -3360,6 +3360,10 @@ async function importLocalSaveFile(file) {
     // pagehide/visibilitychange must not serialize the old in-memory journey over
     // the imported primary while location.reload() is being processed.
     saveImportInProgress = true;
+    // Drain any save already queued before import began. The guard above blocks
+    // newly requested writes while this awaits, preventing an older async write
+    // from landing after the imported primary.
+    await localSaveWriteChain;
     const key = await getLocalSaveKey(true);
     originalPrimaryRaw = localStorage.getItem('ashen-crown-3d');
     if (originalPrimaryRaw !== null) {
