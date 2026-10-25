@@ -40,6 +40,11 @@ const PLAY_LOCALE_ROWS = [
 ['Move','Di chuyển','移動','이동','移动'],
 ['Look around','Quan sát xung quanh','周囲を見る','주변 보기','环顾四周'],
 ['Interact','Tương tác','調べる','상호작용','互动'],
+['USE','DÙNG','使う','사용','使用'],
+['HIT','ĐÁNH','攻撃','공격','攻击'],
+['ROLL','LĂN NÉ','回避','구르기','翻滚'],
+['PARRY','ĐỠ ĐÒN','パリィ','패리','招架'],
+['BAG','TÚI ĐỒ','バッグ','가방','背包'],
 ['Role skills','Kỹ năng vai trò','ロールスキル','역할 기술','职业技能'],
 ['Ember Pulse','Xung Hỏa Tàn','残り火の波動','잿불 파동','余烬脉冲'],
 ['Sprint','Chạy nhanh','ダッシュ','질주','冲刺'],
@@ -129,19 +134,22 @@ const PLAY_LOCALE_ROWS = [
 ['Ask the gatekeeper why one road on his map has been cut away.','Hỏi người giữ cổng vì sao một con đường trên bản đồ bị xóa bỏ.','門番に、地図から道が消された理由を尋ねよう。','문지기에게 지도에서 길 하나가 지워진 이유를 물으세요.','询问守门人，为什么地图上的一条路被抹去了。'],
 ['Recover the two memories the Crown tried to erase.','Tìm lại hai ký ức mà Vương Miện cố xóa bỏ.','王冠が消そうとした2つの記憶を取り戻そう。','왕관이 지우려 한 두 기억을 되찾으세요.','找回王冠试图抹去的两段记忆。'],
 ['Defeat the chapter warden','Đánh bại hộ vệ chương','章の守護者を倒す','챕터 수호자 처치','击败章节守卫'],
+['WARDEN WAITING','HỘ VỆ ĐANG CHỜ','守護者待機中','수호자 대기 중','守卫等待中'],
 ['Return to Lyra','Trở về gặp Lyra','Lyraのもとへ戻る','Lyra에게 돌아가기','返回 Lyra 身边'],
 ['Gather chapter traces','Thu thập dấu tích chương','章の痕跡を集める','챕터 흔적 수집','收集章节痕迹'],
 ['Find two living embers','Tìm hai tàn lửa còn sống','生きた残り火を2つ見つける','살아 있는 잿불 두 개 찾기','找到两枚活余烬'],
 ['Collect Memory Echoes','Thu thập Vọng Ức','記憶の残響を集める','기억의 메아리 수집','收集记忆回响'],
-['Press E to interact','Nhấn E để tương tác','Eキーで調べる','E 키로 상호작용','按 E 互动'],
-['Press E near the glowing object to collect it.','Đến gần vật thể phát sáng rồi nhấn E để thu thập.','光る物の近くでEキーを押して収集します。','빛나는 물체 근처에서 E 키를 눌러 수집하세요.','靠近发光物体并按 E 收集。'],
+['Press G to hear what this chapter is hiding.','Nhấn G để biết điều gì đang bị che giấu trong chương này.','Gキーを押して、この章に隠された真実を聞こう。','G 키를 눌러 이 챕터에 숨겨진 이야기를 들으세요.','按 G 听听本章隐藏着什么。'],
+['Press G near each echo to recover its memory.','Đến gần từng Vọng Ức rồi nhấn G để khôi phục ký ức.','それぞれの残響の近くでGキーを押して記憶を取り戻そう。','각 메아리 근처에서 G 키를 눌러 기억을 되찾으세요.','靠近每个记忆回响并按 G 恢复记忆。'],
+['Press G to interact','Nhấn G để tương tác','Gキーで調べる','G 키로 상호작용','按 G 互动'],
+['Press G near the glowing object to collect it.','Đến gần vật thể phát sáng rồi nhấn G để thu thập.','光る物の近くでGキーを押して収集します。','빛나는 물체 근처에서 G 키를 눌러 수집하세요.','靠近发光物体并按 G 收集。'],
 ['Follow the marker and check the distance in the quest panel.','Đi theo dấu chỉ đường và xem khoảng cách trong bảng nhiệm vụ.','マーカーをたどり、クエスト欄で距離を確認してください。','표식을 따라가며 퀘스트 패널에서 거리를 확인하세요.','沿着标记前进，并查看任务面板中的距离。'],
 ['Go to Lyra at Sanctuary','Đến gặp Lyra tại Thánh Địa','聖域にいるLyraのもとへ','성역에 있는 Lyra에게 가기','前往圣所寻找 Lyra'],
 ['Go to Orren at Sanctuary','Đến gặp Orren tại Thánh Địa','聖域にいるOrrenのもとへ','성역에 있는 Orren에게 가기','前往圣所寻找 Orren'],
 ['Collect 2 Emberleaf','Thu thập 2 Emberleaf','Emberleafを2個集める','Emberleaf 2개 수집','收集 2 个 Emberleaf'],
 ['Collect 2 Memory Echoes','Thu thập 2 Vọng Ức','記憶の残響を2つ集める','기억의 메아리 2개 수집','收集 2 个记忆回响'],
-['Press E to talk to the character.','Nhấn E để trò chuyện với nhân vật.','Eキーでキャラクターと話します。','E 키를 눌러 캐릭터와 대화하세요.','按 E 与角色交谈。'],
-['Reach the marker, then press E to gather the item.','Đi tới dấu chỉ đường rồi nhấn E để nhặt vật phẩm.','マーカーまで移動し、Eキーでアイテムを採集します。','표식에 도착한 뒤 E 키로 아이템을 수집하세요.','到达标记处，再按 E 拾取物品。'],
+['Press G to talk to the character.','Nhấn G để trò chuyện với nhân vật.','Gキーでキャラクターと話します。','G 키를 눌러 캐릭터와 대화하세요.','按 G 与角色交谈。'],
+['Reach the marker, then press G to gather the item.','Đi tới dấu chỉ đường rồi nhấn G để nhặt vật phẩm.','マーカーまで移動し、Gキーでアイテムを採集します。','표식에 도착한 뒤 G 키로 아이템을 수집하세요.','到达标记处，再按 G 拾取物品。'],
 ['Dodge when the Warden telegraphs, then attack during recovery.','Né khi Hộ Vệ báo đòn, rồi phản công lúc hắn hồi chiêu.','守護者の予兆を回避し、攻撃後の隙に反撃しよう。','수호자가 공격을 예고하면 회피하고 후딜레이에 공격하세요.','守卫出现攻击预兆时闪避，并在其恢复时反击。'],
 ['Distance','Khoảng cách','距離','거리','距离'],
 ['TARGET','MỤC TIÊU','目標','목표','目标'],
@@ -152,7 +160,7 @@ const PLAY_LOCALE_ROWS = [
 ['DUSK','HOÀNG HÔN','夕暮れ','해질녘','黄昏'],
 ['NIGHT','BAN ĐÊM','夜','밤','夜晚'],
 ['DAY ','NGÀY ','日目 ','일차 ','第 '],
-['Press E','Nhấn E','Eキーを押す','E 키 누르기','按 E'],
+['Press G','Nhấn G','Gキーを押す','G 키 누르기','按 G'],
 ['GATE','CỔNG','門','관문','大门'],
 ['WAYFINDER','NGƯỜI DẪN ĐƯỜNG','道案内','길잡이','引路人'],
 ['SANCTUARY KEEPER','NGƯỜI GIỮ THÁNH ĐỊA','聖域の番人','성역의 수호자','圣所守护者'],
@@ -387,7 +395,7 @@ function playTranslateText(source, locale=playLanguage) {
   const trimmed=source.trim();
   if(!trimmed)return source;
   const exact=PLAY_TRANSLATION_MAP.get(trimmed);
-  let value=exact?exact[PLAY_LOCALES.indexOf(locale)+1]:trimmed;
+  let value=exact?exact[PLAY_LOCALES.indexOf(locale)]:trimmed;
   if(!exact){
     for(const row of PLAY_TRANSLATION_ROWS_SORTED){
       const [english,...translations]=row;
@@ -793,7 +801,7 @@ function chapterLevelCap(chapter=state.chapter){return CHAPTER_LEVEL_CAPS[THREE.
 function xpNeededForLevel(level=state.level){const lv=Math.max(1,Math.floor(Number(level)||1));return Math.round(80+48*lv+7*lv*lv)}
 function skillUnlockLevel(index){return index+1}
 function equipmentSlotFor(gear){if(!gear)return null;if(gear.type==='Weapon'||gear.type==='Core')return 'core';if(gear.type==='Armor')return 'armor';if(gear.type==='Trinket')return 'charm';if(['Relic','Quest Relic','Chapter Relic'].includes(gear.type))return 'relic';return null}
-let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0,legacyMapSave=false,comboIndex=0,comboWindow=0,parryWindow=0,parryCooldown=0,perfectDodgeWindow=0,ownerGodMode=false;
+let yaw=0,pitch=.28,drag=false,dragPointerId=null,lx=0,ly=0,time=0,toastTimer=0,encounter=null,saveTimer=0,saveWarningShown=false,attackCooldown=0,dodgeIFrames=0,legacyMapSave=false,comboIndex=0,comboWindow=0,parryWindow=0,parryCooldown=0,perfectDodgeWindow=0,ownerGodMode=false,suppressAmbientEnemySpawns=false;
 const player=new THREE.Group(); player.position.set(0,0,7); characters.add(player);
 
 const mat=(c,r=.75,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
@@ -1871,6 +1879,25 @@ let encounterHudAccumulator=0;
 let shadowRefreshAccumulator=0;
 let adaptiveDpr=1;
 let currentFps=60;
+async function ensureBossModelForEncounter(){
+  if(productionBossScene)return true;
+
+  // A restored campaign can spawn the Warden before the resource-pack loader
+  // has populated productionBossBuffer. Earlier code called the lazy parser once,
+  // received false and never retried, leaving a procedural Warden forever.
+  if(!productionGltfLoader||!productionBossBuffer)await loadCachedResourcePack();
+
+  // If a download was already in progress, wait for the shared install operation
+  // instead of treating its early-return guard as a completed load.
+  for(let attempt=0;resourcePackLoading&&attempt<600;attempt++){
+    await new Promise(resolve=>setTimeout(resolve,100));
+  }
+
+  if(!productionGltfLoader||!productionBossBuffer)return false;
+  if(!productionBossScene)await ensureProductionBossLoaded();
+  return Boolean(productionBossScene);
+}
+
 function attachProductionBoss(enemy){
   if(!enemy?.isBoss||!enemy.root||!productionBossScene)return false;
   if(productionBossScene.parent===enemy.root)return true;
@@ -1891,9 +1918,10 @@ function attachProductionBoss(enemy){
   return true;
 }
 
-function spawnEnemy(testOnly=false){
+function spawnEnemy(testOnly=false,forceStoryBoss=false,ignoreSanctuarySafety=false){
   if(enemies.length)return;
-  if(!testOnly&&activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
+  if(forceStoryBoss&&!isChapterWardenReady(state))return;
+  if(!testOnly&&!forceStoryBoss&&!ignoreSanctuarySafety&&activeMapId==='sanctuary'&&Math.hypot(player.position.x,player.position.z-7)<28)return;
   const isBoss=Boolean(testOnly)||isChapterWardenReady(state);
   const angle=Math.random()*Math.PI*2;
   const radius=isBoss?10+Math.random()*3:12+Math.random()*15;
@@ -1941,7 +1969,9 @@ function spawnEnemy(testOnly=false){
   enemies=[encounter];
   if(isBoss){
     if(productionBossScene)attachProductionBoss(encounter);
-    else void ensureProductionBossLoaded().then(()=>{if(encounter?.isBoss)attachProductionBoss(encounter)}).catch(error=>console.warn('[Ashen Crown] Boss model stays on fallback:',error));
+    else void ensureBossModelForEncounter().then(loaded=>{
+      if(loaded&&encounter?.isBoss)attachProductionBoss(encounter);
+    }).catch(error=>console.warn('[Ashen Crown] Boss model stays on fallback:',error));
   }
   setEncounterHud(encounter);
   toastMsg(testOnly?'OWNER QA · Warden trial started; defeat grants no campaign rewards.':isBoss?((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.wardenName||'The Chapter Warden')+' has answered the evidence.'): 'A wandering shade has entered the wilds.');
@@ -2041,7 +2071,7 @@ function finishEncounter(){
     if(gearUnlocked&&Math.random()<.36)dropEquipment(false);
     else if(!bellWaiting)toastMsg('Shade defeated · Ashen Wisp Fragment + 25 Ashen');
   }
-  encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy()}saveState()
+  encounter=null;setEncounterHud(null);if(bellWaiting){toastMsg('The bell answers. The Warden has found you.');spawnEnemy(false,true);setQuest()}saveState()
 }
 function advanceChapter(){
   if(!canAdvanceChapter(state,activeMapId)){
@@ -2439,7 +2469,7 @@ const SHOP_STOCK={merchant_01:[{name:'Hearthguard Coat',type:'Armor',rarity:'Rar
 let shopMenu=null;
 function ensureShopMenu(){if(shopMenu)return shopMenu;shopMenu=document.createElement('section');shopMenu.id='shopMenu';shopMenu.innerHTML='<div class="shop-panel"><button class="shop-close">×</button><div class="shop-kicker">SANCTUARY HAMLET · MERCHANT</div><h2 id="shopTitle">Merchant</h2><p>Trade Ashen for equipment that changes your build.</p><div class="shop-wallet">ASHEN <b id="shopCoins">0</b></div><div id="shopGrid" class="shop-grid"></div></div>';document.body.appendChild(shopMenu);const style=document.createElement('style');style.textContent='#shopMenu{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(5,4,4,.78);backdrop-filter:blur(7px)}#shopMenu.show{display:flex}.shop-panel{position:relative;width:min(920px,92vw);max-height:82vh;overflow:auto;padding:30px;background:linear-gradient(145deg,#17120f,#0c0a09);border:1px solid #5b3c2d;box-shadow:0 25px 80px rgba(0,0,0,.55);color:#eadfd4}.shop-close{position:absolute;right:18px;top:14px;background:none;border:0;color:#b99a86;font-size:28px;cursor:pointer}.shop-kicker{font-size:10px;letter-spacing:3px;color:#a87555}.shop-panel h2{margin:8px 0 4px;font:32px Georgia,serif}.shop-panel p{margin:0 0 18px;color:#9c8c80}.shop-wallet{display:inline-block;padding:8px 12px;border:1px solid #3f3027;font-size:11px;letter-spacing:1px}.shop-wallet b{color:#e49a61}.shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:12px;margin-top:18px}.shop-card{padding:16px;border:1px solid #30241e;background:#100d0b}.shop-card h3{margin:0 0 5px;font:20px Georgia,serif}.shop-card small{display:block;color:#9c806d;margin-bottom:8px}.shop-card p{font-size:12px;line-height:1.5;min-height:38px}.shop-card .stats{color:#d9a77f;font-size:12px;margin-bottom:12px}.shop-buy{width:100%;padding:10px;border:1px solid #6b4732;background:#24160f;color:#eed7c4;cursor:pointer}.shop-buy:disabled{opacity:.38;cursor:not-allowed}';document.head.appendChild(style);shopMenu.querySelector('.shop-close').onclick=()=>shopMenu.classList.remove('show');return shopMenu}
 function openShop(n){const menu=ensureShopMenu(),stock=SHOP_STOCK[n.id]||SHOP_STOCK.merchant_01;menu.querySelector('#shopTitle').textContent=n.name+' · '+n.role;menu.querySelector('#shopCoins').textContent=state.coins;const grid=menu.querySelector('#shopGrid');grid.innerHTML=stock.map((g,i)=>{const locked=state.level<g.level,poor=state.coins<g.price,statText=Object.entries(g.stats).map(([k,v])=>'+'+v+' '+k[0].toUpperCase()+k.slice(1)).join(' · ');return '<article class="shop-card"><h3>'+g.name+'</h3><small>'+g.rarity+' · '+g.type+' · Lv '+g.level+'</small><p>'+g.desc+'</p><div class="stats">'+statText+'</div><button class="shop-buy" data-buy="'+i+'" '+((locked||poor)?'disabled':'')+'>'+ (locked?'Requires Lv '+g.level:poor?'Need '+g.price+' Ashen':'Buy · '+g.price+' Ashen')+'</button></article>'}).join('');grid.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>buyShopItem(n.id,Number(b.dataset.buy)));menu.classList.add('show')}
-function buyShopItem(merchantId,index){const stock=SHOP_STOCK[merchantId]||SHOP_STOCK.merchant_01,g=stock[index];if(!g||state.level<g.level||state.coins<g.price)return;state.coins-=g.price;state.meta.renown+=g.rarity==='Legendary'?5:g.rarity==='Epic'?3:2;state.inventory.push({itemId:'shop-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),name:g.name,type:g.type,rarity:g.rarity,attrs:[...g.attrs],stats:{...g.stats},source:'merchant',price:g.price});state.log.unshift('Purchased '+g.name+'.');saveState();openShop(npcs.find(x=>x.id===merchantId)||{id:merchantId,name:'Merchant',role:'merchant'});toastMsg(g.name+' added to your inventory')}
+function buyShopItem(merchantId,index){const stock=SHOP_STOCK[merchantId]||SHOP_STOCK.merchant_01,g=stock[index];if(!g||state.level<g.level||state.coins<g.price)return;state.coins-=g.price;state.meta.renown+=g.rarity==='Legendary'?5:g.rarity==='Epic'?3:2;state.inventory.push({itemId:'shop-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),name:g.name,type:g.type,rarity:g.rarity,attrs:[...g.attrs],stats:{...g.stats},source:'merchant',price:g.price});state.log.unshift('Purchased '+g.name+'.');saveState();openShop(npcs.find(x=>x.id===merchantId)||villagers.find(x=>x.id===merchantId)||{id:merchantId,name:'Merchant',role:'merchant'});toastMsg(g.name+' added to your inventory')}
 const questWaypoint=new THREE.Group();
 const questWaypointRing=new THREE.Mesh(
   new THREE.TorusGeometry(.62,.07,8,28),
@@ -2491,6 +2521,7 @@ function getQuestTarget(){
   if(state.quest===3&&encounter)return {kind:'enemy',label:encounter.isBoss?(chapter?.wardenName||'Chapter Warden'):'Wandering Shade',entity:encounter};
   if(state.quest===4)return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   if(state.quest>=5){
+    if(state.chapter===10&&state.flags.legacyHome)return null;
     if(activeMapId!=='sanctuary')return {kind:'home',label:'Sanctuary',position:new THREE.Vector3(0,0,7)};
     return {kind:'npc',label:'Lyra',entity:activeNpc('lyra')};
   }
@@ -2503,7 +2534,7 @@ function getQuestSteps(){
   const recordFound=hasChapterRecord(state.flags,state.chapter);
   if(q===0)return [
     ['Go to Lyra at Sanctuary.',false],
-    ['Press E to hear what this chapter is hiding.',false],
+    ['Press G to hear what this chapter is hiding.',false],
     ['Choose how you will investigate the road ahead.',false]
   ];
   if(q===1)return [
@@ -2524,7 +2555,7 @@ function getQuestSteps(){
   if(q===3&&state.echoes<requirements.echoes)return [
     ['Collect '+requirements.echoes+' Memory Echoes',state.echoes>=requirements.echoes],
     ['Look for violet traces scattered across the region.',false],
-    ['Press E near each echo to recover its memory.',false],
+    ['Press G near each echo to recover its memory.',false],
     ['Progress: '+state.echoes+' / '+requirements.echoes,state.echoes>=requirements.echoes]
   ];
   if(q===3)return [
@@ -2537,9 +2568,18 @@ function getQuestSteps(){
     ['Hear what the recovered record means for the people involved.',false],
     ['Choose the consequence you are willing to carry.',false]
   ];
+  if(q>=5&&state.chapter===10&&state.flags.legacyHome)return [
+    ['All 10 chapters completed.',true],
+    ['Your legacy is founded at the Sanctuary.',true],
+    ['Encrypted local progress is saved.',true]
+  ];
   if(activeMapId!=='sanctuary')return [
     ['Return to the Sanctuary.',false],
     ['Speak with Lyra to close this chapter before the next road opens.',false]
+  ];
+  if(q>=5)return [
+    ['Chapter '+String(state.chapter).padStart(2,'0')+' choice recorded.',true],
+    [state.chapter<10?'Speak with Lyra to begin Chapter '+String(state.chapter+1).padStart(2,'0')+'.':'Speak with Lyra to found your new home.',false]
   ];
   return [
     ['Speak with Lyra at the Sanctuary.',false],
@@ -2563,7 +2603,9 @@ function updateQuestGuide(force=false){
   }
   currentQuestTarget=getQuestTarget();
   if(!currentQuestTarget){
-    targetLine.textContent='TARGET · No active target';
+    targetLine.textContent=state.chapter===10&&state.quest>=5&&state.flags.legacyHome
+      ?'JOURNEY COMPLETE · 10 / 10 CHAPTERS'
+      :'TARGET · No active target';
     questWaypoint.visible=false;
     return;
   }
@@ -2622,17 +2664,26 @@ function setQuest(){
     title.textContent=chapter.wardenName||'The Chapter Warden';
     desc.textContent='The recovered evidence has drawn out the keeper. Read the attack tells, evade the marked strike and hit during recovery.';
     obj.textContent='◈ Face '+(chapter.wardenName||'the chapter warden');
-    count.textContent=encounter?'WARDEN PRESENT':'WARDEN APPROACHING';
+    count.textContent=encounter?.isBoss?'WARDEN PRESENT':encounter?'WARDEN WAITING':'WARDEN APPROACHING';
   }else if(q===4){
     title.textContent=state.chapter===1?'A Choice in the Ash':chapter.title+' · The Choice';
     desc.textContent=(chapter.summary||'The truth has surfaced.')+' Return to Lyra and choose: '+String(chapter.choice||'choose what to preserve').replace(' / ',' or ')+'.';
     obj.textContent='◈ Return to Lyra';
     count.textContent='CONSEQUENCE';
+  }else if(state.chapter===10&&state.flags.legacyHome){
+    title.textContent=(chapter?.title||'The New Dawn')+' · Legacy Founded';
+    desc.textContent='You founded a lasting home at the Sanctuary. All ten chapters are complete, and your encrypted local progress is saved.';
+    obj.textContent='◈ Legacy established · Journey complete';
+    count.textContent='10 / 10 COMPLETE';
   }else{
     title.textContent=chapter?.title||'The Hearthbound Vow';
-    desc.textContent=state.chapter===10?'All ten roads return to the Sanctuary. Review the names you restored and decide what the next generation inherits.':state.chapter>1?'The choice in '+chapter.title+' is recorded. Return to the Sanctuary and speak with Lyra before opening another road.':state.flags.sanctuaryOpen?'The lost village has a name again. Its people can begin to return.':'One name remains to guard the last refuge; the others are free.';
-    obj.textContent=state.chapter===10?'◈ Return to Lyra · Found your home':'◈ Chapter '+String(state.chapter).padStart(2,'0')+' complete · Return to Sanctuary';
-    count.textContent='COMPLETE';
+    desc.textContent=state.chapter===10
+      ?'All ten roads return to the Sanctuary. Speak with Lyra to decide what the next generation inherits.'
+      :'The choice in '+chapter.title+' is recorded. Speak with Lyra to prepare the next expedition.';
+    obj.textContent=state.chapter===10
+      ?'◈ Return to Lyra · Found your home'
+      :'◈ Speak with Lyra · Begin Chapter '+String(state.chapter+1).padStart(2,'0');
+    count.textContent=state.chapter===10?'FINALE READY':'CHAPTER COMPLETE';
   }
   $('regionLabel').textContent=region().toUpperCase();
   updateQuestGuide(true);
@@ -2649,7 +2700,22 @@ function region(){
   if(Math.abs(p.x)<42&&Math.abs(p.z)<38)return 'Sanctuary';
   return 'Outer Wilds';
 }
-function findNearby(){let best=null,d=3;for(const n of npcs){if(!n.root.visible)continue;const x=n.root.position.distanceTo(player.position);if(x<d){d=x;best={k:'npc',n}}}for(const n of nodes)if(n.mapId===activeMapId&&!n.collected){const x=n.root.position.distanceTo(player.position);if(x<d){d=x;best={k:'node',n}}}if(activeMapId==='sanctuary')for(const g of gates){const x=g.root.position.distanceTo(player.position);if(x<d)best={k:'gate',n:g}}if(encounter){const x=encounter.root.position.distanceTo(player.position);if(x<d)best={k:'enemy',n:encounter}}return best}
+function findNearby(){
+  let best=null,d=3;
+  const consider=(kind,entity)=>{
+    if(!entity?.root?.visible)return;
+    const distance=entity.root.position.distanceTo(player.position);
+    if(distance<d){d=distance;best={k:kind,n:entity};}
+  };
+  for(const n of npcs)consider('npc',n);
+  // Merchants and other visible hamlet villagers use the same interaction
+  // pipeline as story NPCs; skipping this list made the shop impossible to open.
+  if(activeMapId==='sanctuary')for(const villager of villagers)consider('npc',villager);
+  for(const n of nodes)if(n.mapId===activeMapId&&!n.collected)consider('node',n);
+  if(activeMapId==='sanctuary')for(const g of gates)consider('gate',g);
+  if(encounter)consider('enemy',encounter);
+  return best;
+}
 function nearby(){return nearbyTarget}
 function dialogue(n,text,opts){$('dialogue').classList.add('show');$('speakerName').textContent=n.name.toUpperCase();$('speakerRole').textContent=n.role.toUpperCase();$('dialogueText').textContent=text;const c=$('choices');c.innerHTML='';opts.forEach(o=>{const b=document.createElement('button');b.textContent=o.label;b.onclick=()=>{o.fn();$('dialogue').classList.remove('show')};c.appendChild(b)})}
 function anyOverlayOpen(){return state.paused||['dialogue','tutorial','inventoryMenu','worldMap','metaMenu','systemMenu'].some(id=>$(id)?.classList.contains('show'))||shopMenu?.classList.contains('show')}
@@ -2681,7 +2747,7 @@ function interact(){
       ]);
     }
     else if(n.id==='lyra'&&state.quest===5&&state.chapter<10)dialogue(n,'Chapter '+String(state.chapter).padStart(2,'0')+' is carried home with you. The Sanctuary can grow stronger before the next road opens.',[{label:'Prepare and begin Chapter '+String(state.chapter+1).padStart(2,'0'),fn:advanceChapter},{label:'Stay at the Sanctuary for now',fn:()=>{openSystemMenu('base')}}]);
-    else if(n.id==='lyra'&&state.quest===5&&state.chapter===10)dialogue(n,'Ten roads return to this hearth. The Sanctuary is no longer only a refuge; it is the home you built from every name and choice you carried back.',[{label:'Found the new home',fn:()=>{state.meta.chaptersComplete=10;if(!state.flags.legacyHome)state.meta.legacy++;state.flags.legacyHome=true;updateSanctuaryBuild();state.log.unshift('After ten chapters, you founded a lasting home at the Sanctuary.');saveState();toastMsg('The Sanctuary is your home · 10 chapters complete');openSystemMenu('base')}}]);
+    else if(n.id==='lyra'&&state.quest===5&&state.chapter===10)dialogue(n,'Ten roads return to this hearth. The Sanctuary is no longer only a refuge; it is the home you built from every name and choice you carried back.',[{label:'Found the new home',fn:()=>{state.meta.chaptersComplete=10;if(!state.flags.legacyHome)state.meta.legacy++;state.flags.legacyHome=true;updateSanctuaryBuild();state.log.unshift('After ten chapters, you founded a lasting home at the Sanctuary.');setQuest();saveState();toastMsg('The Sanctuary is your home · 10 chapters complete');openSystemMenu('base')}}]);
     else if(n.id==='lyra'&&state.quest===4&&state.chapter>1){const ch=window.ASHEN_CAMPAIGN[state.chapter-1],options=ch.choice.split(' / ');dialogue(n,ch.summary+' Both paths cost something. Which answer will you carry home?',[
       {label:options[0],fn:()=>{state.quest=5;state.flags['chapter'+state.chapter+'Choice']='first';state.rep.lyra++;xp(70);item(ch.items[ch.items.length-1],'Chapter Relic','Legendary',['Legacy','Chapter '+state.chapter]);state.log.unshift('You chose to '+options[0].toLowerCase()+'.');if(state.chapter<10){setActiveMap('sanctuary');player.position.set(-5,0,-1)}setQuest();saveState()}},
       {label:options[1]||'Choose another path',fn:()=>{state.quest=5;state.flags['chapter'+state.chapter+'Choice']='second';state.rep.seer++;xp(70);item(ch.items[ch.items.length-2]||ch.items[0],'Chapter Relic','Legendary',['Legacy','Chapter '+state.chapter]);state.log.unshift('You chose to '+(options[1]||'take another path').toLowerCase()+'.');if(state.chapter<10){setActiveMap('sanctuary');player.position.set(-5,0,-1)}setQuest();saveState()}}
@@ -2708,7 +2774,9 @@ function interact(){
         state.flags.bellAwakened=true;
         const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1];
         state.log.unshift('The final echo answered. '+(chapter?.wardenName||'The chapter warden')+' has been drawn out.');
-        spawnEnemy();
+        // Chapter 1 and Chapter 10 run in the Sanctuary safe area. A mandatory
+        // story Warden must bypass the ambient-enemy safety restriction.
+        spawnEnemy(false,true);
       }
     }else if(n.type==='record'){
       const chapter=window.ASHEN_CAMPAIGN?.[state.chapter-1]||window.ASHEN_CAMPAIGN?.[0];
@@ -2964,9 +3032,22 @@ function tick(dt){
   }
 
   if(state.hp<=0){
-    state.hp=state.maxHp;state.stamina=100;player.position.set(0,0,activeMapId==='sanctuary'?7:14);dodgeIFrames=0;
-    if(encounter){encounter.root.removeFromParent();encounter=null;enemies=[];setEncounterHud(null)}
-    toastMsg('You fell in battle and woke at the sanctuary.');saveState();
+    const retryChapterWarden=isChapterWardenReady(state);
+    state.hp=state.maxHp;state.stamina=100;
+    player.position.set(0,0,activeMapId==='sanctuary'?7:14);dodgeIFrames=0;
+    if(encounter){
+      const fallen=encounter;
+      disposeEncounterVisuals(fallen);
+      fallen.root.removeFromParent();
+      encounter=null;enemies=[];setEncounterHud(null);
+    }
+    toastMsg(activeMapId==='sanctuary'
+      ?'You fell in battle and woke at the sanctuary.'
+      :'You fell in battle and recovered at the field camp.');
+    saveState();
+    // A Warden gate suppresses ambient spawns; preserve the mandatory story
+    // encounter after death so Chapter 1–10 cannot soft-lock on this transition.
+    if(retryChapterWarden){spawnEnemy(false,true);setQuest();}
   }
 
   $('playerHp').style.width=Math.max(0,Math.min(100,state.hp/state.maxHp*100))+'%';
@@ -3305,7 +3386,7 @@ function setupTouchControls(){
   stick.addEventListener('pointermove',e=>{if(e.pointerId===pointerId)moveStick(e)});
   stick.addEventListener('pointerup',e=>{if(e.pointerId===pointerId)clearStick()});stick.addEventListener('pointercancel',clearStick);
   function moveStick(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.max(1,Math.hypot(dx,dy)),scale=Math.min(1,42/len),nx=dx*scale,ny=dy*scale;knob.style.transform='translate('+nx+'px,'+ny+'px)';keys.KeyD=nx>17;keys.KeyA=nx< -17;keys.KeyS=ny>17;keys.KeyW=ny< -17}
-  controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='inventory')openInventory();else if(action==='skill')useSkill(Number(button.dataset.skill))}));
+  controls.querySelectorAll('button[data-action]').forEach(button=>button.addEventListener('pointerdown',e=>{e.preventDefault();if(anyOverlayOpen())return;const action=button.dataset.action;if(action==='interact')interact();else if(action==='attack')pulse();else if(action==='dodge')dodge();else if(action==='parry')parry();else if(action==='inventory')openInventory();else if(action==='skill')useSkill(Number(button.dataset.skill))}));
 }
 async function syncCloudSaveFromAccount() {
   const auth = window.AshenAuth;
@@ -3412,15 +3493,99 @@ if(isLocalE2ESession) {
     status:()=>({
       gameReady:gameRenderReady,playerModelLoaded:Boolean(productionPlayerScene),
       bossModelLoaded:Boolean(productionBossScene),bossVisualAttached:Boolean(encounter?.isBoss&&productionBossScene?.parent===encounter.root),
+      bossBufferLoaded:Boolean(productionBossBuffer),productionLoaderReady:Boolean(productionGltfLoader),
+      resourcePackLoading:Boolean(resourcePackLoading),
       npcRosterLoaded:productionNpcModelPrototypes.size>=50,
       npcRosterModelCount:productionNpcModelPrototypes.size,
       npcProductionModelCount:npcs.filter(n=>n.productionVisual?.parent===n.root).length,
       villagerProductionModelCount:villagers.filter(n=>n.productionVisual?.parent===n.root).length,
       bossEncounter:Boolean(encounter?.isBoss),bossHp:encounter?.isBoss?Math.round(encounter.hp):null,
-      chapter:state.chapter,level:state.level,fps:Math.round(currentFps||0),
+      chapter:state.chapter,quest:state.quest,map:activeMapId,hp:state.hp,maxHp:state.maxHp,
+      simulationPaused:Boolean(state.paused),documentHidden:Boolean(document.hidden),
+      visibilityState:document.visibilityState,gameTime:Number(time.toFixed(2)),
+      openOverlays:['dialogue','tutorial','inventoryMenu','worldMap','metaMenu','systemMenu','pause','journal','shopMenu']
+        .filter(id=>document.getElementById(id)?.classList.contains('show')),
+      chapterGathered:state.chapterGathered,
+      requiredEmbers:getChapterRequirements(state.chapter).embers,echoes:state.echoes,
+      requiredEchoes:getChapterRequirements(state.chapter).echoes,
+      recordFound:hasChapterRecord(state.flags,state.chapter),wardenDefeated:Boolean(state.flags.bellWardenDefeated),
+      encounterActive:Boolean(encounter),encounterHp:encounter?Math.round(encounter.hp):null,
+      stamina:state.stamina,parryWindow,parryCooldown,
+      inventoryCount:state.inventory.length,coins:state.coins,
+      chaptersComplete:state.meta.chaptersComplete,legacyHome:Boolean(state.flags.legacyHome),
+      saveEncrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d')),
+      gameReady:gameRenderReady,level:state.level,fps:Math.round(currentFps||0),
+      attackCooldown:Math.max(0,attackCooldown),comboIndex,comboWindow,
       canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight
     }),
     prepareVisuals:()=>{state.settings.quality='high';state.settings.reducedMotion=false;applySettings();return true;},
+    suppressAmbientSpawns:()=>{suppressAmbientEnemySpawns=true;return true;},
+    flushLocalSave:async()=>{
+      await localSaveWriteChain;
+      return {encrypted:isEncryptedSaveEnvelope(localStorage.getItem('ashen-crown-3d')),chapter:localSavePlaintext?.chapter,quest:localSavePlaintext?.quest};
+    },
+    triggerPlayerDeath:()=>{state.hp=0;return true;},
+    stageNextStoryInteraction:()=>{
+      if(anyOverlayOpen())return {ok:false,reason:'overlay-open'};
+      let target=null,type='';
+      if(state.quest===0){target=npcs.find(n=>n.id==='lyra');type='npc-lyra-intro';}
+      else if(state.quest===1){target=nodes.find(n=>n.type==='ember'&&n.mapId===activeMapId&&!n.collected);type='ember';}
+      else if(state.quest===2&&!hasChapterRecord(state.flags,state.chapter)){target=nodes.find(n=>n.type==='record'&&n.mapId===activeMapId&&!n.collected);type='record';}
+      else if(state.quest===2){target=npcs.find(n=>n.id==='orren');type='npc-orren-route';}
+      else if(state.quest===3&&state.echoes<getChapterRequirements(state.chapter).echoes){target=nodes.find(n=>n.type==='echo'&&n.mapId===activeMapId&&!n.collected);type='echo';}
+      else if(state.quest===3&&encounter?.isBoss)return {ok:true,type:'boss',chapter:state.chapter};
+      else if(state.quest===4){target=npcs.find(n=>n.id==='lyra');type='npc-lyra-choice';}
+      else if(state.quest===5){target=npcs.find(n=>n.id==='lyra');type=state.chapter===10?'npc-legacy-home':'npc-next-expedition';}
+      if(!target?.root)return {ok:false,reason:'no-target',chapter:state.chapter,quest:state.quest,map:activeMapId,type};
+      const position=target.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(position.x,0,position.z+(type.startsWith('npc-') ? 0.6 : 0));
+      yaw=0;
+      nearbyTarget=findNearby();
+      const actual=nearbyTarget?.k==='npc'?nearbyTarget.n.id:nearbyTarget?.k==='node'?nearbyTarget.n.type:null;
+      return {ok:actual!==null,type,actual,chapter:state.chapter,quest:state.quest,map:activeMapId,x:position.x,z:position.z};
+    },
+    startAmbientStoryBlocker:()=>{
+      if(state.quest!==3||state.echoes>=getChapterRequirements(state.chapter).echoes||encounter)return {ok:false,reason:'story-blocker-not-eligible'};
+      ownerGodMode=true;state.hp=state.maxHp;state.stamina=100;
+      spawnEnemy(false,false,true);
+      if(!encounter||encounter.isBoss)return {ok:false,reason:'ambient-shade-not-spawned'};
+      encounter.root.position.set(player.position.x,0,player.position.z-2.5);
+      encounter.root.updateMatrixWorld(true);
+      setEncounterHud(encounter);
+      return {ok:true,hp:Math.round(encounter.hp),isBoss:encounter.isBoss};
+    },
+    alignAnyEncounterAttack:()=>{
+      if(!encounter||encounter.testOnly)return {ok:false,reason:'no-active-campaign-encounter'};
+      const target=encounter.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(target.x,0,target.z+2.5);yaw=0;player.rotation.y=Math.PI;
+      state.stamina=100;state.hp=state.maxHp;ownerGodMode=true;
+      return {ok:true,hp:Math.round(encounter.hp),isBoss:Boolean(encounter.isBoss)};
+    },
+    prepareCampaignBossFight:()=>{
+      if(state.quest!==3||!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
+      ownerGodMode=true;state.hp=state.maxHp;state.stamina=100;
+      const boss=encounter.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(boss.x,0,boss.z+2.5);yaw=0;player.rotation.y=Math.PI;
+      return {ok:true,hp:Math.round(encounter.hp),playerHp:state.hp};
+    },
+    alignCampaignAttack:()=>{
+      if(!encounter?.isBoss||encounter.testOnly)return {ok:false,reason:'chapter-boss-not-active'};
+      const boss=encounter.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(boss.x,0,boss.z+2.5);yaw=0;player.rotation.y=Math.PI;
+      state.stamina=100;
+      return {ok:true,distance:player.position.distanceTo(boss),bossHp:Math.round(encounter.hp)};
+    },
+    campaignInteraction:()=>nearbyTarget?{kind:nearbyTarget.k,id:nearbyTarget.k==='npc'?nearbyTarget.n.id:nearbyTarget.k==='node'?nearbyTarget.n.type:null}:null,
+    stageMerchant:(id)=>{
+      if(!['merchant_01','merchant_02'].includes(id))return {ok:false,reason:'unknown-merchant'};
+      const merchant=villagers.find(v=>v.id===id&&v.root.visible);
+      if(!merchant)return {ok:false,reason:'merchant-not-visible'};
+      const pos=merchant.root.getWorldPosition(new THREE.Vector3());
+      player.position.set(pos.x,0,pos.z+.6);
+      nearbyTarget=findNearby();
+      return {ok:nearbyTarget?.k==='npc'&&nearbyTarget.n.id===id,id:nearbyTarget?.n?.id||null,
+        distance:nearbyTarget?.n?.root?.position.distanceTo(player.position)||null,coins:state.coins,level:state.level};
+    },
     stageNpcShowcase:()=>{
       window.__ASHEN_NPC_SHOWCASE_ORIGINALS__={
         player:{x:player.position.x,z:player.position.z,yaw,pitch,visible:player.visible},
@@ -3535,7 +3700,7 @@ function refreshOwnerDiagnostics() {
 }
 
 await bootstrapEncryptedSave();
-loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
+loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();if(isChapterWardenReady(state))spawnEnemy(false,true);setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
 if(state.tutorial!==false)$('tutorial').classList.add('show');
 time=DAY_LENGTH*.08;
 showChapterTitle((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.title)||'THE LAST EMBER','Explore · meet people · make choices · shape the world');
@@ -3543,7 +3708,7 @@ if(activeMapId==='sanctuary')spawnWildlifeBurst(10);
 updateSky();
 const DEVELOPMENT_DAY=9;state.meta.developmentDay=Math.max(Number(state.meta.developmentDay||0),DEVELOPMENT_DAY);toastMsg('Development Day '+state.meta.developmentDay+' — the world wakes, villages stir, and the morning sun rises.');
 setInterval(()=>{
-  if(!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!isChapterWardenReady(state))spawnEnemy();
+  if(!suppressAmbientEnemySpawns&&!anyOverlayOpen()&&!document.hidden&&Math.random()<.55&&!isChapterWardenReady(state))spawnEnemy();
   if(activeMapId==='sanctuary'&&!anyOverlayOpen()&&!document.hidden&&wildlife.length<10)spawnWildlifeBurst(4);
 },9000);
 setInterval(()=>{if(!document.hidden)scheduleIdleSave()},15000);

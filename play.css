@@ -415,3 +415,6 @@ a:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visib
 .combat-callout.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:700px){.owner-console{top:66px;right:8px;width:calc(100vw - 16px);padding:14px}.owner-console-head h2{font-size:23px}.owner-diagnostics>div{padding:8px}.owner-tools-grid button{font-size:7px}.combat-callout{bottom:150px;font-size:10px}}
 @media(prefers-reduced-motion:reduce){.combat-callout{transition:none}}
+
+/* Small touch viewports get the on-screen controls even in mobile browser emulation. */
+@media(max-width:760px){.touch-controls{display:flex}}
