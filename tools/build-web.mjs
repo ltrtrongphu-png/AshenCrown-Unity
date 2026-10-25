@@ -36,6 +36,7 @@ const webFiles = [
   'play-boot.js',
   'auth-config.js',
   'auth.js',
+  'cloud-save-queue.js',
   'sw.js',
   'assets/ashen-crown-logo.svg',
   'site.webmanifest',
