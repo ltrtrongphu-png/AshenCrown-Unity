@@ -154,6 +154,17 @@ try{
   await assertLayoutFitsViewport('desktop after UI interactions');
   await capture('play-ui-desktop.png');
 
+  // Keep the all-chapter gameplay loop on the Performance preset. The separate
+  // browser smoke captures production-quality character/scene screenshots above;
+  // this campaign test is primarily verifying quest gates, combat, save/reload
+  // and UI behavior, and SwiftShader can make high shadows extremely slow.
+  await page.keyboard.press('o');
+  await page.waitForFunction(() => document.querySelector('#systemMenu')?.classList.contains('show'));
+  await page.locator('#qualitySetting').selectOption('performance');
+  await page.locator('#systemClose').click();
+  await wait(250);
+  await assertLayoutFitsViewport('desktop performance preset');
+
   // Responsive check is confined to /play; no landing-page files are touched.
   await page.setViewportSize({width:390,height:844});
   await wait(450);
