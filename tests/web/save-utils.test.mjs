@@ -328,3 +328,27 @@ test('orphaned plaintext v5 backup restores the save only after encryption succe
   assert.equal(storage.getItem('ashen-crown-3d.backup.200'), null);
   assert.equal(storage.getItem('unrelated-preference'), 'dark');
 });
+
+
+test('cloud conflict ciphertext backups do not trigger legacy-save recovery mode', async () => {
+  const { webcrypto } = await import('node:crypto');
+  const { encryptSavePayload, readEncryptedLocalSave, backupLocalSave } = await import('../../save-utils.js');
+  const values = new Map();
+  const storage = {
+    get length() { return values.size; },
+    key(index) { return [...values.keys()][index] ?? null; },
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(String(key), String(value)); },
+    removeItem(key) { values.delete(key); }
+  };
+  const key = await webcrypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  const save = { saveVersion: 5, level: 6, chapter: 2, inventory: [], flags: {}, savedAt: 200 };
+  const envelope = await encryptSavePayload(save, key, webcrypto);
+  storage.setItem('ashen-crown-3d', envelope);
+  backupLocalSave(storage, envelope, 300, 3, 'ashen-crown-3d.cloud-conflict.backup.');
+
+  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
+  assert.deepEqual(result.value, save);
+  assert.equal(result.needsRecovery, undefined);
+  assert.equal(storage.getItem('ashen-crown-3d.cloud-conflict.backup.300'), envelope);
+});
