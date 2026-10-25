@@ -1,4 +1,5 @@
 import { CloudSaveQueue } from './cloud-save-queue.js';
+import { isValidSaveV5 } from './save-utils.js';
 
 const AUTH_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const AUTH_CONFIG = window.ASHEN_SUPABASE_CONFIG || {};
@@ -247,6 +248,7 @@ async function writeCloudSave(save, expectedUserId = null) {
   if (expectedUserId && user.id !== expectedUserId) {
     throw new Error('The signed-in account changed before the cloud save began.');
   }
+  if (!isValidSaveV5(save)) throw new Error('Cloud save must match the supported v5 save format.');
   const encoded = JSON.stringify(save);
   // Stay comfortably below the server-side JSONB size constraint in migration 002.
   if (new TextEncoder().encode(encoded).byteLength > 180000) throw new Error('Save is too large to sync.');
@@ -308,7 +310,10 @@ function scheduleCloudFlush(delayOverride = null) {
 function queueSave(save, expectedUserId = null) {
   const activeUserId = currentSession?.user?.id || null;
   if (!activeUserId || (expectedUserId && expectedUserId !== activeUserId)) return false;
-  if (!save || typeof save !== 'object' || Array.isArray(save)) return false;
+  if (!isValidSaveV5(save)) {
+    emitCloudSaveStatus('rejected', 'Cloud backup skipped because this is not a valid v5 save.');
+    return false;
+  }
 
   let encoded;
   try {
