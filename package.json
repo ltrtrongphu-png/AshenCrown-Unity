@@ -13,8 +13,5 @@
     "check:syntax": "node tools/check-syntax.mjs",
     "check:build-cache": "node tools/check-build-cache.mjs",
     "perf:web": "node tools/perf/web-perf.mjs"
-  },
-  "devDependencies": {
-    "playwright": "1.56.0"
   }
 }
