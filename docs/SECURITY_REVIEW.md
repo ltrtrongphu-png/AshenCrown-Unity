@@ -51,6 +51,14 @@ The repository has a `server/` directory with a package script but no `src/index
 6. Before any competitive online feature, move progression/reward validation to a trusted server or database function.
 
 
+
+
+## Browser DOM source-to-sink audit
+
+- See WEB_DOM_SECURITY.md for the review of browser HTML sinks and the Chromium regression.
+- Saved item metadata is normalized before UI use and escaped at HTML-string sinks. Saved journal entries are capped to 80 lines and 1,000 characters each, then escaped at render time.
+- The XSS regression seeds hostile text into a v5 local save and checks inventory/equipment, journal and archive views. This does not certify Unity UI, live Supabase responses, or third-party scripts.
+
 ## Browser local-save encryption
 
 - New local writes use Web Crypto AES-256-GCM with a fresh random 96-bit IV per write. The non-extractable key is stored in IndexedDB, separately from the localStorage ciphertext envelope; write/read-back verification is required.
