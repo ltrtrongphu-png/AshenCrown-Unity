@@ -367,15 +367,30 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
     if (typeof getKey !== 'function') throw new Error('The local save key provider is unavailable.');
     key = key || await getKey();
 
-    // Keep the most useful legacy v5 backup encrypted where possible. If there
-    // is no distinct backup, a copy of the primary save is retained instead.
+    // Preserve an existing encrypted backup across ordinary boots. Rewrite it
+    // only when migrating legacy backups, recovering a save, or repairing a
+    // missing/invalid backup slot; otherwise each launch would roll it forward
+    // and erase the last known-good pre-change save.
     const legacyCandidate = latestValidLegacyBackup(storage, backupKeys);
+    const existingEncryptedBackup = storage.getItem(encryptedBackupKey);
+    let encryptedBackupValid = false;
+    if (isEncryptedSaveEnvelope(existingEncryptedBackup)) {
+      try {
+        const previousBackup = await decryptSavePayload(existingEncryptedBackup, key, cryptoApi);
+        encryptedBackupValid = Boolean(previousBackup && typeof previousBackup === 'object' && !Array.isArray(previousBackup));
+      } catch {}
+    }
+    const shouldRefreshBackup = backupKeys.length > 0 || !encryptedBackupValid || !primaryEncrypted || recoveredFromBackup;
     const backupValue = legacyCandidate?.value || value;
-    const backupEnvelope = await verifiedEnvelope(backupValue, key, cryptoApi);
+    const backupEnvelope = shouldRefreshBackup ? await verifiedEnvelope(backupValue, key, cryptoApi) : null;
 
     // Persist and verify a temporary envelope before touching the source record.
-    await setAndVerifyEncrypted(storage, tempKey, await verifiedEnvelope(value, key, cryptoApi), key, value, cryptoApi);
-    await setAndVerifyEncrypted(storage, encryptedBackupKey, backupEnvelope, key, backupValue, cryptoApi);
+    if (!primaryEncrypted || recoveredFromBackup) {
+      await setAndVerifyEncrypted(storage, tempKey, await verifiedEnvelope(value, key, cryptoApi), key, value, cryptoApi);
+    }
+    if (shouldRefreshBackup) {
+      await setAndVerifyEncrypted(storage, encryptedBackupKey, backupEnvelope, key, backupValue, cryptoApi);
+    }
 
     if (!primaryEncrypted || recoveredFromBackup) {
       const oldRaw = raw;
