@@ -21,7 +21,7 @@ try {
     }, { once: true });
     if (!sessionStorage.getItem('ashen-v5-migration-fixture-seeded')) {
       const primary = {
-        saveVersion: 5, mapVersion: 1, level: 17, xp: 41, hp: 100, stamina: 87,
+        saveVersion: 5, mapVersion: 1, level: 7, xp: 41, hp: 100, stamina: 87,
         coins: 999, shards: 6, echoes: 4, quest: 2, chapter: 3, day: 8,
         savedAt: 220, currentMap: 'sanctuary', flags: { bellWardenDefeated: false, record_chapter_3: true },
         inventory: [{ itemId: 'fixture-blade', name: 'Fixture Blade', type: 'Weapon', rarity: 'Rare',
@@ -46,7 +46,7 @@ try {
   assert.equal(migrated.encrypted, true, 'the migrated v5 save must be stored as AES-GCM ciphertext');
   assert.equal(migrated.recoveryRequired, false, 'a valid v5 fixture should not trigger recovery mode');
   assert.equal(initialState.chapter, 3, 'chapter progress must survive plaintext-to-encrypted migration');
-  assert.equal(initialState.level, 17, 'level progress must survive plaintext-to-encrypted migration');
+  assert.equal(initialState.level, 7, 'a valid chapter-three level must survive plaintext-to-encrypted migration');
   assert.equal(initialState.coins, 999, 'currency must survive plaintext-to-encrypted migration');
   assert.equal(initialState.inventoryCount, 1, 'inventory must survive plaintext-to-encrypted migration');
   const storageAfterMigration = await page.evaluate(() => ({
@@ -66,11 +66,11 @@ try {
   const exported = JSON.parse(exportedRaw);
   assert.equal(exported.saveVersion, 5);
   assert.equal(exported.chapter, 3);
-  assert.equal(exported.level, 17);
+  assert.equal(exported.level, 7);
   assert.equal(exported.inventory[0].name, 'Fixture Blade');
 
   const imported = {
-    ...exported, saveVersion: 5, level: 9, chapter: 2, coins: 123, savedAt: Date.now(),
+    ...exported, saveVersion: 5, level: 5, chapter: 2, coins: 123, savedAt: Date.now(),
     inventory: [{ itemId: 'imported-sigil', name: 'Imported Sigil', type: 'Relic', rarity: 'Epic', attrs: [], stats: { ward: 3 } }]
   };
   const navigation = page.waitForNavigation({ waitUntil: 'domcontentloaded' });
@@ -88,7 +88,7 @@ try {
     encryptedBackup: localStorage.getItem('ashen-crown-3d.encrypted-backup.v1')
   }));
   assert.equal(importedState.chapter, 2, 'import should restore the selected chapter');
-  assert.equal(importedState.level, 9, 'import should restore the selected level');
+  assert.equal(importedState.level, 5, 'import should restore a level within chapter-two cap');
   assert.equal(importedState.coins, 123, 'import should restore the selected currency');
   assert.equal(importedState.inventoryCount, 1, 'imported inventory should be loaded');
   assert.ok(importedStorage.primary.startsWith('ASHEN-AESGCM-v1:'), 'imported save must be encrypted before reload');
