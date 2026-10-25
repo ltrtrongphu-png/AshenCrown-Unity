@@ -223,6 +223,7 @@ test('save import rejects oversized, corrupt, wrong-version and malformed payloa
   assert.deepEqual(parseSaveImport(JSON.stringify(save)), save);
   assert.throws(() => parseSaveImport('{bad json'), /valid JSON/);
   assert.throws(() => parseSaveImport(JSON.stringify({ ...save, saveVersion: 4 })), /v5 save/);
+  assert.throws(() => parseSaveImport(JSON.stringify({ ...save, level: 3.5 })), /v5 save/);
   assert.throws(() => parseSaveImport(JSON.stringify(save), 10), /too large/);
 });
 
