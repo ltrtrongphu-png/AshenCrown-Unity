@@ -25,6 +25,10 @@ GitHub Actions runs this against a disposable local Supabase stack when files un
 
 ## Live two-account staging test
 
+Before running the live test, confirm `public.player_web_saves` is exposed through the staging project's Supabase Data API. Table grants and RLS policies do not, by themselves, guarantee that a table is exposed by the Data API. If the probe reports endpoint/table-not-found (for example, a PostgREST schema-cache error), inspect Project Settings → API/Data API exposure; do not weaken RLS to work around an exposure setting.
+
+Supabase's published rollout says newly created public tables are no longer exposed automatically by default, with enforcement expanding to all projects on October 30, 2026. See the [Supabase changelog](https://supabase.com/changelog?types=breaking-change) and [RLS guide](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
 The workflow `Supabase isolated staging integration` is manual-only. It requires two pre-created, confirmed **test-only** accounts, the publishable/anon key for an isolated staging project, and repository Actions secrets:
 
 - `ASHEN_S4_SUPABASE_URL`: `https://<project-ref>.supabase.co`
@@ -43,7 +47,7 @@ Do not use these accounts to play the game. The test leaves marked fixture saves
 
 ## What the live probe does not prove
 
-The live API probe establishes account-level row isolation and basic save/readback through Supabase Auth and the Data API. It does not certify every browser UI path, email confirmation/reset delivery, offline retries, or simultaneous tabs. The existing unit suite covers cloud-save conflict decisions; a separate browser/session walkthrough should still validate conflict prompts, restore on a clean browser profile, account switching during restore, and production Auth redirect configuration.
+The workflow also runs a Chromium regression against a local build configured for staging Auth. It exercises cloud conflict restore, encrypted conflict backup, and switching from account A to account B in the same browser profile. Neither the live API probe nor the browser regression has run yet because no active staging project/credentials are configured. Email confirmation/reset delivery, offline retries, simultaneous tabs, concurrent account-switch timing, and production Auth redirect configuration remain unverified.
 
 ## Current environment limitation
 
