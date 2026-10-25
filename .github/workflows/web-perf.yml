@@ -4,6 +4,14 @@ on:
   schedule:
     - cron: '17 3 * * *'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'play.js'
+      - 'play.html'
+      - 'play.css'
+      - 'save-utils.js'
+      - 'tools/perf/**'
+      - '.github/workflows/web-perf.yml'
 
 permissions:
   contents: read
@@ -36,7 +44,18 @@ jobs:
           done
           cat /tmp/ashen-crown-perf-http.log
           exit 1
+      - name: Run short performance harness smoke on pull requests
+        if: github.event_name == 'pull_request'
+        run: node tools/perf/web-perf.mjs
+        env:
+          ASHEN_PERF_URL: http://127.0.0.1:4173
+          ASHEN_PERF_MODE: baseline
+          ASHEN_PERF_RUNS: 1
+          ASHEN_PERF_DURATION_MS: 15000
+          ASHEN_PERF_CPU_THROTTLE: 4
+          ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/pr-smoke
       - name: Run three repeatable 60-second baselines at 4x CPU throttle
+        if: github.event_name != 'pull_request'
         run: node tools/perf/web-perf.mjs
         env:
           ASHEN_PERF_URL: http://127.0.0.1:4173
@@ -46,6 +65,7 @@ jobs:
           ASHEN_PERF_CPU_THROTTLE: 4
           ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/baseline
       - name: Run 10-minute GPU resource soak
+        if: github.event_name != 'pull_request'
         run: node tools/perf/web-perf.mjs
         env:
           ASHEN_PERF_URL: http://127.0.0.1:4173
