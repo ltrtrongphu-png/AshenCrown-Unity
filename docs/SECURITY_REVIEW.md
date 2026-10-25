@@ -35,8 +35,9 @@ The repository has a `server/` directory with a package script but no `src/index
 
 ### Not yet verified
 
-- Whether migration 002 applies cleanly to the real Supabase project and its existing tables/policies.
-- Live two-user RLS isolation, signup/email confirmation, sign-in/out, password reset, save and restore on clean profiles, and simultaneous-session behavior. The client-side cloud-save conflict decisions, account-bound queue/retry policy, and local conflict-backup namespace have automated unit coverage; that does not substitute for a real two-user staging test.
+- Local pgTAP tests for migration 002 are authored to cover grants, RLS, two-user row isolation, owner-only writes, and DELETE denial; the CI workflow runs them against a disposable local Supabase stack.
+- Live two-user RLS/API save-readback probe and a manual-only workflow are authored, with explicit project-ref allowlisting and a fail-closed preflight that refuses to overwrite unmarked saves. The live probe has not run because the connected Supabase project is inactive and no separate active staging environment has been configured.
+- Signup/email confirmation, password reset delivery, browser conflict prompts and restore, simultaneous tabs, and concurrent account-switch browser behavior remain unverified live. Unit tests do not substitute for these environment-dependent checks.
 - Unity Editor compilation, generated sandbox scene behavior, PlayMode/EditMode tests, or persistent secure token storage.
 - Full `innerHTML` sink audit, XSS regression test, and browser performance/memory soak.
 - Production HTTP headers and real deployment network trace.
@@ -74,3 +75,11 @@ The repository has a `server/` directory with a package script but no `src/index
 - Cloud restore only accepts the documented v5 save contract. Account identity is checked before applying a remote restore, and the original primary/encrypted-backup bytes are restored if identity changes during the write where storage permits.
 - Cloud-conflict backups use `ashen-crown-3d.cloud-conflict.backup.*`, outside the legacy migration scanner's namespace. This prevents encrypted conflict snapshots from being mistaken for unknown legacy plaintext backups at startup.
 - Unit tests cover queue account isolation, retry behavior, newest-save precedence, v5 validation, and conflict-backup namespace behavior. Live Supabase RLS/account tests remain unverified: they must run in a staging project with two controlled accounts.
+
+
+## Sprint 4 — Supabase verification harness
+
+- Added `supabase/tests/player_web_saves_rls.test.sql` for pgTAP grants/policy assertions, with synthetic users and saves rolled back per test.
+- Added a local-only Supabase CLI configuration and a GitHub Actions workflow that runs `supabase start` + `supabase test db` without linking a remote project.
+- Added a manual-only live staging workflow and `tests/integration/supabase-cloud-save.mjs`. It uses only a publishable/anon key, requires explicit confirmation and an exact project-ref allowlist, refuses to overwrite unmarked saves, and tests two distinct authenticated users.
+- The configured `AshenCrownUnity` project is inactive. No reactivation, live migration, or live data write was attempted; live RLS therefore remains unverified pending a separately active staging project and dedicated test accounts.

@@ -1,0 +1,31 @@
+name: Supabase local RLS tests
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/supabase-rls.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-pgtap:
+    name: Verify player_web_saves RLS with isolated local PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - name: Start isolated local Supabase stack
+        run: supabase start
+      - name: Run pgTAP RLS assertions
+        run: supabase test db
+      - name: Stop local Supabase stack
+        if: always()
+        run: supabase stop --no-backup

@@ -1,0 +1,89 @@
+name: Supabase isolated staging integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_staging:
+        description: 'This writes marked test saves to two dedicated accounts in the selected staging project.'
+        required: true
+        type: choice
+        default: 'NO - cancel'
+        options:
+          - 'NO - cancel'
+          - 'YES - isolated staging only'
+
+permissions:
+  contents: read
+
+jobs:
+  two-account-integration:
+    if: inputs.confirm_staging == 'YES - isolated staging only'
+    name: Verify two-account cloud-save isolation against staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      ASHEN_S4_STAGING_CONFIRM: I_CONFIRM_THIS_IS_AN_ISOLATED_STAGING_PROJECT
+      ASHEN_S4_SUPABASE_URL: ${{ secrets.ASHEN_S4_SUPABASE_URL }}
+      ASHEN_S4_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.ASHEN_S4_SUPABASE_PUBLISHABLE_KEY }}
+      ASHEN_S4_ALLOWED_PROJECT_REF: ${{ secrets.ASHEN_S4_ALLOWED_PROJECT_REF }}
+      ASHEN_S4_USER_A_EMAIL: ${{ secrets.ASHEN_S4_USER_A_EMAIL }}
+      ASHEN_S4_USER_A_PASSWORD: ${{ secrets.ASHEN_S4_USER_A_PASSWORD }}
+      ASHEN_S4_USER_B_EMAIL: ${{ secrets.ASHEN_S4_USER_B_EMAIL }}
+      ASHEN_S4_USER_B_PASSWORD: ${{ secrets.ASHEN_S4_USER_B_PASSWORD }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run guarded two-account staging API probes
+        run: node tests/integration/supabase-cloud-save.mjs
+      - name: Install web runtime dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install pinned Playwright runner and Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.0
+          npx playwright install --with-deps chromium
+      - name: Build local browser game
+        run: node tools/build-web.mjs
+      - name: Configure the local build for the allow-listed staging project
+        run: |
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          const url = new URL(process.env.ASHEN_S4_SUPABASE_URL);
+          const projectRef = process.env.ASHEN_S4_ALLOWED_PROJECT_REF;
+          const key = process.env.ASHEN_S4_SUPABASE_PUBLISHABLE_KEY;
+          if (url.protocol !== 'https:' ||
+              !/^[a-z0-9-]+\.supabase\.co$/i.test(url.hostname) ||
+              url.hostname.split('.')[0] !== projectRef ||
+              !key || /^sb_secret_/i.test(key)) {
+            throw new Error('Staging URL/key failed the local browser config allowlist.');
+          }
+          const config = 'window.ASHEN_SUPABASE_CONFIG = Object.freeze({' +
+            'url: ' + JSON.stringify(url.origin) + ',' +
+            'publishableKey: ' + JSON.stringify(key) +
+            '});\n';
+          writeFileSync('dist/auth-config.js', config, { mode: 0o600 });
+          NODE
+      - name: Serve the local browser build
+        run: |
+          python3 -m http.server 4173 --directory dist > /tmp/ashen-s4-server.log 2>&1 &
+          echo $! > /tmp/ashen-s4-server.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/play.html > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/ashen-s4-server.log
+          exit 1
+      - name: Verify browser cloud restore and two-account switching
+        run: node tests/e2e/supabase-cloud-save-staging.mjs
+        env:
+          ASHEN_S4_LOCAL_GAME_URL: http://127.0.0.1:4173
+      - name: Upload local browser server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashen-s4-staging-server-log
+          path: /tmp/ashen-s4-server.log
+          if-no-files-found: warn

@@ -12,6 +12,8 @@
     "test": "node --test tests/web/*.test.mjs",
     "check:syntax": "node tools/check-syntax.mjs",
     "check:build-cache": "node tools/check-build-cache.mjs",
-    "perf:web": "node tools/perf/web-perf.mjs"
+    "perf:web": "node tools/perf/web-perf.mjs",
+    "test:supabase:rls": "supabase test db",
+    "test:supabase:staging": "node tests/integration/supabase-cloud-save.mjs"
   }
 }
