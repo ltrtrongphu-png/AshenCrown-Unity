@@ -230,7 +230,7 @@ function canonicalJson(value) {
 export function isValidSaveV5(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || value.saveVersion !== 5) return false;
   const level = Number(value.level);
-  if (!Number.isFinite(level) || level < 1 || level > 10000) return false;
+  if (!Number.isInteger(level) || level < 1 || level > 10000) return false;
   if (value.chapter !== undefined) {
     const chapter = Number(value.chapter);
     if (!Number.isInteger(chapter) || chapter < 1 || chapter > 10) return false;
