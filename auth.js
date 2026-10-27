@@ -48,6 +48,7 @@ const authReady = (async () => {
         if (cloudTimer) { clearTimeout(cloudTimer); cloudTimer = null; }
         lastCloudWrite = 0;
         cloudRetryDelay = 5000;
+        cloudLastFailureAt = 0;
         emitCloudSaveStatus(nextUserId ? 'idle' : 'signed-out');
       }
       updateAccountButton();
