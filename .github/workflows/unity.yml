@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   editmode:
-    name: EditMode tests (Unity license required)
+    name: Unity EditMode tests (optional license gate)
     runs-on: ubuntu-latest
     env:
       UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -19,6 +19,19 @@ jobs:
       UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Report Unity test readiness
+        shell: bash
+        run: |
+          if [[ -n "$UNITY_LICENSE" ]]; then
+            echo "### Unity EditMode tests: enabled" >> "$GITHUB_STEP_SUMMARY"
+            echo "A UNITY_LICENSE secret is configured. The Unity Editor tests will run." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Unity EditMode tests: skipped (no license)" >> "$GITHUB_STEP_SUMMARY"
+            echo "Web CI is independent and remains enabled. Add the repository secret UNITY_LICENSE to enable Unity EditMode tests." >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Unity EditMode tests were skipped because UNITY_LICENSE is not configured. This is not a test pass."
+          fi
+
       - name: Run EditMode tests
         if: ${{ env.UNITY_LICENSE != '' }}
         uses: game-ci/unity-test-runner@v4
@@ -27,8 +40,24 @@ jobs:
           testMode: EditMode
           artifactsPath: artifacts
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Explain why tests were skipped
         if: ${{ env.UNITY_LICENSE == '' }}
+        shell: bash
         run: |
-          echo "::warning::Unity EditMode tests were not run because UNITY_LICENSE is not configured."
-          echo "Configure UNITY_LICENSE and any credentials required by your chosen GameCI licensing method."
+          echo "::warning::Unity EditMode tests did not run because UNITY_LICENSE is not configured."
+          echo "This job is intentionally non-blocking for the separate browser/web build. Configure the secret to enable Unity Editor tests."
+          {
+            echo ""
+            echo "Unity tests were **not run**. This job's success only means the optional license gate was handled; it does not mean Unity tests passed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Unity test artifacts
+        if: ${{ always() && env.UNITY_LICENSE != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashencrown-unity-editmode-results
+          path: |
+            artifacts/
+            TestResults/
+          if-no-files-found: ignore

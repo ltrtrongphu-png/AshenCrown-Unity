@@ -9,6 +9,7 @@ Input gameplay dùng **Input Manager cũ**:
 ## Quick links to maintenance docs
 
 - [Unity setup and sandbox generator](docs/UNITY_SETUP.md)
+- [Unity EditMode testing (local Windows + GitHub Actions)](docs/UNITY_TESTING.md)
 - [Web deployment](docs/DEPLOY_VERCEL.md)
 - [Architecture](docs/ARCHITECTURE.md) and [save format v5](docs/SAVE_FORMAT.md)
 - [Controls](docs/CONTROLS.md), [system status](docs/SYSTEMS_STATUS.md), and [known follow-up work](docs/BACKLOG.md)
