@@ -64,7 +64,10 @@
     applyButton = document.createElement('button');
     applyButton.type = 'button';
     applyButton.textContent = 'Update now';
-    applyButton.addEventListener('click', () => void applyUpdate(true));
+    applyButton.addEventListener('click', () => {
+      if (state.updateAvailable) void applyUpdate(true);
+      else void checkForUpdates();
+    });
     dismissButton = document.createElement('button');
     dismissButton.type = 'button';
     dismissButton.className = 'ashen-app-update-dismiss';
@@ -85,7 +88,7 @@
     banner.hidden = !visible;
     if (!visible) return;
     bannerText.textContent = state.message;
-    applyButton.textContent = state.status === 'applying' ? 'Updating…' : 'Update now';
+    applyButton.textContent = state.status === 'applying' ? 'Updating…' : state.updateAvailable ? 'Update now' : 'Retry check';
     applyButton.disabled = applyInProgress || !navigator.onLine;
     dismissButton.hidden = state.autoUpdate && state.status === 'available';
   }
