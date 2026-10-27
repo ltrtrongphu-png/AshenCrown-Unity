@@ -46,8 +46,8 @@ jobs:
           done
           cat /tmp/ashen-crown-perf-http.log
           exit 1
-      - name: Run short performance harness smoke on pull requests
-        if: github.event_name == 'pull_request'
+      - name: Run short performance harness smoke on ordinary pull requests
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'stabilization/')
         run: node tools/perf/web-perf.mjs
         env:
           ASHEN_PERF_URL: http://127.0.0.1:4173
@@ -57,8 +57,9 @@ jobs:
           ASHEN_PERF_CPU_THROTTLE: 4
           ASHEN_PERF_RENDERER: software
           ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/pr-smoke
+      # Stabilization PRs run the full baseline/soak set to validate S5 guardrails.
       - name: Run three repeatable 60-second baselines at 4x CPU throttle
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'stabilization/')
         run: node tools/perf/web-perf.mjs
         env:
           ASHEN_PERF_URL: http://127.0.0.1:4173
@@ -69,7 +70,7 @@ jobs:
           ASHEN_PERF_RENDERER: software
           ASHEN_PERF_ARTIFACT_DIR: artifacts/perf/baseline
       - name: Run 10-minute GPU resource soak
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'stabilization/')
         run: node tools/perf/web-perf.mjs
         env:
           ASHEN_PERF_URL: http://127.0.0.1:4173
