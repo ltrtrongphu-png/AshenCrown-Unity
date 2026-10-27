@@ -36,7 +36,7 @@ This file distinguishes code changes completed in this branch from work still re
 ### Browser gameplay
 - Continue auditing remaining dynamic Three.js geometry/material/texture ownership, especially spawned enemies, wildlife, map creation/disposal and resource-pack replacement. The skill ring and pulse effect paths were fixed, but this is not a whole-renderer leak audit.
 - Split `play.js` into modules only after behavior tests cover save, equipment, quests, collision and combat. Preserve save key `ashen-crown-3d`, save version 5, `ashen:game-ready`, `ashen:game-init-error`, `window.ASHEN_CAMPAIGN`, and `window.AshenAuth.queueSave`.
-- Finish the item-by-item `innerHTML` source-to-sink review and browser XSS regression test. Six unit tests now cover `escapeHtml` and `sanitizeItemRecord`, but they do not exercise the full browser DOM or prove every sink safe.
+- Maintain the item-by-item `innerHTML` source-to-sink inventory in `docs/WEB_DOM_SECURITY.md` and extend `tests/e2e/xss-safety.mjs` whenever save-driven sinks change. The current Chromium regression covers inventory, equipment, journal and archive; it does not certify all browser UI, third-party scripts or Unity UI.
 - Replace DOM text-replacement localization with key-based dictionaries only after translation-key coverage across all five languages exists.
 - Complete touch/gamepad/remappable controls, focus management, reduced-motion checks and offline update UX. S5 adds automated geometry/texture growth guardrails, but a passing scheduled ten-minute soak and the full dynamic-resource ownership audit are still required before claiming the renderer is leak-free.
 

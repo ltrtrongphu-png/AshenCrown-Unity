@@ -27,23 +27,37 @@ begin
 end $migration$;
 
 alter table public.player_web_saves enable row level security;
-revoke all on table public.player_web_saves from anon;
+revoke all on table public.player_web_saves from public, anon, authenticated;
 grant select, insert, update on table public.player_web_saves to authenticated;
-revoke delete on table public.player_web_saves from authenticated;
 
-drop policy if exists player_web_saves_select_own on public.player_web_saves;
+-- PostgreSQL combines permissive RLS policies with OR. Remove unknown legacy
+-- policies too, otherwise a stale permissive policy could bypass these owner
+-- predicates when this migration upgrades a pre-existing table.
+do $migration$
+declare
+  existing_policy record;
+begin
+  for existing_policy in
+    select policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'player_web_saves'
+  loop
+    execute format('drop policy %I on public.player_web_saves', existing_policy.policyname);
+  end loop;
+end
+$migration$;
+
 create policy player_web_saves_select_own
   on public.player_web_saves
   for select to authenticated
   using ((select auth.uid()) = user_id);
 
-drop policy if exists player_web_saves_insert_own on public.player_web_saves;
 create policy player_web_saves_insert_own
   on public.player_web_saves
   for insert to authenticated
   with check ((select auth.uid()) = user_id);
 
-drop policy if exists player_web_saves_update_own on public.player_web_saves;
 create policy player_web_saves_update_own
   on public.player_web_saves
   for update to authenticated

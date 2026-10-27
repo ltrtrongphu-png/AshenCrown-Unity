@@ -244,6 +244,16 @@ export function isValidSaveV5(value) {
   return true;
 }
 
+// Import/recovery can intentionally place opaque pre-migration bytes in the
+// encrypted backup slot. Preserve that specific envelope across ordinary boots,
+// but never treat it as a playable v5 save during recovery.
+function isValidEncryptedBackupPayload(value) {
+  if (isValidSaveV5(value)) return true;
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value) &&
+    value.kind === 'ashen-crown-recovery-v1' &&
+    typeof value.raw === 'string' && value.raw.length > 0);
+}
+
 /** Parse a deliberately unencrypted JSON export, with a hard size limit and v5 shape check. */
 export function parseSaveImport(raw, maxBytes = 1_048_576) {
   if (typeof raw !== 'string') throw new TypeError('Save import must be text.');
@@ -355,6 +365,36 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
         }
         return { value: null, wipedLegacy: false, corrupt: true, needsRecovery: true, reason: 'corrupt-envelope', error, removedBackups: 0 };
       }
+      if (!isValidSaveV5(value)) {
+        // A valid AES-GCM tag proves only that the ciphertext matches the local
+        // key. It does not prove the payload still matches this game's v5
+        // contract. Keep the source bytes untouched and require explicit
+        // recovery instead of passing an unsupported object into gameplay.
+        candidate = latestValidLegacyBackup(storage, backupKeys);
+        if (candidate) {
+          return {
+            value: candidate.value, wipedLegacy: false, corrupt: false, needsRecovery: true,
+            reason: 'unsupported-encrypted-save-legacy-backup-available',
+            backupKey: candidate.key, removedBackups: 0
+          };
+        }
+        const encryptedRecoveryRaw = storage.getItem(encryptedBackupKey);
+        if (isEncryptedSaveEnvelope(encryptedRecoveryRaw)) {
+          try {
+            const encryptedRecovery = await decryptSavePayload(encryptedRecoveryRaw, key, cryptoApi);
+            if (isValidSaveV5(encryptedRecovery)) {
+              return {
+                value: encryptedRecovery, wipedLegacy: false, corrupt: false, needsRecovery: true,
+                reason: 'unsupported-encrypted-save-encrypted-backup-available', removedBackups: 0
+              };
+            }
+          } catch {}
+        }
+        return {
+          value: null, wipedLegacy: false, corrupt: false, needsRecovery: true,
+          reason: 'unsupported-encrypted-save', removedBackups: 0
+        };
+      }
     } else if (raw !== null && raw !== undefined && raw !== '') {
       try {
         candidate = { raw, value: JSON.parse(raw), key: keyName };
@@ -398,7 +438,7 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
     if (isEncryptedSaveEnvelope(existingEncryptedBackup)) {
       try {
         const previousBackup = await decryptSavePayload(existingEncryptedBackup, key, cryptoApi);
-        encryptedBackupValid = Boolean(previousBackup && typeof previousBackup === 'object' && !Array.isArray(previousBackup));
+        encryptedBackupValid = isValidEncryptedBackupPayload(previousBackup);
       } catch {}
     }
     const shouldRefreshBackup = backupKeys.length > 0 || !encryptedBackupValid || !primaryEncrypted || recoveredFromBackup;
@@ -458,6 +498,12 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
 export async function writeEncryptedLocalSave(storage, keyName, value, key, cryptoApi = globalThis.crypto) {
   if (!storage || typeof storage.setItem !== 'function' || typeof storage.getItem !== 'function') {
     throw new TypeError('A writable local storage object is required.');
+  }
+  const recoveryBackupWrite = typeof keyName === 'string' &&
+    keyName.endsWith(ENCRYPTED_SAVE_BACKUP_SUFFIX) &&
+    isValidEncryptedBackupPayload(value);
+  if (!isValidSaveV5(value) && !recoveryBackupWrite) {
+    throw new Error('Encrypted local save must match the supported v5 save format.');
   }
   const envelope = await encryptSavePayload(value, key, cryptoApi);
   storage.setItem(keyName, envelope);

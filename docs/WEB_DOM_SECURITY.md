@@ -12,7 +12,7 @@ Scope: the Three.js browser game in play.js, including save-derived inventory, e
 
 ## Source-to-sink inventory
 
-The 24 innerHTML writes present in this review fall into these groups:
+The 25 innerHTML writes currently present in play.js fall into these groups:
 
 | Sink group | Data source | Guard and disposition |
 |---|---|---|

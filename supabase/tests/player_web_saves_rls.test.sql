@@ -1,6 +1,6 @@
 begin;
 
-select plan(18);
+select plan(25);
 
 select has_table(
   'public',
@@ -13,6 +13,12 @@ select ok(
    from pg_class
    where oid = 'public.player_web_saves'::regclass),
   'row-level security is enabled'
+);
+select is(
+  (select count(*) from pg_policies
+   where schemaname = 'public' and tablename = 'player_web_saves'),
+  3::bigint,
+  'only the three owner-scoped cloud-save policies exist'
 );
 
 select ok(
@@ -32,8 +38,32 @@ select ok(
   'anonymous role has no DELETE grant'
 );
 select ok(
+  not has_table_privilege('anon', 'public.player_web_saves', 'TRUNCATE'),
+  'anonymous role cannot truncate the cloud-save table'
+);
+select ok(
+  not has_table_privilege('anon', 'public.player_web_saves', 'REFERENCES'),
+  'anonymous role cannot add foreign-key references to cloud saves'
+);
+select ok(
+  not has_table_privilege('anon', 'public.player_web_saves', 'TRIGGER'),
+  'anonymous role cannot create triggers on cloud saves'
+);
+select ok(
   not has_table_privilege('authenticated', 'public.player_web_saves', 'DELETE'),
   'authenticated role cannot delete cloud saves'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.player_web_saves', 'TRUNCATE'),
+  'authenticated role cannot truncate the cloud-save table'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.player_web_saves', 'REFERENCES'),
+  'authenticated role cannot add foreign-key references to cloud saves'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.player_web_saves', 'TRIGGER'),
+  'authenticated role cannot create triggers on cloud saves'
 );
 
 insert into auth.users (id, email)
