@@ -194,7 +194,7 @@
         const prepared = await lifecycle.prepareForUpdate();
         if (!prepared) {
           applyInProgress = false;
-          setStatus('update-save-blocked', 'Automatic update paused because the local save needs attention. Fix or export the save, then try again.');
+          setStatus('update-save-blocked', 'Automatic update paused because the local save or cloud backup needs attention. Restore the save or wait for sync, then try again.');
           if (state.autoUpdate && !manual) scheduleAutoApply(8000);
           return false;
         }
