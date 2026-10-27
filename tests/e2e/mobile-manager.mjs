@@ -62,6 +62,9 @@ try {
   assert.equal(await page.locator('#mobileAutoUpdateToggle').getAttribute('aria-pressed'), 'true',
     'automatic updates should be enabled by default');
 
+  const canUpdateWhenIdle = await page.evaluate(() => window.AshenAppLifecycle.canApplyUpdate());
+  assert.equal(canUpdateWhenIdle, true, 'safe app update should be permitted while gameplay is idle');
+
   const initialAutoUpdate = await page.evaluate(() => window.AshenAppUpdater.getState().autoUpdate);
   await page.locator('#mobileAutoUpdateToggle').click();
   assert.equal(await page.evaluate(() => window.AshenAppUpdater.getState().autoUpdate), !initialAutoUpdate,
