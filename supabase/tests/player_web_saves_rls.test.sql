@@ -1,6 +1,6 @@
 begin;
 
-select plan(21);
+select plan(24);
 
 select has_table(
   'public',
@@ -30,6 +30,18 @@ select ok(
 select ok(
   not has_table_privilege('anon', 'public.player_web_saves', 'DELETE'),
   'anonymous role has no DELETE grant'
+);
+select ok(
+  not has_table_privilege('anon', 'public.player_web_saves', 'TRUNCATE'),
+  'anonymous role cannot truncate the cloud-save table'
+);
+select ok(
+  not has_table_privilege('anon', 'public.player_web_saves', 'REFERENCES'),
+  'anonymous role cannot add foreign-key references to cloud saves'
+);
+select ok(
+  not has_table_privilege('anon', 'public.player_web_saves', 'TRIGGER'),
+  'anonymous role cannot create triggers on cloud saves'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.player_web_saves', 'DELETE'),
