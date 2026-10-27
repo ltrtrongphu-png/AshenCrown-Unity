@@ -2,6 +2,7 @@ name: Browser gameplay smoke and screenshots
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
   schedule:
     - cron: '31 4 * * *'
@@ -52,11 +53,11 @@ jobs:
         run: node tests/e2e/xss-safety.mjs
         env:
           ASHEN_SMOKE_URL: http://127.0.0.1:4173
-      # The full campaign is kept as a nightly/manual regression: it renders ten maps
-      # and fights every Warden under software GL, so it is too slow for every PR.
-      # Fast gameplay smoke, save migration/export/import and XSS remain PR gates.
+      # The full campaign renders ten maps and fights every Warden under software GL.
+      # Keep it off ordinary PRs, but run it on stabilization/* PRs to validate
+      # cross-sprint fixes end-to-end without slowing every feature branch.
       - name: Play through all 10 chapters and regress gameplay UI
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'stabilization/')
         run: node tests/e2e/campaign-playthrough.mjs
         env:
           ASHEN_SMOKE_URL: http://127.0.0.1:4173
