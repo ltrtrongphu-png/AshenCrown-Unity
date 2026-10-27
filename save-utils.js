@@ -499,6 +499,12 @@ export async function writeEncryptedLocalSave(storage, keyName, value, key, cryp
   if (!storage || typeof storage.setItem !== 'function' || typeof storage.getItem !== 'function') {
     throw new TypeError('A writable local storage object is required.');
   }
+  const recoveryBackupWrite = typeof keyName === 'string' &&
+    keyName.endsWith(ENCRYPTED_SAVE_BACKUP_SUFFIX) &&
+    isValidEncryptedBackupPayload(value);
+  if (!isValidSaveV5(value) && !recoveryBackupWrite) {
+    throw new Error('Encrypted local save must match the supported v5 save format.');
+  }
   const envelope = await encryptSavePayload(value, key, cryptoApi);
   storage.setItem(keyName, envelope);
   const stored = storage.getItem(keyName);
