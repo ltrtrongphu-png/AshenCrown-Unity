@@ -221,6 +221,7 @@
     const updater = window.AshenAppUpdater;
     if (!updater) return;
     if (updater.getState?.().updateAvailable) {
+      closeManager();
       await updater.applyUpdate();
     } else {
       await updater.checkForUpdates();
