@@ -430,20 +430,28 @@ test('invalid encrypted backup is repaired from the current valid v5 primary', a
     'the last-known-good backup slot must contain a validated v5 save');
 });
 
-test('encrypted local-save writer rejects unsupported payloads before mutating storage', async () => {
+test('encrypted recovery backup envelopes remain preserved while a valid v5 primary is loaded', async () => {
   const { webcrypto } = await import('node:crypto');
-  const { writeEncryptedLocalSave } = await import('../../save-utils.js');
-  const original = 'ASHEN-AESGCM-v1:keep-existing-envelope';
-  const values = new Map([['ashen-crown-3d', original]]);
+  const { writeEncryptedLocalSave, decryptSavePayload, readEncryptedLocalSave, ENCRYPTED_SAVE_BACKUP_SUFFIX } = await import('../../save-utils.js');
+  const primary = { saveVersion: 5, level: 5, chapter: 2, inventory: [], flags: {}, savedAt: 100 };
+  const recovery = { kind: 'ashen-crown-recovery-v1', raw: 'unreadable-or-unsupported-original-bytes' };
+  const values = new Map();
   const storage = {
+    get length() { return values.size; },
+    key(index) { return [...values.keys()][index] ?? null; },
     getItem(keyName) { return values.has(keyName) ? values.get(keyName) : null; },
-    setItem(keyName, value) { values.set(String(keyName), String(value)); }
+    setItem(keyName, value) { values.set(String(keyName), String(value)); },
+    removeItem(keyName) { values.delete(keyName); }
   };
   const key = await webcrypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  await writeEncryptedLocalSave(storage, 'ashen-crown-3d', primary, key, webcrypto);
+  const backupKey = 'ashen-crown-3d' + ENCRYPTED_SAVE_BACKUP_SUFFIX;
+  await writeEncryptedLocalSave(storage, backupKey, recovery, key, webcrypto);
+  const recoveryEnvelope = storage.getItem(backupKey);
 
-  await assert.rejects(
-    () => writeEncryptedLocalSave(storage, 'ashen-crown-3d', { saveVersion: 4, level: 5 }, key, webcrypto),
-    /supported v5 save format/
-  );
-  assert.equal(storage.getItem('ashen-crown-3d'), original, 'invalid input must not replace the existing primary bytes');
+  const result = await readEncryptedLocalSave(storage, 'ashen-crown-3d', async () => key, webcrypto);
+  assert.deepEqual(result.value, primary);
+  assert.equal(result.needsRecovery, undefined);
+  assert.deepEqual(await decryptSavePayload(storage.getItem(backupKey), key, webcrypto), recovery);
+  assert.equal(storage.getItem(backupKey), recoveryEnvelope, 'opaque recovery bytes must not be rolled forward over on boot');
 });
