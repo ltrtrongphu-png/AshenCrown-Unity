@@ -4014,7 +4014,37 @@ function refreshOwnerDiagnostics() {
 }
 
 await bootstrapEncryptedSave();
-loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();if(isChapterWardenReady(state))spawnEnemy(false,true);setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
+loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();if(isChapterWardenReady(state))spawnEnemy(false,true);setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();
+window.AshenAppLifecycle = {
+  canApplyUpdate() {
+    if (localSaveRecoveryRequired || saveImportInProgress || cloudRestoreInProgress) return false;
+    const blockingLayers = [
+      '#tutorial.show', '#dialogue.show', '#pause.show', '#result.show',
+      '#systemMenu.show', '#inventoryMenu.show', '#worldMap.show', '#metaMenu.show',
+      '#mobileManagerOverlay:not([hidden])', '.owner-console.show'
+    ];
+    if (blockingLayers.some(selector => document.querySelector(selector))) return false;
+    if (encounter && Number(encounter.hp) > 0) return false;
+    return true;
+  },
+  async prepareForUpdate() {
+    if (!this.canApplyUpdate()) return false;
+    saveState(true);
+    await localSaveWriteChain;
+    const saveStatus = $('saveStatus');
+    return !localSaveRecoveryRequired &&
+      saveStatus?.dataset?.state !== 'error' &&
+      isValidSaveV5(localSavePlaintext);
+  },
+  getStatus() {
+    return {
+      chapter: state.chapter,
+      quest: state.quest,
+      saveRecoveryRequired: localSaveRecoveryRequired,
+      localSaveValid: isValidSaveV5(localSavePlaintext)
+    };
+  }
+};
 if(state.tutorial!==false)$('tutorial').classList.add('show');
 time=DAY_LENGTH*.08;
 showChapterTitle((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.title)||'THE LAST EMBER','Explore · meet people · make choices · shape the world');
