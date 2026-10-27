@@ -32,6 +32,7 @@ test('automatic updater performs frequent uncached service-worker version checks
   assert.match(updater, /activeBuildId/);
   assert.match(updater, /waitingBuildId/);
   assert.match(updater, /waitingNeedsActivation/);
+  assert.match(updater, /registration\?\.waiting && state\.waitingBuildId/);
   assert.doesNotMatch(worker, /await self\.skipWaiting\(\)/);
 });
 
