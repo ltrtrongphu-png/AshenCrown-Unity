@@ -14,6 +14,7 @@ let cloudTimer = null;
 let lastCloudWrite = 0;
 let cloudWriteInFlight = false;
 let cloudRetryDelay = 5000;
+let cloudLastFailureAt = 0;
 const cloudSaveQueue = new CloudSaveQueue();
 
 const authReady = (async () => {
@@ -281,10 +282,12 @@ async function flushCloudSave() {
     if ((currentSession?.user?.id || null) !== snapshot.userId) return;
     lastCloudWrite = Date.now();
     cloudRetryDelay = 5000;
+    cloudLastFailureAt = 0;
     emitCloudSaveStatus(cloudSaveQueue.hasPending ? 'pending' : 'saved');
   } catch (error) {
     const activeUserId = currentSession?.user?.id || null;
     if (activeUserId === snapshot.userId && cloudSaveQueue.retry(snapshot, activeUserId)) {
+      cloudLastFailureAt = Date.now();
       retryDelay = cloudRetryDelay;
       cloudRetryDelay = Math.min(cloudRetryDelay * 2, 300000);
       emitCloudSaveStatus('retrying', 'Cloud backup failed; retrying automatically.');
@@ -302,11 +305,16 @@ async function flushPendingCloudSave(timeoutMs = 7000) {
   const timeout = Math.max(1000, Math.min(15000, Number(timeoutMs) || 7000));
   const startedAt = Date.now();
 
-  if (cloudTimer) {
-    clearTimeout(cloudTimer);
-    cloudTimer = null;
+  if (cloudSaveQueue.hasPending && !cloudWriteInFlight) {
+    // Respect exponential retry backoff during repeated network/server failures;
+    // an app-refresh attempt must not turn a slow failure into a retry storm.
+    if (cloudLastFailureAt && Date.now() - cloudLastFailureAt < cloudRetryDelay) return false;
+    if (cloudTimer) {
+      clearTimeout(cloudTimer);
+      cloudTimer = null;
+    }
+    void flushCloudSave();
   }
-  if (cloudSaveQueue.hasPending && !cloudWriteInFlight) void flushCloudSave();
 
   while (Date.now() - startedAt < timeout) {
     if (!currentSession?.user?.id) return true;
