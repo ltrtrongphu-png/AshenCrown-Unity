@@ -355,6 +355,36 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
         }
         return { value: null, wipedLegacy: false, corrupt: true, needsRecovery: true, reason: 'corrupt-envelope', error, removedBackups: 0 };
       }
+      if (!isValidSaveV5(value)) {
+        // A valid AES-GCM tag proves only that the ciphertext matches the local
+        // key. It does not prove the payload still matches this game's v5
+        // contract. Keep the source bytes untouched and require explicit
+        // recovery instead of passing an unsupported object into gameplay.
+        candidate = latestValidLegacyBackup(storage, backupKeys);
+        if (candidate) {
+          return {
+            value: candidate.value, wipedLegacy: false, corrupt: false, needsRecovery: true,
+            reason: 'unsupported-encrypted-save-legacy-backup-available',
+            backupKey: candidate.key, removedBackups: 0
+          };
+        }
+        const encryptedRecoveryRaw = storage.getItem(encryptedBackupKey);
+        if (isEncryptedSaveEnvelope(encryptedRecoveryRaw)) {
+          try {
+            const encryptedRecovery = await decryptSavePayload(encryptedRecoveryRaw, key, cryptoApi);
+            if (isValidSaveV5(encryptedRecovery)) {
+              return {
+                value: encryptedRecovery, wipedLegacy: false, corrupt: false, needsRecovery: true,
+                reason: 'unsupported-encrypted-save-encrypted-backup-available', removedBackups: 0
+              };
+            }
+          } catch {}
+        }
+        return {
+          value: null, wipedLegacy: false, corrupt: false, needsRecovery: true,
+          reason: 'unsupported-encrypted-save', removedBackups: 0
+        };
+      }
     } else if (raw !== null && raw !== undefined && raw !== '') {
       try {
         candidate = { raw, value: JSON.parse(raw), key: keyName };
@@ -398,7 +428,7 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
     if (isEncryptedSaveEnvelope(existingEncryptedBackup)) {
       try {
         const previousBackup = await decryptSavePayload(existingEncryptedBackup, key, cryptoApi);
-        encryptedBackupValid = Boolean(previousBackup && typeof previousBackup === 'object' && !Array.isArray(previousBackup));
+        encryptedBackupValid = isValidSaveV5(previousBackup);
       } catch {}
     }
     const shouldRefreshBackup = backupKeys.length > 0 || !encryptedBackupValid || !primaryEncrypted || recoveredFromBackup;
@@ -458,6 +488,9 @@ export async function readEncryptedLocalSave(storage, keyName, getKey, cryptoApi
 export async function writeEncryptedLocalSave(storage, keyName, value, key, cryptoApi = globalThis.crypto) {
   if (!storage || typeof storage.setItem !== 'function' || typeof storage.getItem !== 'function') {
     throw new TypeError('A writable local storage object is required.');
+  }
+  if (!isValidSaveV5(value)) {
+    throw new Error('Encrypted local save must match the supported v5 save format.');
   }
   const envelope = await encryptSavePayload(value, key, cryptoApi);
   storage.setItem(keyName, envelope);
