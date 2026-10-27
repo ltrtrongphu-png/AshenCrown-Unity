@@ -12,9 +12,9 @@ Input gameplay dùng **Input Manager cũ**:
 - [Web deployment](docs/DEPLOY_VERCEL.md)
 - [Architecture](docs/ARCHITECTURE.md) and [save format v5](docs/SAVE_FORMAT.md)
 - [Controls](docs/CONTROLS.md), [system status](docs/SYSTEMS_STATUS.md), and [known follow-up work](docs/BACKLOG.md)
-- [Security review](docs/SECURITY_REVIEW.md), [Supabase staging verification](docs/SUPABASE_STAGING.md), and [contributing guide](CONTRIBUTING.md)
+- [Security review](docs/SECURITY_REVIEW.md), [Supabase staging verification](docs/SUPABASE_STAGING.md), [WebGL performance soak](docs/WEBGL_SOAK.md), and [contributing guide](CONTRIBUTING.md)
 
-**Verification notice:** GitHub Web CI passed on the latest completed run (static reference check, six web utility tests, JS syntax checks and a 21-file deployment artifact). Unity Editor compilation, generated-scene playability, live Supabase migration/RLS, browser soak/performance and Lighthouse are still unverified; see the status docs before treating this source as production-ready.
+**Verification notice:** GitHub Web CI passed on the latest completed run (static reference check, web utility tests, JS syntax checks and a deployment artifact). S5 adds unit-tested WebGL resource-growth analysis to the performance harness, but the scheduled/manual ten-minute soak still needs a passing run. Unity Editor compilation, generated-scene playability, live Supabase migration/RLS, hardware-browser performance and Lighthouse remain unverified; see the status docs before treating this source as production-ready.
 
 ## Vercel deployment
 

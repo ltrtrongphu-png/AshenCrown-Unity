@@ -9,6 +9,7 @@ This file distinguishes code changes completed in this branch from work still re
 - The Unity loot-test key L is gated to Editor/Development builds.
 - Skill-ring effects reuse prewarmed meshes/geometries/materials; the pulse effect now expires in the game tick and disposes its transient child resources instead of using a timeout with no disposal.
 - Added six Node tests for HTML escaping and save-record normalization; GitHub Web CI passed these tests, the allow-list checks, and a 21-file Vercel artifact build on the last verified run.
+- S5 adds post-warm-up WebGL geometry/texture trend analysis, sustained-growth thresholds for the ten-minute soak, and focused unit tests. JavaScript heap growth remains diagnostic because garbage collection makes heap samples noisy.
 - `GameplayEventBridge` no longer polls `FindObjectsOfType` every second: player/boss lifecycle events now drive subscriptions, with PlayerRegistry and BossController cleanup/reset handling.
 - Added an EditMode test source for player and boss registry lifecycle. It has not run in Unity because the GitHub workflow has no configured Unity license.
 - Added additive migration 002 for `player_web_saves` with RLS select/insert/update own-row policies, no anonymous/delete policy, a JSONB size limit, and a version field. The browser upsert was aligned to this schema.
@@ -37,7 +38,7 @@ This file distinguishes code changes completed in this branch from work still re
 - Split `play.js` into modules only after behavior tests cover save, equipment, quests, collision and combat. Preserve save key `ashen-crown-3d`, save version 5, `ashen:game-ready`, `ashen:game-init-error`, `window.ASHEN_CAMPAIGN`, and `window.AshenAuth.queueSave`.
 - Finish the item-by-item `innerHTML` source-to-sink review and browser XSS regression test. Six unit tests now cover `escapeHtml` and `sanitizeItemRecord`, but they do not exercise the full browser DOM or prove every sink safe.
 - Replace DOM text-replacement localization with key-based dictionaries only after translation-key coverage across all five languages exists.
-- Complete touch/gamepad/remappable controls, focus management, reduced-motion checks, offline update UX, and 10-minute memory soak test.
+- Complete touch/gamepad/remappable controls, focus management, reduced-motion checks and offline update UX. S5 adds automated geometry/texture growth guardrails, but a passing scheduled ten-minute soak and the full dynamic-resource ownership audit are still required before claiming the renderer is leak-free.
 
 ### Baseline/CI/release
 - Web CI, npm audit, Gitleaks and CodeQL passed on PR head `5d90156ddbf50e33441d694b3df5b0116cd8ba21`. Re-run or inspect the latest workflow status if another commit is pushed before merge. Unity EditMode execution remains skipped without a license.

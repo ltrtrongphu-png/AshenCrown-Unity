@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import { chromium } from 'playwright';
+import { analyzeRendererResourceTrends } from './resource-trend.mjs';
 
 const baseUrl = process.env.ASHEN_PERF_URL || process.env.ASHEN_SMOKE_URL || 'http://127.0.0.1:4173';
 const mode = process.env.ASHEN_PERF_MODE || 'baseline';
@@ -165,6 +166,10 @@ try {
     const collected = await page.evaluate(() => window.__ASHEN_PERF__.snapshot());
     const frames = collected.frameMs;
     const longTasks = collected.longTasksMs;
+    // Ignore the pre-measurement scene snapshot so only post-warm-up intervals
+    // are considered when detecting sustained resource growth.
+    const sampledResources = rendererSamples.slice(1);
+    const resourceTrend = analyzeRendererResourceTrends(sampledResources, { sampleIntervalMs });
     const geometryCounts = rendererSamples.map(sample => Number(sample.geometries) || 0);
     const textureCounts = rendererSamples.map(sample => Number(sample.textures) || 0);
     const heaps = rendererSamples.map(sample => Number(sample.heapBytes)).filter(Number.isFinite);
@@ -194,6 +199,7 @@ try {
       },
       longTasks: { countOver50ms: longTasks.filter(duration => duration > 50).length, maxMs: longTasks.length ? Number(Math.max(...longTasks).toFixed(3)) : null },
       rendererSamples,
+      resourceTrend,
       memoryTrend: {
         geometries: geometryCounts,
         textures: textureCounts,
@@ -232,6 +238,7 @@ const summary = {
   longTaskMedianCount: median(results.map(result => result.longTasks.countOver50ms)),
   geometryStrictIncreaseRuns: results.filter(result => result.memoryTrend.geometryStrictlyIncreasing).length,
   textureStrictIncreaseRuns: results.filter(result => result.memoryTrend.textureStrictlyIncreasing).length,
+  resourceGrowthSuspectedRuns: results.filter(result => result.resourceTrend.suspectedLeak).length,
   results
 };
 const markdown = [
@@ -245,13 +252,16 @@ const markdown = [
   '- Browser readiness median: ' + summary.gameReadyMedianMs + ' ms',
   '- Frame p50/p95/p99 median: ' + summary.frameP50MedianMs + ' / ' + summary.frameP95MedianMs + ' / ' + summary.frameP99MedianMs + ' ms',
   '- Long tasks >50 ms median count: ' + summary.longTaskMedianCount,
-  '- Runs with strictly increasing geometry/texture counts: ' + summary.geometryStrictIncreaseRuns + ' / ' + summary.textureStrictIncreaseRuns,
+  '- Runs with strictly increasing geometry/texture counts (diagnostic): ' + summary.geometryStrictIncreaseRuns + ' / ' + summary.textureStrictIncreaseRuns,
+  '- Runs over sustained resource-growth thresholds: ' + summary.resourceGrowthSuspectedRuns,
   '',
-  '| Run | p50 ms | p95 ms | p99 ms | Max ms | >33 ms frames | >50 ms long tasks | Save writes |',
-  '|---:|---:|---:|---:|---:|---:|---:|---:|',
+  '| Run | p50 ms | p95 ms | p99 ms | Max ms | >33 ms frames | >50 ms long tasks | Geometry Δ | Texture Δ | Growth suspected | Save writes |',
+  '|---:|---:|---:|---:|---:|---:|---:|---:|---:|:---:|---:|',
   ...results.map(result => '| ' + result.run + ' | ' + result.frames.p50Ms + ' | ' + result.frames.p95Ms + ' | ' +
     result.frames.p99Ms + ' | ' + result.frames.maxMs + ' | ' + result.frames.over33ms + ' | ' +
-    result.longTasks.countOver50ms + ' | ' + result.saveWritesDuringMeasurement + ' |'),
+    result.longTasks.countOver50ms + ' | ' + (result.resourceTrend.geometries.delta ?? 'n/a') + ' | ' +
+    (result.resourceTrend.textures.delta ?? 'n/a') + ' | ' + (result.resourceTrend.suspectedLeak ? 'YES' : 'no') + ' | ' +
+    result.saveWritesDuringMeasurement + ' |'),
   '',
   'These are measurements from this run and machine only. Do not compare them with previous runs unless browser, machine, build, map and CPU throttle are matched.',
   ''
@@ -262,7 +272,12 @@ await writeFile(artifactDir + '/web-perf-summary.md', markdown);
 process.stdout.write('\n' + markdown + '\n');
 
 if (mode === 'soak') {
-  assert.equal(summary.geometryStrictIncreaseRuns, 0, 'GPU geometry count must not increase strictly across every post-warmup sample during soak.');
-  assert.equal(summary.textureStrictIncreaseRuns, 0, 'GPU texture count must not increase strictly across every post-warmup sample during soak.');
+  const suspectedLeaks = results.filter(result => result.resourceTrend.suspectedLeak).map(result => ({
+    run: result.run,
+    geometryTrend: result.resourceTrend.geometries,
+    textureTrend: result.resourceTrend.textures
+  }));
+  assert.equal(suspectedLeaks.length, 0,
+    'Sustained WebGL geometry/texture growth exceeded the soak guardrail. Review the uploaded JSON/Markdown artifacts: ' + JSON.stringify(suspectedLeaks));
   assert.ok(results.every(result => result.pageErrors.length === 0), 'soak should not generate uncaught page errors');
 }
