@@ -163,8 +163,8 @@
     updateStatusPill(byId('mobileManagerProgress'), 'QUEST · ' + (progress?.textContent?.trim() || '1 / 1'));
     byId('mobileAutoUpdateToggle').textContent = updateState.autoUpdate === false ? 'OFF' : 'ON';
     byId('mobileAutoUpdateToggle').setAttribute('aria-pressed', String(updateState.autoUpdate !== false));
-    byId('mobileInstallApp').hidden = !updater?.isInstallAvailable?.();
-    byId('mobileInstallApp').textContent = updateState.installAvailable ? 'Install app' : 'Install app';
+    byId('mobileInstallApp').hidden = false;
+    byId('mobileInstallApp').textContent = updateState.installAvailable ? 'Install app' : 'Add to Home Screen';
     const feedback = byId('mobileManagerFeedback');
     if (updateState.updateAvailable) {
       feedback.textContent = updateState.message || 'A newer version is available.';
