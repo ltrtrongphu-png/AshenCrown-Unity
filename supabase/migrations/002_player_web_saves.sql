@@ -27,9 +27,8 @@ begin
 end $migration$;
 
 alter table public.player_web_saves enable row level security;
-revoke all on table public.player_web_saves from anon;
+revoke all on table public.player_web_saves from anon, authenticated;
 grant select, insert, update on table public.player_web_saves to authenticated;
-revoke delete on table public.player_web_saves from authenticated;
 
 drop policy if exists player_web_saves_select_own on public.player_web_saves;
 create policy player_web_saves_select_own
