@@ -29,6 +29,9 @@ test('automatic updater performs frequent uncached service-worker version checks
   assert.match(worker, /ASHEN_APP_VERSION/);
   assert.match(worker, /self\.clients\.claim\(\)/);
   assert.match(worker, /ASHEN_SKIP_WAITING/);
+  assert.match(updater, /activeBuildId/);
+  assert.match(updater, /waitingBuildId/);
+  assert.match(updater, /waitingNeedsActivation/);
   assert.doesNotMatch(worker, /await self\.skipWaiting\(\)/);
 });
 
