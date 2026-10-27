@@ -10,6 +10,8 @@
     message: 'Checking for updates…',
     buildId: BUILD_ID,
     workerBuildId: '',
+    activeBuildId: '',
+    waitingBuildId: '',
     updateAvailable: false,
     autoUpdate: readAutoUpdatePreference(),
     online: navigator.onLine,
@@ -114,23 +116,47 @@
     } catch {}
   }
 
-  function handleWorkerVersion(version) {
+  function handleWorkerVersion(version, role = 'active') {
     if (typeof version !== 'string' || !/^[a-f0-9]{16}$/i.test(version)) return;
-    state.workerBuildId = version;
-    if (version === BUILD_ID) {
+    if (role === 'waiting') state.waitingBuildId = version;
+    else state.activeBuildId = version;
+
+    // Prefer a ready waiting worker as the refresh target. This also handles
+    // a fresh HTML page whose version matches the waiting worker while an older
+    // worker is still controlling its cache.
+    const hasWaitingWorker = Boolean(state.waitingBuildId);
+    const target = hasWaitingWorker ? state.waitingBuildId : state.activeBuildId;
+    const waitingNeedsActivation = hasWaitingWorker &&
+      Boolean(state.activeBuildId) && state.activeBuildId !== state.waitingBuildId;
+    const activeIsOutdated = !hasWaitingWorker && Boolean(state.activeBuildId) &&
+      state.activeBuildId !== BUILD_ID && !registration?.installing;
+    const updateNeeded = hasWaitingWorker
+      ? state.waitingBuildId !== BUILD_ID || waitingNeedsActivation
+      : activeIsOutdated;
+    state.workerBuildId = target || '';
+
+    if (!updateNeeded) {
       state.updateAvailable = false;
-      if (readReloadTarget() === version) writeReloadTarget('');
-      setStatus('current', 'You are using the latest available version.');
+      if (readReloadTarget() === BUILD_ID) writeReloadTarget('');
+      setStatus('current', registration?.installing
+        ? 'Checking a newly downloaded app shell…'
+        : 'You are using the latest available version.');
       window.clearTimeout(retryTimer);
       return;
     }
 
     state.updateAvailable = true;
-    setStatus('available', 'A newer version is ready. Your local save will be checked before the game refreshes.');
-    if (state.autoUpdate) scheduleAutoApply(900);
+    const shellNeedsActivation = hasWaitingWorker && waitingNeedsActivation;
+    setStatus('available', shellNeedsActivation
+      ? 'The app shell and page versions differ. Your save will be checked before they are synchronized.'
+      : 'A newer version is ready. Your local save will be checked before the game refreshes.');
+    if (state.autoUpdate && (!registration?.installing || hasWaitingWorker)) scheduleAutoApply(900);
   }
 
-  function probeWorkerVersion(worker = navigator.serviceWorker?.controller || registration?.active) {
+  function probeWorkerVersion(
+    worker = navigator.serviceWorker?.controller || registration?.active,
+    role = 'active'
+  ) {
     if (!worker || typeof MessageChannel !== 'function') return Promise.resolve(null);
     return new Promise(resolve => {
       const channel = new MessageChannel();
@@ -153,7 +179,7 @@
         finish(null);
       }
     }).then(version => {
-      if (version) handleWorkerVersion(version);
+      if (version) handleWorkerVersion(version, role);
       return version;
     });
   }
@@ -266,7 +292,10 @@
         bindRegistration(registration);
       }
       await registration.update();
-      await probeWorkerVersion(registration.waiting || registration.active || navigator.serviceWorker.controller);
+      await Promise.all([
+        probeWorkerVersion(registration.active || navigator.serviceWorker.controller, 'active'),
+        probeWorkerVersion(registration.waiting, 'waiting')
+      ]);
       if (!state.updateAvailable && state.status === 'checking') {
         setStatus('current', 'You are using the latest available version.');
       }
@@ -288,11 +317,15 @@
       if (!installing) return;
       installing.addEventListener('statechange', () => {
         if (installing.state === 'installed') {
-          void probeWorkerVersion(reg.waiting || reg.active || navigator.serviceWorker.controller);
+          void Promise.all([
+            probeWorkerVersion(reg.active || navigator.serviceWorker.controller, 'active'),
+            probeWorkerVersion(reg.waiting, 'waiting')
+          ]);
         }
       });
     });
-    void probeWorkerVersion(reg.active || navigator.serviceWorker.controller);
+    void probeWorkerVersion(reg.active || navigator.serviceWorker.controller, 'active');
+    void probeWorkerVersion(reg.waiting, 'waiting');
   }
 
   async function installApp() {
@@ -358,10 +391,10 @@
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', event => {
-        if (event.data?.type === 'ASHEN_APP_VERSION') handleWorkerVersion(event.data.buildId);
+        if (event.data?.type === 'ASHEN_APP_VERSION') handleWorkerVersion(event.data.buildId, 'active');
       });
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        void probeWorkerVersion();
+        void probeWorkerVersion(navigator.serviceWorker.controller, 'active');
       });
       navigator.serviceWorker.register(new URL('./sw.js', location.href), { updateViaCache: 'none' })
         .then(reg => {
@@ -369,7 +402,10 @@
           bindRegistration(reg);
           return registration.update().catch(() => {});
         })
-        .then(() => probeWorkerVersion(registration?.waiting || registration?.active || navigator.serviceWorker.controller))
+        .then(() => Promise.all([
+          probeWorkerVersion(registration?.active || navigator.serviceWorker.controller, 'active'),
+          probeWorkerVersion(registration?.waiting, 'waiting')
+        ]))
         .catch(() => {
           if (!navigator.onLine) setStatus('offline', 'Offline. The installed version remains available.');
           else setStatus('update-check-failed', 'Automatic updates could not start in this browser session.');
