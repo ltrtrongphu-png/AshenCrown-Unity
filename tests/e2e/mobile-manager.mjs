@@ -62,8 +62,8 @@ try {
   assert.equal(await page.locator('#mobileAutoUpdateToggle').getAttribute('aria-pressed'), 'true',
     'automatic updates should be enabled by default');
 
-  const canUpdateWhenIdle = await page.evaluate(() => window.AshenAppLifecycle.canApplyUpdate());
-  assert.equal(canUpdateWhenIdle, true, 'safe app update should be permitted while gameplay is idle');
+  const canUpdateWhileManagerOpen = await page.evaluate(() => window.AshenAppLifecycle.canApplyUpdate());
+  assert.equal(canUpdateWhileManagerOpen, false, 'the field manager must block automatic refresh while it is open');
 
   const initialAutoUpdate = await page.evaluate(() => window.AshenAppUpdater.getState().autoUpdate);
   await page.locator('#mobileAutoUpdateToggle').click();
@@ -74,6 +74,8 @@ try {
     'automatic updates setting should be reversible');
 
   await page.locator('#mobileManagerClose').click();
+  const canUpdateWhenIdle = await page.evaluate(() => window.AshenAppLifecycle.canApplyUpdate());
+  assert.equal(canUpdateWhenIdle, true, 'safe app update should be permitted while gameplay is idle');
   await page.locator('#mobileDockBag').click();
   await page.waitForFunction(() => document.querySelector('#inventoryMenu')?.classList.contains('show'));
   await page.locator('#closeInventory').click();
