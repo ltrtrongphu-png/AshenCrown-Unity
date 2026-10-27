@@ -28,6 +28,8 @@ test('automatic updater performs frequent uncached service-worker version checks
   assert.match(worker, /ASHEN_GET_VERSION/);
   assert.match(worker, /ASHEN_APP_VERSION/);
   assert.match(worker, /self\.clients\.claim\(\)/);
+  assert.match(worker, /ASHEN_SKIP_WAITING/);
+  assert.doesNotMatch(worker, /await self\.skipWaiting\(\)/);
 });
 
 test('mobile manager exposes game, save, network, install and update controls', async () => {
