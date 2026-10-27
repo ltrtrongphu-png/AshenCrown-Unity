@@ -4032,9 +4032,19 @@ window.AshenAppLifecycle = {
     saveState(true);
     await localSaveWriteChain;
     const saveStatus = $('saveStatus');
-    return !localSaveRecoveryRequired &&
-      saveStatus?.dataset?.state !== 'error' &&
-      isValidSaveV5(localSavePlaintext);
+    if (localSaveRecoveryRequired ||
+        saveStatus?.dataset?.state === 'error' ||
+        !isValidSaveV5(localSavePlaintext)) return false;
+    // Do not reload while a signed-in player's newest snapshot is still queued
+    // or in flight. Local ciphertext is already verified; cloud must settle too.
+    if (window.AshenAuth?.getUserId?.() && window.AshenAuth?.flushPendingCloudSave) {
+      const cloudFlushed = await window.AshenAuth.flushPendingCloudSave(7000);
+      if (!cloudFlushed) {
+        toastMsg('Update is waiting for cloud backup to finish. Your encrypted local save is safe.');
+        return false;
+      }
+    }
+    return !localSaveRecoveryRequired && $('saveStatus')?.dataset?.state !== 'error';
   },
   getStatus() {
     return {
