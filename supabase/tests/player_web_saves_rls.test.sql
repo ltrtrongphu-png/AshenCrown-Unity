@@ -1,6 +1,6 @@
 begin;
 
-select plan(18);
+select plan(21);
 
 select has_table(
   'public',
@@ -34,6 +34,18 @@ select ok(
 select ok(
   not has_table_privilege('authenticated', 'public.player_web_saves', 'DELETE'),
   'authenticated role cannot delete cloud saves'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.player_web_saves', 'TRUNCATE'),
+  'authenticated role cannot truncate the cloud-save table'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.player_web_saves', 'REFERENCES'),
+  'authenticated role cannot add foreign-key references to cloud saves'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.player_web_saves', 'TRIGGER'),
+  'authenticated role cannot create triggers on cloud saves'
 );
 
 insert into auth.users (id, email)
