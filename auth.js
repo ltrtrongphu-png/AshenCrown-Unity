@@ -14,6 +14,7 @@ let cloudTimer = null;
 let lastCloudWrite = 0;
 let cloudWriteInFlight = false;
 let cloudRetryDelay = 5000;
+let cloudLastFailureAt = 0;
 const cloudSaveQueue = new CloudSaveQueue();
 
 const authReady = (async () => {
@@ -47,6 +48,7 @@ const authReady = (async () => {
         if (cloudTimer) { clearTimeout(cloudTimer); cloudTimer = null; }
         lastCloudWrite = 0;
         cloudRetryDelay = 5000;
+        cloudLastFailureAt = 0;
         emitCloudSaveStatus(nextUserId ? 'idle' : 'signed-out');
       }
       updateAccountButton();
@@ -281,10 +283,12 @@ async function flushCloudSave() {
     if ((currentSession?.user?.id || null) !== snapshot.userId) return;
     lastCloudWrite = Date.now();
     cloudRetryDelay = 5000;
+    cloudLastFailureAt = 0;
     emitCloudSaveStatus(cloudSaveQueue.hasPending ? 'pending' : 'saved');
   } catch (error) {
     const activeUserId = currentSession?.user?.id || null;
     if (activeUserId === snapshot.userId && cloudSaveQueue.retry(snapshot, activeUserId)) {
+      cloudLastFailureAt = Date.now();
       retryDelay = cloudRetryDelay;
       cloudRetryDelay = Math.min(cloudRetryDelay * 2, 300000);
       emitCloudSaveStatus('retrying', 'Cloud backup failed; retrying automatically.');
@@ -294,6 +298,31 @@ async function flushCloudSave() {
     cloudWriteInFlight = false;
     if (cloudSaveQueue.hasPending) scheduleCloudFlush(retryDelay);
   }
+}
+
+async function flushPendingCloudSave(timeoutMs = 7000) {
+  await authReady;
+  if (!currentSession?.user?.id) return true;
+  const timeout = Math.max(1000, Math.min(15000, Number(timeoutMs) || 7000));
+  const startedAt = Date.now();
+
+  if (cloudSaveQueue.hasPending && !cloudWriteInFlight) {
+    // Respect exponential retry backoff during repeated network/server failures;
+    // an app-refresh attempt must not turn a slow failure into a retry storm.
+    if (cloudLastFailureAt && Date.now() - cloudLastFailureAt < cloudRetryDelay) return false;
+    if (cloudTimer) {
+      clearTimeout(cloudTimer);
+      cloudTimer = null;
+    }
+    void flushCloudSave();
+  }
+
+  while (Date.now() - startedAt < timeout) {
+    if (!currentSession?.user?.id) return true;
+    if (!cloudSaveQueue.hasPending && !cloudWriteInFlight) return true;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  return !cloudSaveQueue.hasPending && !cloudWriteInFlight;
 }
 
 function scheduleCloudFlush(delayOverride = null) {
@@ -340,6 +369,7 @@ window.AshenAuth = {
   loadCloudSave,
   saveCloudSave: writeCloudSave,
   queueSave,
+  flushPendingCloudSave,
   signOut
 };
 

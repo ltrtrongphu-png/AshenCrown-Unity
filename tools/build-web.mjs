@@ -19,6 +19,8 @@ const webFiles = [
   'play.html',
   'styles.css',
   'play.css',
+  'app-update.css',
+  'mobile-manager.css',
   'model3d.css',
   'app.js',
   'i18n.js',
@@ -26,6 +28,8 @@ const webFiles = [
   'story-progression.js',
   'model3d.js',
   'play.js',
+  'app-update.js',
+  'mobile-manager.js',
   'save-utils.js',
   'vendor/three.module.js',
   'vendor/three.core.js',
@@ -108,7 +112,7 @@ function checkJavaScriptSyntax(file, module = false) {
 for (const file of ['app.js', 'campaign.js', 'i18n.js', 'sw.js', 'play-boot.js', 'auth-config.js']) {
   checkJavaScriptSyntax(file, false);
 }
-for (const file of ['play.js', 'save-utils.js', 'model3d.js', 'auth.js', 'cloud-save-queue.js', 'vendor/three.module.js', 'vendor/three.core.js', 'vendor/GLTFLoader.js', 'utils/BufferGeometryUtils.js', 'utils/SkeletonUtils.js']) {
+for (const file of ['play.js', 'save-utils.js', 'model3d.js', 'auth.js', 'cloud-save-queue.js', 'app-update.js', 'mobile-manager.js', 'vendor/three.module.js', 'vendor/three.core.js', 'vendor/GLTFLoader.js', 'utils/BufferGeometryUtils.js', 'utils/SkeletonUtils.js']) {
   checkJavaScriptSyntax(file, true);
 }
 

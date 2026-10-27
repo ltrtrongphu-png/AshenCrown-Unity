@@ -4014,7 +4014,76 @@ function refreshOwnerDiagnostics() {
 }
 
 await bootstrapEncryptedSave();
-loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();if(isChapterWardenReady(state))spawnEnemy(false,true);setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();if('serviceWorker'in navigator)navigator.serviceWorker.register(new URL('./sw.js',location.href)).catch(()=>{});
+loadState();const completedTravel=canFastTravel(),savedMap=completedTravel&&MAPS[state.currentMap]?state.currentMap:state.quest>=5&&state.chapter<10?'sanctuary':mapIdForChapter(state.chapter);setActiveMap(savedMap,!completedTravel);if(state.quest<5&&activeMapId!=='sanctuary'){npcs.forEach((n,i)=>{const p=[[0,12],[5,9],[-5,9]][i];n.root.position.set(p[0],0,p[1])})};if(state.quest>=5&&state.chapter<10)player.position.set(-5,0,-1);setupTouchControls();if(isChapterWardenReady(state))spawnEnemy(false,true);setQuest();renderJournal('story');refreshEquipment();resize();void loadCachedResourcePack();
+let appUpdateHoldActive = false;
+function releaseAppUpdateHold() {
+  if (!appUpdateHoldActive) return;
+  appUpdateHoldActive = false;
+  state.paused = false;
+  Object.keys(keys).forEach(key => { keys[key] = false; });
+  window.dispatchEvent(new CustomEvent('ashen:app-update-hold', { detail: { active: false } }));
+}
+
+window.AshenAppLifecycle = {
+  canApplyUpdate() {
+    if (localSaveRecoveryRequired || saveImportInProgress || cloudRestoreInProgress || state.paused) return false;
+    if (anyOverlayOpen() || document.querySelector('#mobileManagerOverlay:not([hidden]), .owner-console.show')) return false;
+    // The final story encounter is mandatory progress. Ordinary roaming shades
+    // do not block an update once the player has stopped actively fighting.
+    if (encounter?.isBoss && Number(encounter.hp) > 0) return false;
+    if (attackCooldown > 0.1 || comboWindow > 0 || parryWindow > 0 || dodgeIFrames > 0) return false;
+    return true;
+  },
+  async prepareForUpdate() {
+    if (!this.canApplyUpdate()) return false;
+    // Pause simulation and input before awaiting encryption/cloud IO so the
+    // player cannot change progress after the verified save snapshot is made.
+    appUpdateHoldActive = true;
+    state.paused = true;
+    Object.keys(keys).forEach(key => { keys[key] = false; });
+    window.dispatchEvent(new CustomEvent('ashen:app-update-hold', { detail: { active: true } }));
+    try {
+      saveState(true);
+      await localSaveWriteChain;
+      const saveStatus = $('saveStatus');
+      if (localSaveRecoveryRequired ||
+          saveStatus?.dataset?.state === 'error' ||
+          !isValidSaveV5(localSavePlaintext)) {
+        releaseAppUpdateHold();
+        return false;
+      }
+      // Do not reload while a signed-in player's newest snapshot is still queued
+      // or in flight. Respect cloud retry backoff instead of retrying in a loop.
+      if (window.AshenAuth?.getUserId?.() && window.AshenAuth?.flushPendingCloudSave) {
+        const cloudFlushed = await window.AshenAuth.flushPendingCloudSave(7000);
+        if (!cloudFlushed) {
+          toastMsg('Update is waiting for cloud backup to finish. Your encrypted local save is safe.');
+          releaseAppUpdateHold();
+          return false;
+        }
+      }
+      const ready = !localSaveRecoveryRequired && $('saveStatus')?.dataset?.state !== 'error';
+      if (!ready) releaseAppUpdateHold();
+      return ready;
+    } catch (error) {
+      releaseAppUpdateHold();
+      throw error;
+    }
+  },
+  cancelUpdate() {
+    releaseAppUpdateHold();
+    return true;
+  },
+  getStatus() {
+    return {
+      chapter: state.chapter,
+      quest: state.quest,
+      saveRecoveryRequired: localSaveRecoveryRequired,
+      localSaveValid: isValidSaveV5(localSavePlaintext),
+      updateHoldActive: appUpdateHoldActive
+    };
+  }
+};
 if(state.tutorial!==false)$('tutorial').classList.add('show');
 time=DAY_LENGTH*.08;
 showChapterTitle((window.ASHEN_CAMPAIGN?.[state.chapter-1]?.title)||'THE LAST EMBER','Explore · meet people · make choices · shape the world');

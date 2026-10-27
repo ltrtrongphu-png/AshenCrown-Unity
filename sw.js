@@ -1,4 +1,5 @@
 const SHELL_CACHE = 'ashen-shell-__ASHEN_BUILD_ID__';
+const BUILD_ID = '__ASHEN_BUILD_ID__';
 const APP_FILES = [
   './',
   './index.html',
@@ -6,9 +7,13 @@ const APP_FILES = [
   './app.js?v=__ASHEN_BUILD_ID__',
   './styles.css?v=__ASHEN_BUILD_ID__',
   './play.css?v=__ASHEN_BUILD_ID__',
+  './app-update.css?v=__ASHEN_BUILD_ID__',
+  './mobile-manager.css?v=__ASHEN_BUILD_ID__',
   './campaign.js?v=__ASHEN_BUILD_ID__',
   './story-progression.js',
   './play.js?v=__ASHEN_BUILD_ID__',
+  './app-update.js?v=__ASHEN_BUILD_ID__',
+  './mobile-manager.js?v=__ASHEN_BUILD_ID__',
   './save-utils.js',
   './vendor/three.module.js',
   './vendor/three.core.js',
@@ -33,7 +38,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
     await cache.addAll(APP_FILES);
-    await self.skipWaiting();
+    // On an update, remain waiting until the page confirms a safe save and
+    // explicitly sends ASHEN_SKIP_WAITING. First installs activate normally.
+
   })());
 });
 
@@ -42,6 +49,8 @@ self.addEventListener('activate', (event) => {
     const names = await caches.keys();
     await Promise.all(names.filter((name) => name.startsWith('ashen-shell-') && name !== SHELL_CACHE).map((name) => caches.delete(name)));
     await self.clients.claim();
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clients) client.postMessage({ type: 'ASHEN_APP_VERSION', buildId: BUILD_ID });
   })());
 });
 
@@ -82,4 +91,16 @@ self.addEventListener('fetch', (event) => {
     }
     return response;
   })());
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'ASHEN_GET_VERSION') {
+    const response = { type: 'ASHEN_APP_VERSION', buildId: BUILD_ID };
+    if (event.ports?.[0]) event.ports[0].postMessage(response);
+    else event.source?.postMessage(response);
+    return;
+  }
+  if (event.data?.type === 'ASHEN_SKIP_WAITING') {
+    event.waitUntil(self.skipWaiting());
+  }
 });

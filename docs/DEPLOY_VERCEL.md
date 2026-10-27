@@ -11,7 +11,7 @@ npm install --ignore-scripts --no-audit --no-fund
 node tools/build-web.mjs
 ```
 
-The build script checks JavaScript syntax, validates local HTML resource references against its allow-list, fails when a required source file is missing, generates `resource-pack.json`, fingerprints the service-worker shell cache, and writes `dist/`.
+The build script checks JavaScript syntax, validates local HTML resource references against its allow-list, fails when a required source file is missing, generates `resource-pack.json`, fingerprints the service-worker shell cache and both page build IDs, and writes `dist/`. The shared app-update manager uses `updateViaCache: 'none'`, queries the active service worker's build ID, and checks for updates every five minutes while the page is visible. The game page persists its encrypted local save and defers automatic refresh during active menus/dialogue/combat.
 
 The script's console output reports the final number of files and total uncompressed artifact size. It does not measure Brotli/gzip transfer size, browser FPS, heap/GPU allocations, or Lighthouse.
 
