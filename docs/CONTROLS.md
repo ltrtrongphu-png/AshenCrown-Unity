@@ -38,3 +38,12 @@
 | M | World map |
 
 Some in-demo help labels overlap (notably E and F). Treat this as a source-derived list, not a claim that every mapping has passed a browser interaction test. Debug keys are not intended to be available in Unity release builds.
+
+
+## Browser demo — phone controls and app management
+
+The browser game exposes a touch joystick and action buttons on narrow/touch layouts. The mobile command dock provides quick access to the inventory, world map, journal, pause and the Field Manager. The Field Manager shows the current build, connection state, local-save state, cloud-sync state, chapter/quest progress, and shortcuts for Sanctuary, role, settings, archive, help, save export/import and PWA installation.
+
+Automatic version checks are enabled by default. The app checks its service worker at startup, when returning to the tab/network, and every five minutes while visible. New builds use a content-derived build ID. The page saves and verifies the encrypted local v5 save before an automatic refresh; refresh waits until the player has left active menus/dialogue/combat. Automatic updates can be disabled in Field Manager, and an update can be applied manually when safe.
+
+The Install / Add to Home Screen action uses the browser's install prompt where available. Browsers that do not expose that prompt receive platform-specific instructions instead. Installation and offline cache support depend on browser support and an HTTPS (or localhost) origin. The mobile field manager is for the browser demo and is not an assertion that Unity's native mobile build has been tested.
