@@ -455,3 +455,21 @@ test('encrypted recovery backup envelopes remain preserved while a valid v5 prim
   assert.deepEqual(await decryptSavePayload(storage.getItem(backupKey), key, webcrypto), recovery);
   assert.equal(storage.getItem(backupKey), recoveryEnvelope, 'opaque recovery bytes must not be rolled forward over on boot');
 });
+
+test('unsupported payloads cannot replace the primary encrypted save', async () => {
+  const { webcrypto } = await import('node:crypto');
+  const { writeEncryptedLocalSave } = await import('../../save-utils.js');
+  const original = 'ASHEN-AESGCM-v1:preserve-primary-bytes';
+  const values = new Map([['ashen-crown-3d', original]]);
+  const storage = {
+    getItem(keyName) { return values.has(keyName) ? values.get(keyName) : null; },
+    setItem(keyName, value) { values.set(String(keyName), String(value)); }
+  };
+  const key = await webcrypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+
+  await assert.rejects(
+    () => writeEncryptedLocalSave(storage, 'ashen-crown-3d', { saveVersion: 6, level: 5, chapter: 1 }, key, webcrypto),
+    /supported v5 save format/
+  );
+  assert.equal(storage.getItem('ashen-crown-3d'), original, 'invalid payload must not mutate the primary save');
+});
