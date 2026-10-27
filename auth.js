@@ -296,6 +296,26 @@ async function flushCloudSave() {
   }
 }
 
+async function flushPendingCloudSave(timeoutMs = 7000) {
+  await authReady;
+  if (!currentSession?.user?.id) return true;
+  const timeout = Math.max(1000, Math.min(15000, Number(timeoutMs) || 7000));
+  const startedAt = Date.now();
+
+  if (cloudTimer) {
+    clearTimeout(cloudTimer);
+    cloudTimer = null;
+  }
+  if (cloudSaveQueue.hasPending && !cloudWriteInFlight) void flushCloudSave();
+
+  while (Date.now() - startedAt < timeout) {
+    if (!currentSession?.user?.id) return true;
+    if (!cloudSaveQueue.hasPending && !cloudWriteInFlight) return true;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  return !cloudSaveQueue.hasPending && !cloudWriteInFlight;
+}
+
 function scheduleCloudFlush(delayOverride = null) {
   if (cloudTimer || !currentSession?.user || !cloudSaveQueue.hasPending) return;
   const wait = Number.isFinite(delayOverride)
@@ -340,6 +360,7 @@ window.AshenAuth = {
   loadCloudSave,
   saveCloudSave: writeCloudSave,
   queueSave,
+  flushPendingCloudSave,
   signOut
 };
 
