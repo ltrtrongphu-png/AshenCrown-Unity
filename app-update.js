@@ -21,6 +21,7 @@
   let registration = null;
   let installPrompt = null;
   let checkInProgress = false;
+  let versionCheckCompleted = false;
   let applyInProgress = false;
   let retryTimer = 0;
   let checkTimer = 0;
@@ -128,9 +129,8 @@
     // handles new HTML arriving while an older worker still controls the cache.
     const hasWaitingWorker = Boolean(registration?.waiting && state.waitingBuildId);
     const target = hasWaitingWorker ? state.waitingBuildId : state.activeBuildId;
-    const waitingNeedsActivation = hasWaitingWorker &&
-      Boolean(state.activeBuildId) && state.activeBuildId !== state.waitingBuildId;
-    const activeIsOutdated = !hasWaitingWorker && Boolean(state.activeBuildId) &&
+    const waitingNeedsActivation = hasWaitingWorker && state.activeBuildId !== state.waitingBuildId;
+    const activeIsOutdated = !hasWaitingWorker && versionCheckCompleted && Boolean(state.activeBuildId) &&
       state.activeBuildId !== BUILD_ID && !registration?.installing;
     const updateNeeded = hasWaitingWorker
       ? state.waitingBuildId !== BUILD_ID || waitingNeedsActivation
@@ -298,6 +298,9 @@
         probeWorkerVersion(registration.active || navigator.serviceWorker.controller, 'active'),
         probeWorkerVersion(registration.waiting, 'waiting')
       ]);
+      versionCheckCompleted = true;
+      if (registration.waiting && state.waitingBuildId) handleWorkerVersion(state.waitingBuildId, 'waiting');
+      else if (state.activeBuildId) handleWorkerVersion(state.activeBuildId, 'active');
       if (!state.updateAvailable && state.status === 'checking') {
         setStatus('current', 'You are using the latest available version.');
       }
@@ -404,10 +407,15 @@
           bindRegistration(reg);
           return registration.update().catch(() => {});
         })
-        .then(() => Promise.all([
-          probeWorkerVersion(registration?.active || navigator.serviceWorker.controller, 'active'),
-          probeWorkerVersion(registration?.waiting, 'waiting')
-        ]))
+        .then(async () => {
+          await Promise.all([
+            probeWorkerVersion(registration?.active || navigator.serviceWorker.controller, 'active'),
+            probeWorkerVersion(registration?.waiting, 'waiting')
+          ]);
+          versionCheckCompleted = true;
+          if (registration?.waiting && state.waitingBuildId) handleWorkerVersion(state.waitingBuildId, 'waiting');
+          else if (state.activeBuildId) handleWorkerVersion(state.activeBuildId, 'active');
+        })
         .catch(() => {
           if (!navigator.onLine) setStatus('offline', 'Offline. The installed version remains available.');
           else setStatus('update-check-failed', 'Automatic updates could not start in this browser session.');
