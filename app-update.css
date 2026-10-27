@@ -1,0 +1,29 @@
+.ashen-app-update-banner {
+  position: fixed;
+  z-index: 3000;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 14px;
+  width: min(540px, calc(100vw - 28px));
+  padding: 12px 14px;
+  border: 1px solid rgba(212,119,64,.58);
+  border-radius: 12px;
+  background: rgba(13,10,8,.97);
+  color: #f0e7dc;
+  box-shadow: 0 16px 60px rgba(0,0,0,.58);
+  font: 500 12px/1.4 "DM Sans", "Segoe UI", sans-serif;
+}
+.ashen-app-update-banner[hidden] { display: none !important; }
+.ashen-app-update-copy { margin: 0; }
+.ashen-app-update-actions { display: flex; align-items: center; gap: 6px; }
+.ashen-app-update-actions button { min-height: 36px; padding: 8px 10px; border: 1px solid #d47740; border-radius: 7px; background: #d47740; color: #1a0d07; font: 800 10px/1.2 "DM Sans", sans-serif; white-space: nowrap; }
+.ashen-app-update-actions button:disabled { opacity: .55; }
+.ashen-app-update-actions .ashen-app-update-dismiss { border-color: rgba(225,208,188,.22); background: transparent; color: #d8c8ba; }
+@media (max-width: 760px) {
+  .ashen-app-update-banner { top: max(116px, calc(env(safe-area-inset-top) + 105px)); right: 8px; bottom: auto; left: 8px; width: auto; grid-template-columns: 1fr; gap: 8px; padding: 10px; font-size: 11px; }
+  .ashen-app-update-actions { justify-content: flex-end; }
+  .ashen-app-update-actions button { min-height: 40px; }
+}
