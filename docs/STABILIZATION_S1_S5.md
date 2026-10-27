@@ -18,7 +18,7 @@ readEncryptedLocalSave previously accepted any decrypted JSON object in the encr
 
 Regression coverage includes an unsupported encrypted primary, a good encrypted v5 backup, repairing a schema-invalid encrypted backup, and preserving opaque import-recovery bytes.
 
-The S4 privilege audit also found that revoking only DELETE could leave old direct or PUBLIC grants on TRUNCATE/REFERENCES/TRIGGER if a table already existed. The migration now revokes all table privileges from PUBLIC, anon, and authenticated, then grants only SELECT/INSERT/UPDATE to authenticated. The pgTAP plan is expanded from 18 to 24 assertions to cover the extra forbidden privileges for both anon and authenticated roles.
+The S4 privilege audit also found that revoking only DELETE could leave old direct or PUBLIC grants on TRUNCATE/REFERENCES/TRIGGER if a table already existed. The migration now revokes all table privileges from PUBLIC, anon, and authenticated, then grants only SELECT/INSERT/UPDATE to authenticated. It also removes all existing policies on this dedicated table before creating exactly three owner-scoped policies, preventing stale permissive policies from widening access on an upgrade. The pgTAP plan is expanded from 18 to 25 assertions to cover the extra forbidden privileges and exact policy count.
 
 ## Gameplay verification
 
