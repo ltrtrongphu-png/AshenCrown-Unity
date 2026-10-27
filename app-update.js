@@ -120,11 +120,13 @@
     if (typeof version !== 'string' || !/^[a-f0-9]{16}$/i.test(version)) return;
     if (role === 'waiting') state.waitingBuildId = version;
     else state.activeBuildId = version;
+    // If this document successfully loaded the target page version, a previous
+    // refresh was successful even when the matching worker shell still needs activation.
+    if (version === BUILD_ID && readReloadTarget() === BUILD_ID) writeReloadTarget('');
 
-    // Prefer a ready waiting worker as the refresh target. This also handles
-    // a fresh HTML page whose version matches the waiting worker while an older
-    // worker is still controlling its cache.
-    const hasWaitingWorker = Boolean(state.waitingBuildId);
+    // Prefer an actual ready waiting worker as the refresh target. This also
+    // handles new HTML arriving while an older worker still controls the cache.
+    const hasWaitingWorker = Boolean(registration?.waiting && state.waitingBuildId);
     const target = hasWaitingWorker ? state.waitingBuildId : state.activeBuildId;
     const waitingNeedsActivation = hasWaitingWorker &&
       Boolean(state.activeBuildId) && state.activeBuildId !== state.waitingBuildId;
