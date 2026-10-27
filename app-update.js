@@ -202,11 +202,43 @@
           return false;
         }
       }
+      // A newly installed worker stays in the waiting state until this save is
+      // verified. Activate only this waiting worker, and wait for controllerchange
+      // before reloading, so cached assets and page code move to the same version.
+      const waitingWorker = registration?.waiting;
+      if (waitingWorker) {
+        const activated = await new Promise(resolve => {
+          let done = false;
+          const finish = result => {
+            if (done) return;
+            done = true;
+            window.clearTimeout(timeout);
+            navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+            resolve(result);
+          };
+          const onControllerChange = () => finish(true);
+          const timeout = window.setTimeout(() => finish(false), 10000);
+          navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+          try {
+            waitingWorker.postMessage({ type: 'ASHEN_SKIP_WAITING' });
+          } catch {
+            finish(false);
+          }
+        });
+        if (!activated) {
+          lifecycle?.cancelUpdate?.();
+          applyInProgress = false;
+          setStatus('update-check-failed', 'The update could not activate safely. Your local save is preserved; check again or reload manually later.');
+          if (state.autoUpdate && !manual) scheduleAutoApply(8000);
+          return false;
+        }
+      }
       if (target) writeReloadTarget(target);
       setStatus('applying', 'Update is ready. Refreshing to the latest build…');
       window.setTimeout(() => window.location.reload(), 200);
       return true;
     } catch (error) {
+      lifecycle?.cancelUpdate?.();
       applyInProgress = false;
       setStatus('update-save-blocked', 'Update paused to protect your save. ' + (error?.message || 'The save could not be verified.'));
       return false;
@@ -234,7 +266,7 @@
         bindRegistration(registration);
       }
       await registration.update();
-      await probeWorkerVersion();
+      await probeWorkerVersion(registration.waiting || registration.active || navigator.serviceWorker.controller);
       if (!state.updateAvailable && state.status === 'checking') {
         setStatus('current', 'You are using the latest available version.');
       }
@@ -256,7 +288,7 @@
       if (!installing) return;
       installing.addEventListener('statechange', () => {
         if (installing.state === 'installed') {
-          void probeWorkerVersion(reg.active || navigator.serviceWorker.controller);
+          void probeWorkerVersion(reg.waiting || reg.active || navigator.serviceWorker.controller);
         }
       });
     });
@@ -337,7 +369,7 @@
           bindRegistration(reg);
           return registration.update().catch(() => {});
         })
-        .then(() => probeWorkerVersion())
+        .then(() => probeWorkerVersion(registration?.waiting || registration?.active || navigator.serviceWorker.controller))
         .catch(() => {
           if (!navigator.onLine) setStatus('offline', 'Offline. The installed version remains available.');
           else setStatus('update-check-failed', 'Automatic updates could not start in this browser session.');
