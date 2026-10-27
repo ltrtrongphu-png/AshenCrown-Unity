@@ -1,6 +1,6 @@
 begin;
 
-select plan(24);
+select plan(25);
 
 select has_table(
   'public',
@@ -13,6 +13,12 @@ select ok(
    from pg_class
    where oid = 'public.player_web_saves'::regclass),
   'row-level security is enabled'
+);
+select is(
+  (select count(*) from pg_policies
+   where schemaname = 'public' and tablename = 'player_web_saves'),
+  3::bigint,
+  'only the three owner-scoped cloud-save policies exist'
 );
 
 select ok(
