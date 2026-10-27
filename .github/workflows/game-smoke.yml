@@ -56,6 +56,10 @@ jobs:
         run: node tests/e2e/mobile-manager.mjs
         env:
           ASHEN_SMOKE_URL: http://127.0.0.1:4173
+      - name: Verify service-worker waiting, activation and version refresh
+        run: node tests/e2e/pwa-update-flow.mjs
+        env:
+          ASHEN_SMOKE_URL: http://127.0.0.1:4173
       # The full campaign is kept as a nightly/manual regression: it renders ten maps
       # and fights every Warden under software GL, so it is too slow for every PR.
       # Fast gameplay smoke, save migration/export/import and XSS remain PR gates.
