@@ -4070,6 +4070,10 @@ window.AshenAppLifecycle = {
       throw error;
     }
   },
+  cancelUpdate() {
+    releaseAppUpdateHold();
+    return true;
+  },
   getStatus() {
     return {
       chapter: state.chapter,
