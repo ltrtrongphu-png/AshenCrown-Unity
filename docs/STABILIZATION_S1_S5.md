@@ -10,7 +10,7 @@ Audit started: 2026-10-27. Scope: merged PRs #76–#81 and the current browser-d
 | S2 — browser DOM/XSS | Saved item/journal text is sanitized/escaped at DOM sinks; Chromium regression | XSS E2E passes on the current stabilization PR | Does not validate Unity UI or all third-party scripts. |
 | S3 — cloud-save reliability | Account-bound in-memory queue, retry/backoff, v5 cloud contract, conflict backup, account-switch guards | Cloud queue unit coverage and static checks are in Web CI; local browser journey passes | Live cross-account behavior is unverified without an active isolated staging project and two dedicated test accounts. |
 | S4 — Supabase verification | Local pgTAP RLS suite and guarded two-account staging probe | Local pgTAP job passed in its S4 CI run; probe fails closed without explicit staging confirmation | Live RLS/API isolation is not verified. The connected project is inactive; do not activate or write to it as part of this audit. |
-| S5 — WebGL soak guardrails | Analyze sustained geometry/texture growth and produce diagnostic artifacts | PR performance smoke passes | Three 60-second baselines and the ten-minute soak are skipped on PRs; the full scheduled/manual soak remains needed. |
+| S5 — WebGL soak guardrails | Analyze sustained geometry/texture growth and produce diagnostic artifacts | Ordinary PRs run short smoke; stabilization PRs run three 60-second baselines plus the ten-minute soak | Actual baseline/soak outcome is being collected for this stabilization pass; no result is assumed in advance. |
 
 ## Regression found and fix
 
@@ -20,13 +20,13 @@ Regression coverage includes an unsupported encrypted primary, a good encrypted 
 
 ## Gameplay verification
 
-The existing browser workflow intentionally skips the ten-chapter campaign test on normal PRs. To make this stabilization actually exercise the campaign without making every PR pay that cost, the full campaign now runs on stabilization/* branches as well as scheduled/manual runs. The test covers all ten objective/warden/choice cycles, a Chapter 1 reload/death recovery edge, merchant purchase/equip, final save persistence after reload, browser exceptions, console errors, and same-origin request failures.
+The existing browser workflow intentionally skips the ten-chapter campaign test on normal PRs. To make this stabilization actually exercise the campaign without making every PR pay that cost, the full campaign now runs on stabilization/* branches as well as scheduled/manual runs. The performance workflow on stabilization branches also runs three repeatable 60-second baselines plus the full ten-minute soak. The test covers all ten objective/warden/choice cycles, a Chapter 1 reload/death recovery edge, merchant purchase/equip, final save persistence after reload, browser exceptions, console errors, and same-origin request failures.
 
 A campaign pass will show that the scripted browser path works under CI's software WebGL renderer; it is not a substitute for human playtesting, a hardware GPU run, Unity Editor tests, or live cloud account switching.
 
 ## Known environment-dependent work still open
 
 - Live S4 two-account staging probe and Supabase migration/RLS verification; requires a separate active staging project and two dedicated test-only credentials.
-- Full ten-minute WebGL soak; scheduled/manual, not the PR's short performance smoke.
+- Full ten-minute WebGL soak and three repeatable baselines; this stabilization branch runs them while ordinary PRs retain the short smoke.
 - Unity 2021.3 LTS compile/EditMode/PlayMode; the current GitHub Unity job skips actual Editor execution if UNITY_LICENSE is absent.
 - Production deployment status and hardware/browser performance/Lighthouse.
