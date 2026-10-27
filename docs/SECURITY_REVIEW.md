@@ -4,7 +4,7 @@ Review target: browser story demo, browser save handling, Unity Supabase auth/cl
 
 ## Current source protections
 
-- Browser inventory/journal paths use escaping/sanitization for player-controlled strings, but the remaining `play.js` `innerHTML` assignments still require an item-by-item source-to-sink review and regression tests.
+- The current `play.js` DOM sink inventory is documented in `WEB_DOM_SECURITY.md` (25 `innerHTML` writes). The Chromium XSS regression exercises saved inventory/equipment, journal and archive views; new or changed sinks must be reviewed and the regression expanded where appropriate. This is not a blanket guarantee for every browser UI or Unity UI.
 - Browser save state is client-controlled. The local key `ashen-crown-3d` and save version 5 are preserved.
 - Browser cloud-save client targets `player_web_saves`; migration `002_player_web_saves.sql` defines a row keyed by `auth.users.id`, JSONB payload size bound, version, and RLS policies limited to authenticated select/insert/update of the current user's row.
 - Unity C# client still targets the separate `player_saves` table defined by migration 001, with both `save_json` and `save_text` for the current client contract.
@@ -39,7 +39,7 @@ The repository has a `server/` directory with a package script but no `src/index
 - Live two-user RLS/API save-readback probe and a manual-only workflow are authored, with explicit project-ref allowlisting and a fail-closed preflight that refuses to overwrite unmarked saves. The live probe has not run because the connected Supabase project is inactive and no separate active staging environment has been configured.
 - Signup/email confirmation, password reset delivery, browser conflict prompts and restore, simultaneous tabs, and concurrent account-switch browser behavior remain unverified live. Unit tests do not substitute for these environment-dependent checks.
 - Unity Editor compilation, generated sandbox scene behavior, PlayMode/EditMode tests, or persistent secure token storage.
-- Full `innerHTML` sink audit, XSS regression test, and browser performance/memory soak.
+- Full dynamic Three.js resource-ownership audit and a passing ten-minute WebGL resource soak remain unverified. The DOM sink inventory and selected save-driven Chromium XSS regression are present; they do not certify Unity UI or third-party scripts.
 - Production HTTP headers and real deployment network trace.
 
 ## Release checklist
