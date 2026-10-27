@@ -55,4 +55,6 @@ test('mobile update lifecycle saves local state before refreshing and avoids act
   assert.match(game, /#mobileManagerOverlay:not\(\[hidden\]\)/);
   assert.match(updater, /window\.AshenAppLifecycle/);
   assert.match(updater, /window\.location\.reload\(\)/);
+  assert.match(game, /flushPendingCloudSave\(7000\)/);
+  assert.match(await read('auth.js'), /flushPendingCloudSave/);
 });
