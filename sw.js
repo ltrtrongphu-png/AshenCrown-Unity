@@ -38,7 +38,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL_CACHE);
     await cache.addAll(APP_FILES);
-    await self.skipWaiting();
+    // On an update, remain waiting until the page confirms a safe save and
+    // explicitly sends ASHEN_SKIP_WAITING. First installs activate normally.
+
   })());
 });
 
